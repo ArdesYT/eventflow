@@ -1,7 +1,7 @@
 EventFlow Projekt Dokumentáció
 ________________________________________
 1. A projekt célja
-Az EventFlow projekt egy modern, teljes veremű (Full-Stack) webalkalmazás, amelynek célja egy konferencia vagy rendezvény programfüzetének digitális kezelése. Az alkalmazás lehetővé teszi a látogatók számára az előadások böngészését, keresését és a részletek megtekintését.
+Az EventFlow projekt egy modern, teljes (Full-Stack) webalkalmazás, amelynek célja egy konferencia vagy rendezvény programfüzetének digitális kezelése. Az alkalmazás lehetővé teszi a látogatók számára az előadások böngészését, keresését és a részletek megtekintését.
 A szoftver megoldást nyújt a hagyományos, papíralapú programfüzetek kiváltására. A rendszer biztosítja az adatok valós idejű elérését, gyors kereshetőséget és mobilbarát megjelenítést, így a résztvevők bárhol, bármikor értesülhetnek a menetrendről.
 ________________________________________
 2. Alkalmazott technológiák (Technológiai stack)
