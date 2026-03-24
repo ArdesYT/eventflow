@@ -44,9 +44,9 @@ export default function SessionsView({ sessions, searchTerm, onEventClick }: Ses
               {s.speaker_name}
             </div>
             <div className="session-card-footer">
-              <span className="session-date">{s.date}</span>
+              <span className="session-date">{String(s.date).slice(0, 10)}</span>
               <span className={`session-duration ${s.color}`}>
-                {s.start_time} – {s.end_time}
+                {String(s.start_time).slice(0,5)} – {String(s.end_time).slice(0,5)}
               </span>
             </div>
           </div>

@@ -40,8 +40,25 @@ export default function Root() {
       const res = await fetch(`${API}/api/sessions`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: Session[] = await res.json();
-      // Ensure every session has a color fallback so UI never crashes
-      setSessions(data.map(s => ({ ...s, color: s.color ?? 'blue' })));
+      // Normalize date/time fields — DB may return full ISO strings like
+      // "2026-03-05T08:00:00.000Z" instead of "2026-03-05" / "09:00"
+      const normalized = data.map(s => {
+        const rawDate  = String(s.date       ?? s.start_time ?? '');
+        const rawStart = String(s.start_time ?? '');
+        const rawEnd   = String(s.end_time   ?? '');
+        return {
+          ...s,
+          color:      s.color ?? 'blue',
+          date:       rawDate.slice(0, 10),           // "2026-03-05"
+          start_time: rawStart.length > 5
+                        ? rawStart.slice(11, 16)      // "T09:00" → "09:00"
+                        : rawStart.slice(0, 5),       // already "09:00"
+          end_time:   rawEnd.length > 5
+                        ? rawEnd.slice(11, 16)
+                        : rawEnd.slice(0, 5),
+        };
+      });
+      setSessions(normalized);
       setError(null);
     } catch (e) {
       console.error('fetchSessions failed:', e);
@@ -72,15 +89,6 @@ export default function Root() {
   }, [user, backendMode, fetchSessions]);
 
   async function handleLogin(credentials: { email: string; password: string }): Promise<User> {
-    // Always allow demo accounts, regardless of backend availability
-    const demoMatch = DEMO_USERS.find(
-      u => u.email === credentials.email && u.password === credentials.password,
-    );
-    if (demoMatch) {
-      const { password: _, ...userWithoutPassword } = demoMatch;
-      return userWithoutPassword;
-    }
-
     if (backendMode) {
       const res = await fetch(`${API}/api/auth/login`, {
         method: 'POST',
@@ -95,8 +103,10 @@ export default function Root() {
       // Normalize role just in case DB returns different casing
       return { ...u, role: u.role?.trim().toLowerCase() as User['role'] };
     }
-
-    throw new Error('Invalid email or password.');
+    const match = DEMO_USERS.find(u => u.email === credentials.email && u.password === credentials.password);
+    if (!match) throw new Error('Invalid email or password.');
+    const { password: _, ...user } = match;
+    return user;
   }
 
   async function handleCreate(body: object): Promise<void> {
