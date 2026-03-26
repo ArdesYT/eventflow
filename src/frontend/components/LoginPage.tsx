@@ -1,7 +1,11 @@
 import { useState } from 'react';
+import type { LoginCredentials } from '../../backend/types';
+import type { User } from '../../backend/types';
 
 interface Props {
-  onLogin: (credentials: { email: string; password: string }) => Promise<void>;
+  offlineMode: boolean;
+  // Change 'void' to 'Promise<User>'
+  onLogin: (credentials: LoginCredentials) => Promise<User>; 
 }
 
 type View = 'login' | 'register';

@@ -68,3 +68,13 @@ export interface LoginCredentials {
   email: string;
   password: string;
 }
+
+export interface AppProps {
+  initialUser: User; // Ensure 'User' is imported from your types file
+  sessions: Session[];
+  loading: boolean;
+  error: string | null;
+  onCreate: (body: CreateSessionBody) => Promise<void>; // Use CreateSessionBody, not object
+  onDelete: (id: number) => Promise<void>;
+  onLogout: () => void;
+}

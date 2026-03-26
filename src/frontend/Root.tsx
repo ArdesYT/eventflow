@@ -3,6 +3,8 @@ import type { Session } from '../backend/types';
 import App from './App';
 import type { User } from '../backend/types';
 import LoginPage from './components/LoginPage';
+import PublicEventsPage from './components/PublicEventsPage';
+import type { CreateSessionBody } from '../backend/types'; // Add this import
 
 const API = 'http://localhost:3000';
 
@@ -125,7 +127,7 @@ export default function Root() {
     }
   }
 
-  async function handleLogin(credentials: { email: string; password: string }): Promise<void> {
+  async function handleLogin(credentials: { email: string; password: string }): Promise<User> {
     if (backendMode) {
       const res = await fetch(`${API}/api/auth/login`, {
         method: 'POST',
@@ -140,8 +142,10 @@ export default function Root() {
         const userData = { id: data.id, name: data.name, email: data.email, role: data.role };
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
+        return userData;
       }
     }
+    throw new Error('Login failed.');
   }
 
   async function handleRegister(credentials: { name: string; email: string; password: string }): Promise<void> {
@@ -166,19 +170,43 @@ export default function Root() {
     setUser(null);
   }
 
-  if (!user) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
 
+// 1. Handle Login State
+if (!user) {
+  return (
+    <LoginPage
+      offlineMode={backendMode === false}
+      onLogin={handleLogin} // Pass the function directly to simplify
+    />
+  );
+}
+
+// 2. Role-Based Routing
+// TypeScript now knows 'user' is not null
+const userRole = user.role?.trim().toLowerCase();
+
+if (userRole === 'booker') {
   return (
     <App
+      user={user}
       sessions={sessions}
       loading={loading}
       error={error}
-      user={user}
-      onLogout={handleLogout}
       onCreate={handleCreate}
       onDelete={handleDelete}
+      onLogout={() => setUser(null)}
     />
   );
+}
+
+// 3. Default to Attendee View
+return (
+  <PublicEventsPage
+    sessions={sessions}
+    loading={loading}
+    error={error}
+    user={user}
+    onLogout={() => setUser(null)}
+  />
+);
 }
