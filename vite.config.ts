@@ -8,6 +8,7 @@ export default defineConfig({
       // Engedélyezi a fájlok elérését a munkakönyvtáron kívül is, 
       // ha a backend és frontend külön mappában van
       allow: ['..']
-    }
+    },
+    port: 3002, // Vite alapértelmezett portja
   }
 })
