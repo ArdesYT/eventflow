@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import type { Session } from '../../backend/types';
 
 interface MiniCalendarProps {

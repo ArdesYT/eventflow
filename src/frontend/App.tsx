@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import type { Session, ViewType, BookingFormData, CreateSessionBody, User } from '../backend/types';
 import MiniCalendar from './components/MiniCalendar';
 import CalendarView from './components/CalendarView';
@@ -20,34 +20,46 @@ const PAGE_TITLES: Record<ViewType, string> = {
   calendar: 'Calendar', sessions: 'Sessions', agenda: 'Agenda', stats: 'Overview',
 };
 
-function getInitials(name: string): string {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-}
-
 interface AppProps {
-  initialUser: User;
   sessions: Session[];
   loading: boolean;
   error: string | null;
-  onCreate: (body: CreateSessionBody) => Promise<void>;
-  onDelete: (id: number) => Promise<void>;
+  user: User;
   onLogout: () => void;
+  onCreate: (body: object) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
 }
 
-export default function App({ initialUser, sessions, loading, error, onCreate, onDelete, onLogout }: AppProps) {
+export default function App({ sessions, loading, error, user, onLogout, onCreate, onDelete }: AppProps) {
   const today = new Date(2026, 2, 20);
 
-  const [saving,       setSaving]       = useState(false);
-  const [saveError,    setSaveError]    = useState<string | null>(null);
-  const [currentView,  setCurrentView]  = useState<ViewType>('calendar');
-  const [calSubView,   setCalSubView]   = useState<'month' | 'agenda'>('month');
-  const [curMonth,     setCurMonth]     = useState(today.getMonth());
-  const [curYear,      setCurYear]      = useState(today.getFullYear());
+  const userName = user?.name ?? 'User';
+  const userInitials = userName.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase();
+
+  // UI state
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<ViewType>('calendar');
+  const [calSubView, setCalSubView] = useState<'month' | 'agenda'>('month');
+  const [curMonth, setCurMonth] = useState(today.getMonth());
+  const [curYear, setCurYear] = useState(today.getFullYear());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [searchTerm,   setSearchTerm]   = useState('');
-  const [bookingDate,  setBookingDate]  = useState<string | undefined>();
-  const [showBooking,  setShowBooking]  = useState(false);
-  const [detailId,     setDetailId]     = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [bookingDate, setBookingDate] = useState<string | undefined>();
+  const [showBooking, setShowBooking] = useState(false);
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const detailSession = useMemo(
     () => sessions.find(s => s.id === detailId) ?? null,
@@ -122,7 +134,7 @@ export default function App({ initialUser, sessions, loading, error, onCreate, o
             <h1 className="page-title">{PAGE_TITLES[currentView]}</h1>
             {currentView === 'calendar' && (
               <div className="view-toggle">
-                <button className={`view-btn${calSubView === 'month'  ? ' active' : ''}`} onClick={() => setCalSubView('month')}>Month</button>
+                <button className={`view-btn${calSubView === 'month' ? ' active' : ''}`} onClick={() => setCalSubView('month')}>Month</button>
                 <button className={`view-btn${calSubView === 'agenda' ? ' active' : ''}`} onClick={() => setCalSubView('agenda')}>Agenda</button>
               </div>
             )}
@@ -132,25 +144,40 @@ export default function App({ initialUser, sessions, loading, error, onCreate, o
               <span className="search-icon">🔍</span>
               <input className="search-input" placeholder="Search sessions..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
-            <button className="btn-new" onClick={() => { setBookingDate(undefined); setShowBooking(true); }}>+ New Booking</button>
-            <div className="topbar-user-pill">
-              <div className="topbar-user-avatar">{getInitials(initialUser.name)}</div>
-              <span className="topbar-user-name">{initialUser.name}</span>
+            <div className="profile-menu" ref={profileRef}>
+              <button className={`profile-trigger${profileOpen ? ' open' : ''}`} onClick={() => setProfileOpen(o => !o)} aria-label="Profile menu">
+                <span className="profile-avatar">{userInitials}</span>
+                <span className="profile-name">{userName}</span>
+                <span className="profile-chevron">▾</span>
+              </button>
+              {profileOpen && (
+                <div className="profile-dropdown">
+                  <div className="dropdown-header">
+                    <span className="dropdown-header-name">{userName}</span>
+                    {user.email && <span className="dropdown-header-email">{user.email}</span>}
+                  </div>
+                  <div className="dropdown-divider" />
+                  <div className="dropdown-item">My Profile</div>
+                  <div className="dropdown-item">Settings</div>
+                  <div className="dropdown-divider" />
+                  <div className="dropdown-item danger" onClick={onLogout}>Logout</div>
+                </div>
+              )}
             </div>
-            <button className="topbar-logout-btn" onClick={onLogout} title="Sign out">⎋</button>
+            <button className="btn-new" onClick={() => { setBookingDate(undefined); setShowBooking(true); }}>+ New Booking</button>
           </div>
         </div>
 
         <div className="content-area">
           {loading && <div className="loader">Adatok betöltése...</div>}
-          {error   && <div className="error-banner">{error}</div>}
+          {error && <div className="error-banner">{error}</div>}
           {!loading && !error && (
             <>
-              {currentView === 'calendar' && calSubView === 'month'  && <CalendarView curMonth={curMonth} curYear={curYear} sessions={sessions} selectedDate={selectedDate} onSelectDay={selectDay} onEventClick={id => setDetailId(id)} onNavigate={navigateMonth} onToday={goToday} />}
+              {currentView === 'calendar' && calSubView === 'month' && <CalendarView curMonth={curMonth} curYear={curYear} sessions={sessions} selectedDate={selectedDate} onSelectDay={selectDay} onEventClick={id => setDetailId(id)} onNavigate={navigateMonth} onToday={goToday} />}
               {currentView === 'calendar' && calSubView === 'agenda' && <AgendaView sessions={sessions} onEventClick={id => setDetailId(id)} onDelete={deleteSession} />}
               {currentView === 'sessions' && <SessionsView sessions={sessions} searchTerm={searchTerm} onEventClick={id => setDetailId(id)} />}
-              {currentView === 'agenda'   && <AgendaView sessions={sessions} onEventClick={id => setDetailId(id)} onDelete={deleteSession} />}
-              {currentView === 'stats'    && <StatsView sessions={sessions} onEventClick={id => setDetailId(id)} onDelete={deleteSession} />}
+              {currentView === 'agenda' && <AgendaView sessions={sessions} onEventClick={id => setDetailId(id)} onDelete={deleteSession} />}
+              {currentView === 'stats' && <StatsView sessions={sessions} onEventClick={id => setDetailId(id)} onDelete={deleteSession} />}
             </>
           )}
         </div>
