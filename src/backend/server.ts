@@ -12,12 +12,9 @@ dotenv.config();
 
 const app = express();
 
-// In production (Back4App) the React app is served from the same origin,
-// so we allow the CLIENT_URL env var or fall back to all origins in dev.
 app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
 app.use(express.json());
 
-// Serve the compiled React frontend from the /public folder
 const PUBLIC_DIR = path.join(__dirname, '../../public');
 app.use(express.static(PUBLIC_DIR));
 
@@ -30,8 +27,6 @@ const pool: Pool = mariadb.createPool({
     connectionLimit: 5,
 });
 
-// --- SEGÉDFÜGGVÉNYEK ---
-
 function formatDatetime(d: Date): string {
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -42,9 +37,6 @@ function formatDate(d: Date): string {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-// --- API VÉGPONTOK ---
-
-// 1. Összes előadás lekérése
 app.get('/api/sessions', async (_req: Request, res: Response) => {
     let conn: PoolConnection | undefined;
     try {
@@ -79,7 +71,6 @@ app.get('/api/sessions', async (_req: Request, res: Response) => {
     }
 });
 
-// 2. Regisztráció
 app.post('/api/auth/register', async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
 
@@ -113,7 +104,6 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
     }
 });
 
-// 3. Bejelentkezés
 app.post('/api/auth/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
@@ -146,7 +136,6 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     }
 });
 
-// 4. Új előadás hozzáadása
 app.post('/api/sessions', async (req: Request<{}, {}, Session>, res: Response) => {
     const { title, description, start_time, end_time, room_id, speaker_id, color } = req.body;
 
@@ -184,7 +173,6 @@ app.post('/api/sessions', async (req: Request<{}, {}, Session>, res: Response) =
     }
 });
 
-// 5. Előadás törlése
 app.delete('/api/sessions/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -206,10 +194,10 @@ app.delete('/api/sessions/:id', async (req: Request, res: Response) => {
     }
 });
 
-// Catch-all: send React's index.html for any non-API route (client-side routing)
+// Catch-all: Express 5 syntax
 app.get('/{*path}', (_req: Request, res: Response) => {
     res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
 const port = process.env.PORT ?? 8080;
-    app.listen(port, () => console.log(`Listening on ${port}`));
+app.listen(port, () => console.log(`Listening on ${port}`));
