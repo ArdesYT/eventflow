@@ -207,7 +207,7 @@ app.delete('/api/sessions/:id', async (req: Request, res: Response) => {
 });
 
 // Catch-all: send React's index.html for any non-API route (client-side routing)
-app.get('*', (_req: Request, res: Response) => {
+app.get('/{*path}', (_req: Request, res: Response) => {
     res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
