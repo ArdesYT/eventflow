@@ -4,7 +4,7 @@ import * as mariadb from 'mariadb';
 import type { Pool, PoolConnection } from 'mariadb';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import path from 'path';
 import type { Session } from './types';
 
