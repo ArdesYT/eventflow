@@ -5,9 +5,18 @@ import PublicEventsPage from './components/PublicEventsPage';
 import App from './App';
 
 const API = 'http://localhost:3000';
+const USER_KEY = 'ef_user';
 
 export default function Root() {
-  const [user, setUser] = useState<User | null>(null);
+  // Initialise from localStorage so the session survives a page refresh
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const stored = localStorage.getItem(USER_KEY);
+      return stored ? (JSON.parse(stored) as User) : null;
+    } catch {
+      return null;
+    }
+  });
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,6 +38,15 @@ export default function Root() {
     fetchSessions();
   }, [fetchSessions]);
 
+  function persistUser(u: User | null) {
+    if (u) {
+      localStorage.setItem(USER_KEY, JSON.stringify(u));
+    } else {
+      localStorage.removeItem(USER_KEY);
+    }
+    setUser(u);
+  }
+
   async function handleLogin(credentials: any): Promise<User> {
     const res = await fetch(`${API}/api/auth/login`, {
       method: 'POST',
@@ -47,7 +65,7 @@ export default function Root() {
       role: data.user.role.trim().toLowerCase()
     };
 
-    setUser(loggedInUser);
+    persistUser(loggedInUser);
     return loggedInUser;
   }
 
@@ -98,15 +116,15 @@ export default function Root() {
       error={null}
       onCreate={handleCreate}
       onDelete={handleDelete}
-      onLogout={() => setUser(null)}
-/>
+      onLogout={() => persistUser(null)}
+    />
   ) : (
     <PublicEventsPage
       sessions={sessions}
       loading={loading}
       error={null}
       user={user}
-      onLogout={() => setUser(null)}
+      onLogout={() => persistUser(null)}
     />
   );
 }
