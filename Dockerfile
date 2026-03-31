@@ -12,9 +12,10 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig*.json ./
 RUN npm install --legacy-peer-deps
-COPY src/backend ./src/backend
-# Compile with explicit outDir so we always know where the JS lands
-RUN npx tsc --skipLibCheck --outDir /app/dist/backend --rootDir src/backend src/backend/*.ts
+# Copy full src so tsconfig paths resolve correctly
+COPY src ./src
+# Use tsconfig for esModuleInterop etc, but force outDir so output path is predictable
+RUN npx tsc --project tsconfig.json --skipLibCheck --outDir /app/dist/backend --noEmit false
 
 # Stage 3: Production image
 FROM node:22-alpine
