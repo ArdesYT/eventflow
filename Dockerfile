@@ -25,7 +25,7 @@ COPY package*.json ./
 RUN npm install --omit=dev --legacy-peer-deps
 
 # Copy compiled backend JS from stage 2
-COPY --from=backend-build /app/dist/src/backend ./dist/src//backend
+COPY --from=backend-build /app/dist/src/backend ./dist/src/backend
 
 # Copy built React frontend from stage 1 into public/
 COPY --from=build /app/dist ./public
