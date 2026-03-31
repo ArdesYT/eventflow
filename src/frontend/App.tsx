@@ -26,7 +26,7 @@ interface AppProps {
   error: string | null;
   user: User;
   onLogout: () => void;
-  onCreate: (body: object) => Promise<void>;
+  onCreate: (body: CreateSessionBody) => Promise<void>;  // was: object
   onDelete: (id: number) => Promise<void>;
 }
 

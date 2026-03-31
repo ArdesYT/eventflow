@@ -1,57 +1,52 @@
 export type EventColor = 'blue' | 'amber' | 'green' | 'red';
-
 export type ViewType = 'calendar' | 'sessions' | 'agenda' | 'stats';
+export type UserRole = 'booker' | 'attendee';
 
-// ── Raw DB columns in the sessions table ──────────────────────────────────────
+// --- Adatbázis Nyers Sorok ---
 export interface SessionRow {
   id: number;
   title: string;
   description?: string;
-  start_time: string;   // stored as datetime or HH:MM string
-  end_time: string;
+  start_time: string;   // DB: "YYYY-MM-DD HH:mm:ss"
+  end_time: string;     // DB: "YYYY-MM-DD HH:mm:ss"
   room_id: number;
   speaker_id: number;
   color: EventColor;
 }
 
-// ── Joined shape returned by GET /api/sessions ────────────────────────────────
-// Adds room_name + speaker_name via LEFT JOIN, plus a plain date string
-// that the frontend uses for calendar grouping.
+// --- Frontend Kibővített Modell ---
 export interface Session extends SessionRow {
-  date: string;         // YYYY-MM-DD (parsed from start_time, or its own DB column)
-  room_name: string;
-  speaker_name: string;
+  date: string;         // Segédmező: "YYYY-MM-DD"
+  room_name: string;    // JOIN-olt érték
+  speaker_name: string; // JOIN-olt érték
 }
 
-// ── Data the frontend submits when creating a booking ─────────────────────────
+// --- Foglalási Form Adatok ---
 export interface BookingFormData {
   title: string;
   description: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  room_id: number;      // FK — sent to the DB
-  speaker_id: number;   // FK — sent to the DB
-  room_name: string;    // for optimistic UI update only, not written to DB
-  speaker_name: string; // for optimistic UI update only, not written to DB
+  date: string;         // HTML date inputhoz
+  start_time: string;   // HTML time inputhoz ("HH:mm")
+  end_time: string;     // HTML time inputhoz ("HH:mm")
+  room_id: number;
+  speaker_id: number;
+  room_name: string;
+  speaker_name: string;
   color: EventColor;
 }
 
-// ── Subset actually written to the DB by POST /api/sessions ──────────────────
+// --- API Payload (Amit a POST/PUT küld) ---
 export interface CreateSessionBody {
   title: string;
   description?: string;
-  start_time: string;
+  start_time: string;   // Már összefűzve: "YYYY-MM-DD HH:mm:ss"
   end_time: string;
   room_id: number;
   speaker_id: number;
   color: EventColor;
 }
 
-
-// ── Auth ──────────────────────────────────────────────
-export type UserRole = 'booker' | 'attendee';
-
+// --- Felhasználói Típusok ---
 export interface User {
   id: number;
   name: string;
@@ -59,22 +54,21 @@ export interface User {
   role: UserRole;
 }
 
-export interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-}
-
 export interface LoginCredentials {
   email: string;
-  password: string;
+  password?: string;
 }
 
-export interface AppProps {
-  initialUser: User; // Ensure 'User' is imported from your types file
+// --- Naptár Specifikus Típusok ---
+export interface CalendarDay {
+  date: Date;
+  isCurrentMonth: boolean;
+  isToday: boolean;
   sessions: Session[];
-  loading: boolean;
-  error: string | null;
-  onCreate: (body: CreateSessionBody) => Promise<void>; // Use CreateSessionBody, not object
-  onDelete: (id: number) => Promise<void>;
-  onLogout: () => void;
+}
+
+export interface NavItem {
+  view: ViewType;
+  icon: string;
+  label: string;
 }

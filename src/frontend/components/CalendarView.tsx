@@ -26,7 +26,7 @@ export default function CalendarView({
   curMonth, curYear, sessions, selectedDate,
   onSelectDay, onEventClick, onNavigate, onToday,
 }: CalendarViewProps) {
-  const today = new Date(2026, 2, 20);
+  const today = new Date();
   const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
   let startDow = new Date(curYear, curMonth, 1).getDay() - 1;
   if (startDow < 0) startDow = 6;
