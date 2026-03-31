@@ -15,6 +15,9 @@ RUN npm install --legacy-peer-deps
 COPY src/backend ./src/backend
 RUN npx tsc --project tsconfig.backend.json
 
+# DEBUG: print compiled output so we can see what was actually generated
+RUN find /app/dist -type f
+
 # Stage 3: Production image
 FROM node:22-alpine
 RUN apk add --no-cache python3 make g++
@@ -23,13 +26,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev --legacy-peer-deps
 
-# Copy compiled backend JS from stage 2
 COPY --from=backend-build /app/dist/backend ./dist/backend
-
-# Copy built React frontend from stage 1 into public/
 COPY --from=build /app/dist ./public
+
+# DEBUG: verify files exist and test module load
+RUN find /app/dist -type f
+RUN node -e "require('./dist/backend/server.js')" || true
 
 ENV PORT=8080
 EXPOSE 8080
-
-CMD ["sh", "-c", "node dist/backend/server.js 2>&1; echo 'EXIT:' $?; sleep 3600"]
+CMD ["node", "dist/backend/server.js"]
