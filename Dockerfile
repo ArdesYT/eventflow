@@ -2,7 +2,7 @@
 FROM node:18-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 COPY . .
 RUN npm run build
 
@@ -11,7 +11,7 @@ FROM node:18-alpine AS backend-build
 WORKDIR /app
 COPY package*.json ./
 COPY tsconfig*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 COPY src/backend ./src/backend
 RUN npx tsc --project tsconfig.json || npx tsc --skipLibCheck
 
@@ -21,7 +21,7 @@ WORKDIR /app
 
 # Install production dependencies only
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm install --omit=dev --legacy-peer-deps
 
 # Copy compiled backend JS from stage 2
 COPY --from=backend-build /app/dist/backend ./dist/backend
@@ -33,5 +33,4 @@ COPY --from=build /app/dist ./public
 ENV PORT=8080
 EXPOSE 8080
 
-# Serve static React files from Express and run compiled JS (no ts-node needed)
 CMD ["node", "dist/backend/server.js"]
