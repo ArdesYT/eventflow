@@ -6,7 +6,7 @@
  *   npx tsc seed-passwords.ts && node seed-passwords.js
  */
 import * as mariadb from 'mariadb';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 
 dotenv.config();
