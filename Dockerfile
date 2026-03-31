@@ -19,6 +19,7 @@ RUN npx tsc --project tsconfig.backend.json
 FROM node:22-alpine
 RUN apk add --no-cache python3 make g++
 WORKDIR /app
+
 COPY package*.json ./
 RUN npm install --omit=dev --legacy-peer-deps
 
@@ -27,6 +28,9 @@ COPY --from=backend-build /app/dist/backend ./dist/backend
 
 # Copy built React frontend from stage 1 into public/
 COPY --from=build /app/dist ./public
+
+# DEBUG: test module loads at build time to surface import errors
+RUN node -e "require('./dist/backend/server.js')" || true
 
 ENV PORT=8080
 EXPOSE 8080
