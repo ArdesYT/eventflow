@@ -4,7 +4,7 @@ import LoginPage from './components/LoginPage';
 import PublicEventsPage from './components/PublicEventsPage';
 import App from './App';
 
-const API = 'http://localhost:3000';
+const API = import.meta.env.VITE_API_URL ?? '';
 const USER_KEY = 'ef_user';
 
 export default function Root() {
