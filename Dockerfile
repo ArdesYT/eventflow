@@ -1,5 +1,5 @@
 # Stage 1: Build the React frontend
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Compile TypeScript backend
-FROM node:20-alpine AS backend-build
+FROM node:22-alpine AS backend-build
 WORKDIR /app
 COPY package*.json ./
 COPY tsconfig*.json ./
@@ -16,7 +16,7 @@ COPY src/backend ./src/backend
 RUN npx tsc --project tsconfig.json || npx tsc --skipLibCheck
 
 # Stage 3: Production image
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 
 # Install production dependencies only
