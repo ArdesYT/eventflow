@@ -16,7 +16,7 @@ COPY src/backend ./src/backend
 RUN npx tsc --project tsconfig.json || npx tsc --skipLibCheck
 
 # Stage 3: Production image
-FROM node:18-alpine
+FROM node:20-alpine
 WORKDIR /app
 
 # Install production dependencies only
