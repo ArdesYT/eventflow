@@ -211,7 +211,5 @@ app.get('*', (_req: Request, res: Response) => {
     res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
-const PORT = Number(process.env.PORT) || 8080;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 EventFlow fut: http://0.0.0.0:${PORT}`);
-});
+const port = process.env.PORT ?? 8080;
+    app.listen(port, () => console.log(`Listening on ${port}`));
