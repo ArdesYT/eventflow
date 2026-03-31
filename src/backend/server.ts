@@ -5,30 +5,33 @@ import type { Pool, PoolConnection } from 'mariadb';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
+import path from 'path';
 import type { Session } from './types';
 
 dotenv.config();
 
 const app = express();
 
+// In production (Back4App) the React app is served from the same origin,
+// so we allow the CLIENT_URL env var or fall back to all origins in dev.
 app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
 app.use(express.json());
 
+// Serve the compiled React frontend from the /public folder
+const PUBLIC_DIR = path.join(__dirname, '../../public');
+app.use(express.static(PUBLIC_DIR));
+
 const pool: Pool = mariadb.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    port: Number(process.env.DB_PORT) || 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASS || '',
-    database: process.env.DB_NAME || 'eventflow',
+    host:            process.env.DB_HOST     || 'localhost',
+    port:            Number(process.env.DB_PORT) || 3306,
+    user:            process.env.DB_USER     || 'root',
+    password:        process.env.DB_PASS     || '',
+    database:        process.env.DB_NAME     || 'eventflow',
     connectionLimit: 5,
-    // Removed timezone: 'Z' — it was shifting local DATETIME values to UTC,
-    // causing sessions to appear on the wrong day or not match calendar dates.
 });
 
 // --- SEGÉDFÜGGVÉNYEK ---
 
-// MariaDB DATETIME columns come back as JS Date objects.
-// Convert to plain "YYYY-MM-DD HH:mm:ss" using local values (no timezone shift).
 function formatDatetime(d: Date): string {
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -63,7 +66,7 @@ app.get('/api/sessions', async (_req: Request, res: Response) => {
                 ...row,
                 start_time: formatDatetime(start),
                 end_time:   formatDatetime(end),
-                date:       formatDate(start), // derived field for frontend calendar grouping
+                date:       formatDate(start),
             };
         });
 
@@ -203,12 +206,12 @@ app.delete('/api/sessions/:id', async (req: Request, res: Response) => {
     }
 });
 
-// Szerver indítása
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`
-    🚀 EventFlow Backend fut!
-    🌍 URL: http://localhost:${PORT}
-    📅 Dátum: ${new Date().toLocaleString('hu-HU')}
-    `);
+// Catch-all: send React's index.html for any non-API route (client-side routing)
+app.get('*', (_req: Request, res: Response) => {
+    res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+});
+
+const PORT = Number(process.env.PORT) || 8080;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 EventFlow fut: http://0.0.0.0:${PORT}`);
 });
