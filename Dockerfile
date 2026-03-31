@@ -29,10 +29,7 @@ COPY --from=backend-build /app/dist/backend ./dist/backend
 # Copy built React frontend from stage 1 into public/
 COPY --from=build /app/dist ./public
 
-# DEBUG: test module loads at build time to surface import errors
-RUN node -e "require('./dist/backend/server.js')" || true
-
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["node", "dist/backend/server.js"]
+CMD ["sh", "-c", "node dist/backend/server.js 2>&1; echo 'EXIT:' $?; sleep 3600"]
