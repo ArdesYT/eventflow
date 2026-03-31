@@ -12,10 +12,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig*.json ./
 RUN npm install --legacy-peer-deps
-# Copy full src so tsconfig paths resolve correctly
-COPY src ./src
-# Use tsconfig for esModuleInterop etc, but force outDir so output path is predictable
-RUN npx tsc --project tsconfig.json --skipLibCheck --outDir /app/dist/backend --noEmit false
+COPY src/backend ./src/backend
+RUN npx tsc --project tsconfig.backend.json
 
 # Stage 3: Production image
 FROM node:22-alpine
@@ -25,7 +23,7 @@ COPY package*.json ./
 RUN npm install --omit=dev --legacy-peer-deps
 
 # Copy compiled backend JS from stage 2
-COPY --from=backend-build /app/dist/src/backend ./dist/src/backend
+COPY --from=backend-build /app/dist/backend ./dist/backend
 
 # Copy built React frontend from stage 1 into public/
 COPY --from=build /app/dist ./public
