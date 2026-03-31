@@ -13,13 +13,13 @@ COPY package*.json ./
 COPY tsconfig*.json ./
 RUN npm install --legacy-peer-deps
 COPY src/backend ./src/backend
-RUN npx tsc --project tsconfig.json || npx tsc --skipLibCheck
+# Compile with explicit outDir so we always know where the JS lands
+RUN npx tsc --skipLibCheck --outDir /app/dist/backend --rootDir src/backend src/backend/*.ts
 
 # Stage 3: Production image
 FROM node:22-alpine
 WORKDIR /app
 
-# Install production dependencies only
 COPY package*.json ./
 RUN npm install --omit=dev --legacy-peer-deps
 
@@ -29,7 +29,6 @@ COPY --from=backend-build /app/dist/backend ./dist/backend
 # Copy built React frontend from stage 1 into public/
 COPY --from=build /app/dist ./public
 
-# Back4App injects PORT at runtime — default to 8080
 ENV PORT=8080
 EXPOSE 8080
 
