@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { User, Session, CreateSessionBody } from '../backend/types';
+import type { User, Session, CreateSessionBody, LoginCredentials } from '../backend/types';
 import LoginPage from './components/LoginPage';
 import PublicEventsPage from './components/PublicEventsPage';
 import App from './App';
@@ -47,7 +47,7 @@ export default function Root() {
     setUser(u);
   }
 
-  async function handleLogin(credentials: any): Promise<User> {
+  async function handleLogin(credentials: LoginCredentials): Promise<User> {
     const res = await fetch(`${API}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
