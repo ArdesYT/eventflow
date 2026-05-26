@@ -1,4 +1,5 @@
 import type { Session, User } from '../../backend/types';
+import { formatDayHeader, isTodayDateKey } from '../lib/sessionFormat';
 
 interface PublicEventsPageProps {
   sessions: Session[];
@@ -25,12 +26,6 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-function isValidDateString(value: string): boolean {
-  if (!value) return false;
-  const d = new Date(value);
-  return !Number.isNaN(d.getTime());
-}
-
 export default function PublicEventsPage({
   sessions,
   loading,
@@ -38,9 +33,7 @@ export default function PublicEventsPage({
   user,
   onLogout,
 }: PublicEventsPageProps) {
-  const cleaned = sessions.filter((s) => isValidDateString(s.date));
-
-  const upcoming = [...cleaned].sort((a, b) =>
+  const upcoming = [...sessions].sort((a, b) =>
     (a.date + a.start_time).localeCompare(b.date + b.start_time),
   );
 
@@ -51,7 +44,6 @@ export default function PublicEventsPage({
   });
 
   const sortedDates = Object.keys(grouped).sort();
-
   const totalSessions = upcoming.length;
   const uniqueDays = sortedDates.length;
 
@@ -111,31 +103,20 @@ export default function PublicEventsPage({
         )}
 
         {sortedDates.map((ds) => {
-          const dateObj = new Date(ds);
-          const isToday =
-            isValidDateString(ds) &&
-            new Date().toDateString() === dateObj.toDateString();
-          const dayNum = dateObj.getDate();
-          const monthShort = dateObj
-            .toLocaleDateString('hu-HU', { month: 'short' })
-            .toUpperCase();
-          const weekday = dateObj.toLocaleDateString('hu-HU', {
-            weekday: 'long',
-          });
+          const header = formatDayHeader(ds);
+          const isToday = isTodayDateKey(ds);
 
           return (
             <section key={ds} className="public-day">
               <header className="public-day-header">
                 <div
-                  className={
-                    'public-day-circle' + (isToday ? ' today' : '')
-                  }
+                  className={'public-day-circle' + (isToday ? ' today' : '')}
                 >
-                  {dayNum}
+                  {header.dayNum}
                 </div>
                 <div>
                   <div className="public-day-label">
-                    {weekday}, {monthShort} {dayNum}.
+                    {header.weekday}, {header.monthShort} {header.dayNum}.
                   </div>
                   {isToday && (
                     <div className="public-day-today-tag">Mai programok</div>
@@ -148,7 +129,7 @@ export default function PublicEventsPage({
                   <article key={ev.id} className="public-session-card">
                     <div
                       className="public-session-accent"
-                      style={{ background: ACCENT[ev.color] }}
+                      style={{ background: ACCENT[ev.color] ?? ACCENT.blue }}
                     />
                     <div className="public-session-time">
                       <div className="public-time-start">{ev.start_time}</div>
@@ -165,15 +146,15 @@ export default function PublicEventsPage({
                         </div>
                         <div
                           className="public-session-room"
-                          style={{ background: ACCENT[ev.color] + '22' }}
+                          style={{
+                            background: (ACCENT[ev.color] ?? ACCENT.blue) + '22',
+                          }}
                         >
                           {ev.room_name}
                         </div>
                       </div>
                       {ev.description && (
-                        <p className="public-session-desc">
-                          {ev.description}
-                        </p>
+                        <p className="public-session-desc">{ev.description}</p>
                       )}
                     </div>
                   </article>

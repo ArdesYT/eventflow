@@ -1,27 +1,24 @@
 import express from 'express';
 import type { Request, Response } from 'express';
-import * as mariadb from 'mariadb'; // Így lesz jó a 3. sor!
-// Pool helyett PoolConnection-t is importálunk
+import * as mariadb from 'mariadb';
 import type { Pool, PoolConnection } from 'mariadb';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
-import type { Session } from './types'; // Feltételezve, hogy a types.ts létezik
+import type { Session } from './types';
 
 dotenv.config();
 
 const app = express();
 
-// Middleware-ek
 app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
 app.use(express.json());
 
-// MariaDB Kapcsolati Pool konfiguráció
 const pool: Pool = mariadb.createPool({
     host: process.env.DB_HOST || 'localhost',
     port: Number(process.env.DB_PORT) || 3306,
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASS || '', // XAMPP esetén üres
+    password: process.env.DB_PASS || '',
     database: process.env.DB_NAME || 'eventflow',
     connectionLimit: 5,
     timezone: 'Z'
@@ -29,10 +26,15 @@ const pool: Pool = mariadb.createPool({
 
 // --- API VÉGPONTOK ---
 
-// 1. Összes előadás lekérése (Látogatói modul)
+// 1. Összes előadás lekérése
+// Helper: Date object -> "YYYY-MM-DD HH:mm:ss"
+function formatDatetime(d: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 app.get('/api/sessions', async (_req: Request, res: Response) => {
-    // Connection helyett PoolConnection
-let conn: PoolConnection | undefined;
+    let conn: PoolConnection | undefined;
     try {
         conn = await pool.getConnection();
         const query = `
@@ -40,10 +42,25 @@ let conn: PoolConnection | undefined;
             FROM sessions s
             LEFT JOIN rooms r ON s.room_id = r.id
             LEFT JOIN speakers sp ON s.speaker_id = sp.id
+            WHERE s.start_time != '0000-00-00 00:00:00'
             ORDER BY s.start_time ASC
         `;
-        const rows: Session[] = await conn.query(query);
-        res.json(rows);
+        const rows: any[] = await conn.query(query);
+
+        // MariaDB returns DATETIME columns as JS Date objects.
+        // Convert them to plain strings so the frontend gets consistent
+        // "YYYY-MM-DD HH:mm:ss" values instead of ISO timestamps.
+        const formatted = rows.map(row => ({
+            ...row,
+            start_time: row.start_time instanceof Date ? formatDatetime(row.start_time) : row.start_time,
+            end_time:   row.end_time   instanceof Date ? formatDatetime(row.end_time)   : row.end_time,
+            // Derive the date string the frontend uses for calendar grouping
+            date: row.start_time instanceof Date
+                ? `${row.start_time.getFullYear()}-${String(row.start_time.getMonth() + 1).padStart(2, '0')}-${String(row.start_time.getDate()).padStart(2, '0')}`
+                : (row.start_time as string).slice(0, 10),
+        }));
+
+        res.json(formatted);
     } catch (err) {
         console.error("Lekérdezési hiba:", err);
         res.status(500).json({ message: "Nem sikerült lekérni az előadásokat." });
@@ -52,7 +69,7 @@ let conn: PoolConnection | undefined;
     }
 });
 
-// 2. Regisztráció (Auth modul)
+// 2. Regisztráció
 app.post('/api/auth/register', async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
 
@@ -60,18 +77,15 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
         return res.status(400).json({ message: "Hiányzó adatok!" });
     }
 
-    // Connection helyett PoolConnection
     let conn: PoolConnection | undefined;
     try {
         conn = await pool.getConnection();
 
-        // Email ellenőrzése
         const existing = await conn.query("SELECT id FROM users WHERE email = ?", [email]);
         if (existing.length > 0) {
             return res.status(409).json({ message: "Ez az email már regisztrálva van!" });
         }
 
-        // Jelszó hashelése
         const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 10;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
@@ -89,24 +103,87 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
     }
 });
 
-// 3. Új előadás hozzáadása (Admin modul)
-app.post('/api/sessions', async (req: Request<{}, {}, Session>, res: Response) => {
-    const { title, description, start_time, end_time, room_id, speaker_id } = req.body;
+// 3. Bejelentkezés
+app.post('/api/auth/login', async (req: Request, res: Response) => {
+    const { email, password } = req.body;
 
-    // Connection helyett PoolConnection
+    if (!email || !password) {
+        return res.status(400).json({ message: "Hiányzó adatok!" });
+    }
+
+    let conn: PoolConnection | undefined;
+    try {
+        conn = await pool.getConnection();
+
+        const rows = await conn.query("SELECT * FROM users WHERE email = ?", [email]);
+        if (rows.length === 0) {
+            return res.status(401).json({ message: "Hibás email vagy jelszó!" });
+        }
+
+        const user = rows[0];
+        const match = await bcrypt.compare(password, user.password_hash);
+        if (!match) {
+            return res.status(401).json({ message: "Hibás email vagy jelszó!" });
+        }
+
+        const { password_hash, ...safeUser } = user;
+        res.json(safeUser);
+    } catch (err) {
+        console.error("Bejelentkezési hiba:", err);
+        res.status(500).json({ message: "Szerver hiba." });
+    } finally {
+        if (conn) conn.release();
+    }
+});
+
+// 4. Új előadás hozzáadása
+app.post('/api/sessions', async (req: Request<{}, {}, Session>, res: Response) => {
+    const { title, description, start_time, end_time, room_id, speaker_id, color } = req.body;
+
+    if (!title || !start_time || !end_time) {
+        return res.status(400).json({ message: "Hiányzó kötelező adatok!" });
+    }
+
+    // Érvénytelen dátum ellenőrzése
+    if (start_time.startsWith('0000') || end_time.startsWith('0000')) {
+        return res.status(400).json({ message: "Érvénytelen dátum!" });
+    }
+
     let conn: PoolConnection | undefined;
     try {
         conn = await pool.getConnection();
         const sql = `
-            INSERT INTO sessions (title, description, start_time, end_time, room_id, speaker_id) 
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO sessions (title, description, start_time, end_time, room_id, speaker_id, color) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
-        const result = await conn.query(sql, [title, description, start_time, end_time, room_id, speaker_id]);
-        
+        const result = await conn.query(sql, [title, description ?? '', start_time, end_time, room_id, speaker_id, color ?? 'blue']);
+
         res.status(201).json({ id: result.insertId.toString(), message: "Előadás létrehozva!" });
     } catch (err) {
         console.error("Admin mentési hiba:", err);
         res.status(500).json({ message: "Szerver hiba az előadás mentésekor." });
+    } finally {
+        if (conn) conn.release();
+    }
+});
+
+// 5. Előadás törlése
+app.delete('/api/sessions/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    let conn: PoolConnection | undefined;
+    try {
+        conn = await pool.getConnection();
+        const result = await conn.query("DELETE FROM sessions WHERE id = ?", [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Az előadás nem található." });
+        }
+
+        res.json({ message: "Előadás törölve." });
+    } catch (err) {
+        console.error("Törlési hiba:", err);
+        res.status(500).json({ message: "Szerver hiba a törlés során." });
     } finally {
         if (conn) conn.release();
     }

@@ -1,4 +1,4 @@
-import type { Session } from '../../Backend/types';
+import type { Session } from '../../backend/types';
 
 interface SessionsViewProps {
   sessions: Session[];

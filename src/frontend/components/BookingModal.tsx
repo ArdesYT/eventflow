@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { BookingFormData, EventColor } from '../../Backend/types';
+import type { BookingFormData, EventColor } from '../../backend/types';
 
 interface BookingModalProps {
   saving?: boolean;
