@@ -5,7 +5,36 @@ import type { Pool, PoolConnection } from 'mariadb';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
-import type { Session } from './types';
+import type { Session, UserRole } from './types';
+
+const VALID_ROLES: UserRole[] = ['admin', 'booker', 'attendee'];
+
+async function requireAdmin(
+    req: Request,
+    res: Response,
+): Promise<{ id: number; role: string } | null> {
+    const userId = Number(req.headers['x-user-id']);
+    if (!userId) {
+        res.status(401).json({ message: 'Bejelentkezés szükséges.' });
+        return null;
+    }
+
+    let conn: PoolConnection | undefined;
+    try {
+        conn = await pool.getConnection();
+        const rows = await conn.query(
+            'SELECT id, role FROM users WHERE id = ?',
+            [userId],
+        );
+        if (!rows.length || rows[0].role !== 'admin') {
+            res.status(403).json({ message: 'Csak adminisztrátorok számára.' });
+            return null;
+        }
+        return rows[0];
+    } finally {
+        if (conn) conn.release();
+    }
+}
 
 dotenv.config();
 
@@ -152,11 +181,28 @@ app.post('/api/sessions', async (req: Request<{}, {}, Session>, res: Response) =
     let conn: PoolConnection | undefined;
     try {
         conn = await pool.getConnection();
+        // If the provided speaker_id does not match a speakers row, try to
+        // create a speaker from the provided speaker_name (if any). This
+        // allows using a user id/name as the booker without failing FK.
+        let finalSpeakerId = speaker_id;
+        if (speaker_id) {
+            const rows = await conn.query('SELECT id FROM speakers WHERE id = ?', [speaker_id]);
+            if (!rows.length) {
+                // try to create from speaker_name in the body
+                const providedName = (req.body as any).speaker_name;
+                if (providedName) {
+                    const r = await conn.query('INSERT INTO speakers (name) VALUES (?)', [providedName]);
+                    finalSpeakerId = r.insertId;
+                } else {
+                    finalSpeakerId = 1; // fallback to default speaker id
+                }
+            }
+        }
         const sql = `
             INSERT INTO sessions (title, description, start_time, end_time, room_id, speaker_id, color) 
             VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
-        const result = await conn.query(sql, [title, description ?? '', start_time, end_time, room_id, speaker_id, color ?? 'blue']);
+        const result = await conn.query(sql, [title, description ?? '', start_time, end_time, room_id, finalSpeakerId, color ?? 'blue']);
 
         res.status(201).json({ id: result.insertId.toString(), message: "Előadás létrehozva!" });
     } catch (err) {
@@ -167,7 +213,51 @@ app.post('/api/sessions', async (req: Request<{}, {}, Session>, res: Response) =
     }
 });
 
-// 5. Előadás törlése
+// 5. Előadás frissítése
+app.patch('/api/sessions/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { title, description, start_time, end_time, room_id, speaker_id, color } = req.body as Session;
+
+    if (!title || !start_time || !end_time) {
+        return res.status(400).json({ message: "Hiányzó kötelező adatok!" });
+    }
+
+    let conn: PoolConnection | undefined;
+    try {
+        conn = await pool.getConnection();
+        // If speaker_id doesn't match, allow creating a speaker from speaker_name
+        let finalSpeakerId = speaker_id;
+        if (speaker_id) {
+            const rows = await conn.query('SELECT id FROM speakers WHERE id = ?', [speaker_id]);
+            if (!rows.length) {
+                const providedName = (req.body as any).speaker_name;
+                if (providedName) {
+                    const r = await conn.query('INSERT INTO speakers (name) VALUES (?)', [providedName]);
+                    finalSpeakerId = r.insertId;
+                } else {
+                    finalSpeakerId = 1; // fallback to default speaker id
+                }
+            }
+        }
+        const result = await conn.query(
+            'UPDATE sessions SET title = ?, description = ?, start_time = ?, end_time = ?, room_id = ?, speaker_id = ?, color = ? WHERE id = ?',
+            [title, description ?? '', start_time, end_time, room_id, finalSpeakerId, color ?? 'blue', id],
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Az előadás nem található." });
+        }
+
+        res.json({ message: "Előadás frissítve." });
+    } catch (err) {
+        console.error("Frissítési hiba:", err);
+        res.status(500).json({ message: "Szerver hiba az előadás frissítésekor." });
+    } finally {
+        if (conn) conn.release();
+    }
+});
+
+// 6. Előadás törlése
 app.delete('/api/sessions/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -184,6 +274,90 @@ app.delete('/api/sessions/:id', async (req: Request, res: Response) => {
     } catch (err) {
         console.error("Törlési hiba:", err);
         res.status(500).json({ message: "Szerver hiba a törlés során." });
+    } finally {
+        if (conn) conn.release();
+    }
+});
+
+// 6. Admin — felhasználók listázása
+app.get('/api/admin/users', async (req: Request, res: Response) => {
+    if (!(await requireAdmin(req, res))) return;
+
+    let conn: PoolConnection | undefined;
+    try {
+        conn = await pool.getConnection();
+        const rows = await conn.query(
+            'SELECT id, name, email, role FROM users ORDER BY id ASC',
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Admin users list error:', err);
+        res.status(500).json({ message: 'Nem sikerült lekérni a felhasználókat.' });
+    } finally {
+        if (conn) conn.release();
+    }
+});
+
+// 7. Admin — felhasználó szerepkör módosítása
+app.patch('/api/admin/users/:id', async (req: Request, res: Response) => {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const { id } = req.params;
+    const { role } = req.body as { role?: string };
+
+    if (!role || !VALID_ROLES.includes(role as UserRole)) {
+        return res.status(400).json({ message: 'Érvénytelen szerepkör.' });
+    }
+
+    if (Number(id) === admin.id && role !== 'admin') {
+        return res.status(400).json({ message: 'Saját admin jogosultság nem vonható vissza.' });
+    }
+
+    let conn: PoolConnection | undefined;
+    try {
+        conn = await pool.getConnection();
+        const result = await conn.query(
+            'UPDATE users SET role = ? WHERE id = ?',
+            [role, id],
+        );
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Felhasználó nem található.' });
+        }
+        const rows = await conn.query(
+            'SELECT id, name, email, role FROM users WHERE id = ?',
+            [id],
+        );
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Admin user update error:', err);
+        res.status(500).json({ message: 'Nem sikerült frissíteni a felhasználót.' });
+    } finally {
+        if (conn) conn.release();
+    }
+});
+
+// 8. Admin — felhasználó törlése
+app.delete('/api/admin/users/:id', async (req: Request, res: Response) => {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const { id } = req.params;
+    if (Number(id) === admin.id) {
+        return res.status(400).json({ message: 'Saját fiók nem törölhető.' });
+    }
+
+    let conn: PoolConnection | undefined;
+    try {
+        conn = await pool.getConnection();
+        const result = await conn.query('DELETE FROM users WHERE id = ?', [id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Felhasználó nem található.' });
+        }
+        res.json({ message: 'Felhasználó törölve.' });
+    } catch (err) {
+        console.error('Admin user delete error:', err);
+        res.status(500).json({ message: 'Nem sikerült törölni a felhasználót.' });
     } finally {
         if (conn) conn.release();
     }

@@ -1,5 +1,6 @@
 import type { Session } from '../../backend/types';
 import AgendaView from './AgendaView';
+import { useI18n } from '../i18n/I18nProvider';
 
 interface StatsViewProps {
   sessions: Session[];
@@ -8,24 +9,27 @@ interface StatsViewProps {
 }
 
 function toDateStr(y: number, m: number, d: number): string {
-  return `${y}-${String(m + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
 export default function StatsView({ sessions, onEventClick, onDelete }: StatsViewProps) {
-  const today = new Date(2026, 2, 20);
+  const { t } = useI18n();
+  const today = new Date();
   const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
 
-  const uniqueRooms    = new Set(sessions.map(s => s.room_name)).size;
-  const uniqueSpeakers = new Set(sessions.map(s => s.speaker_name)).size;
-  const uniqueDays     = new Set(sessions.map(s => s.date)).size;
+  const uniqueRooms = new Set(sessions.map((s) => s.room_name)).size;
+  const uniqueSpeakers = new Set(sessions.map((s) => s.speaker_name)).size;
+  const uniqueDays = new Set(sessions.map((s) => s.date)).size;
 
   const roomCount: Record<string, number> = {};
-  sessions.forEach(s => { roomCount[s.room_name] = (roomCount[s.room_name] ?? 0) + 1; });
+  sessions.forEach((s) => {
+    roomCount[s.room_name] = (roomCount[s.room_name] ?? 0) + 1;
+  });
   const sortedRooms = Object.entries(roomCount).sort((a, b) => b[1] - a[1]);
   const maxCount = sortedRooms[0]?.[1] ?? 1;
 
   const upcoming = sessions
-    .filter(s => s.date >= todayStr)
+    .filter((s) => s.date >= todayStr)
     .sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time))
     .slice(0, 5);
 
@@ -33,43 +37,50 @@ export default function StatsView({ sessions, onEventClick, onDelete }: StatsVie
     <>
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-label">Total Sessions</div>
+          <div className="stat-label">{t('stats.totalSessions')}</div>
           <div className="stat-value">{sessions.length}</div>
-          <div className="stat-sub">Across all rooms</div>
+          <div className="stat-sub">{t('stats.totalSessionsSub')}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Rooms Used</div>
+          <div className="stat-label">{t('stats.roomsUsed')}</div>
           <div className="stat-value">{uniqueRooms}</div>
-          <div className="stat-sub">Active venues</div>
+          <div className="stat-sub">{t('stats.roomsUsedSub')}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Speakers</div>
+          <div className="stat-label">{t('stats.speakers')}</div>
           <div className="stat-value">{uniqueSpeakers}</div>
-          <div className="stat-sub">Unique presenters</div>
+          <div className="stat-sub">{t('stats.speakersSub')}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Event Days</div>
+          <div className="stat-label">{t('stats.eventDays')}</div>
           <div className="stat-value">{uniqueDays}</div>
-          <div className="stat-sub">This month</div>
+          <div className="stat-sub">{t('stats.eventDaysSub')}</div>
         </div>
       </div>
 
-      <div className="section-title">Sessions by Room</div>
+      <div className="section-title">{t('stats.byRoom')}</div>
       <div className="room-bar-container">
         {sortedRooms.map(([room, count]) => (
           <div key={room} className="bar-row">
             <div className="bar-row-header">
               <span className="bar-room-name">{room}</span>
-              <span className="bar-count">{count} session{count > 1 ? 's' : ''}</span>
+              <span className="bar-count">
+                {count === 1
+                  ? t('stats.sessionCount', { count })
+                  : t('stats.sessionCount_plural', { count })}
+              </span>
             </div>
             <div className="bar-track">
-              <div className="bar-fill" style={{ width: `${Math.round(count / maxCount * 100)}%` }} />
+              <div
+                className="bar-fill"
+                style={{ width: `${Math.round((count / maxCount) * 100)}%` }}
+              />
             </div>
           </div>
         ))}
       </div>
 
-      <div className="section-title">Upcoming Sessions</div>
+      <div className="section-title">{t('stats.upcoming')}</div>
       <AgendaView sessions={upcoming} onEventClick={onEventClick} onDelete={onDelete} />
     </>
   );

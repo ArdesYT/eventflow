@@ -1,4 +1,5 @@
 import type { Session } from '../../backend/types';
+import { LOCALE_BCP47, type Locale } from '../i18n/locales';
 
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MYSQL_DT = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/;
@@ -66,7 +67,8 @@ export function normalizeSession(raw: Record<string, unknown>): Session | null {
   };
 }
 
-export function formatDayHeader(dateKey: string, locale = 'hu-HU') {
+export function formatDayHeader(dateKey: string, locale: Locale = 'hu') {
+  const bcp47 = LOCALE_BCP47[locale];
   const match = DATE_ONLY.exec(dateKey);
   if (!match) {
     return { dayNum: 0, weekday: '', monthShort: '', isValid: false };
@@ -79,8 +81,8 @@ export function formatDayHeader(dateKey: string, locale = 'hu-HU') {
 
   return {
     dayNum: d,
-    weekday: date.toLocaleDateString(locale, { weekday: 'long' }),
-    monthShort: date.toLocaleDateString(locale, { month: 'short' }).toUpperCase(),
+    weekday: date.toLocaleDateString(bcp47, { weekday: 'long' }),
+    monthShort: date.toLocaleDateString(bcp47, { month: 'short' }).toUpperCase(),
     isValid: true,
   };
 }

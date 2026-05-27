@@ -2,6 +2,8 @@ export type EventColor = 'blue' | 'amber' | 'green' | 'red';
 
 export type ViewType = 'calendar' | 'sessions' | 'agenda' | 'stats';
 
+export type AdminViewType = 'overview' | 'users' | 'sessions' | 'rooms';
+
 // ── Raw DB columns in the sessions table ──────────────────────────────────────
 export interface SessionRow {
   id: number;
@@ -45,12 +47,13 @@ export interface CreateSessionBody {
   end_time: string;
   room_id: number;
   speaker_id: number;
+  speaker_name?: string;
   color: EventColor;
 }
 
 
 // ── Auth ──────────────────────────────────────────────
-export type UserRole = 'booker' | 'attendee';
+export type UserRole = 'admin' | 'booker' | 'attendee';
 
 export interface User {
   id: number;

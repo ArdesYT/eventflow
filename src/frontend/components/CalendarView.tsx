@@ -1,4 +1,7 @@
+import type { ReactNode } from 'react';
 import type { Session } from '../../backend/types';
+import { useI18n } from '../i18n/I18nProvider';
+import { formatMonthYear, getWeekdayLabels } from '../i18n/dateFormat';
 
 interface CalendarViewProps {
   curMonth: number;
@@ -11,34 +14,36 @@ interface CalendarViewProps {
   onToday: () => void;
 }
 
-const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December',
-];
-const DAY_LABELS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-
 function toDateStr(y: number, m: number, d: number): string {
-  return `${y}-${String(m + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
 export default function CalendarView({
-  curMonth, curYear, sessions, selectedDate,
-  onSelectDay, onEventClick, onNavigate, onToday,
+  curMonth,
+  curYear,
+  sessions,
+  selectedDate,
+  onSelectDay,
+  onEventClick,
+  onNavigate,
+  onToday,
 }: CalendarViewProps) {
-  const today = new Date(2026, 2, 20);
+  const { t, locale } = useI18n();
+  const today = new Date();
+  const dayLabels = getWeekdayLabels(locale);
   const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
   let startDow = new Date(curYear, curMonth, 1).getDay() - 1;
   if (startDow < 0) startDow = 6;
 
-  const getSessionsForDate = (ds: string) => sessions.filter(s => s.date === ds);
-  const cells: JSX.Element[] = [];
+  const getSessionsForDate = (ds: string) => sessions.filter((s) => s.date === ds);
+  const cells: ReactNode[] = [];
 
   for (let i = 0; i < startDow; i++) {
     const d = new Date(curYear, curMonth, -startDow + 1 + i);
     cells.push(
       <div key={`pre${i}`} className="cal-cell other-month">
         <div className="day-num">{d.getDate()}</div>
-      </div>
+      </div>,
     );
   }
 
@@ -50,7 +55,6 @@ export default function CalendarView({
       curYear === today.getFullYear();
     const isSel = ds === selectedDate;
     const dayEvents = getSessionsForDate(ds);
-
     cells.push(
       <div
         key={ds}
@@ -58,43 +62,57 @@ export default function CalendarView({
         onClick={() => onSelectDay(ds)}
       >
         <div className="day-num">{d}</div>
-        {dayEvents.slice(0, 3).map(ev => (
+        {dayEvents.slice(0, 3).map((ev) => (
           <div
             key={ev.id}
             className={`cal-event ${ev.color}`}
-            onClick={e => { e.stopPropagation(); onEventClick(ev.id); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEventClick(ev.id);
+            }}
           >
-            {ev.start_time} {ev.title}
+            {ev.title}
           </div>
         ))}
         {dayEvents.length > 3 && (
-          <div className="more-events">+{dayEvents.length - 3} more</div>
+          <div className="more-events">
+            {t('calendar.moreEvents', { count: dayEvents.length - 3 })}
+          </div>
         )}
-      </div>
+      </div>,
     );
   }
 
-  const totalCells = startDow + daysInMonth;
-  const trailing = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  const trailing = (7 - ((startDow + daysInMonth) % 7)) % 7;
   for (let i = 1; i <= trailing; i++) {
     cells.push(
       <div key={`post${i}`} className="cal-cell other-month">
         <div className="day-num">{i}</div>
-      </div>
+      </div>,
     );
   }
 
   return (
     <>
       <div className="cal-nav">
-        <button className="cal-nav-btn" onClick={() => onNavigate(-1)}>&#8592;</button>
-        <div className="cal-month-title">{MONTHS[curMonth]} {curYear}</div>
-        <button className="today-btn" onClick={onToday}>Today</button>
-        <button className="cal-nav-btn" onClick={() => onNavigate(1)}>&#8594;</button>
+        <button className="cal-nav-btn" onClick={() => onNavigate(-1)}>
+          &#8592;
+        </button>
+        <div className="cal-month-title">{formatMonthYear(curMonth, curYear, locale)}</div>
+        <button className="today-btn" onClick={onToday}>
+          {t('calendar.today')}
+        </button>
+        <button className="cal-nav-btn" onClick={() => onNavigate(1)}>
+          &#8594;
+        </button>
       </div>
       <div className="calendar-grid">
         <div className="cal-header-row">
-          {DAY_LABELS.map(l => <div key={l} className="cal-header-cell">{l}</div>)}
+          {dayLabels.map((l) => (
+            <div key={l} className="cal-header-cell">
+              {l}
+            </div>
+          ))}
         </div>
         <div className="cal-body">{cells}</div>
       </div>

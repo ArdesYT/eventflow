@@ -10,9 +10,11 @@ export function loadStoredUser(): User | null {
     const parsed = JSON.parse(raw) as User;
     if (!parsed?.id || !parsed?.email || !parsed?.role) return null;
 
+    const role = parsed.role.trim().toLowerCase();
+    if (role !== 'admin' && role !== 'booker' && role !== 'attendee') return null;
     return {
       ...parsed,
-      role: parsed.role.trim().toLowerCase() as User['role'],
+      role: role as User['role'],
     };
   } catch {
     return null;

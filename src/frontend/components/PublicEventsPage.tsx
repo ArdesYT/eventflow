@@ -1,5 +1,7 @@
 import type { Session, User } from '../../backend/types';
 import { formatDayHeader, isTodayDateKey } from '../lib/sessionFormat';
+import { useI18n } from '../i18n/I18nProvider';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface PublicEventsPageProps {
   sessions: Session[];
@@ -33,6 +35,8 @@ export default function PublicEventsPage({
   user,
   onLogout,
 }: PublicEventsPageProps) {
+  const { t, locale } = useI18n();
+
   const upcoming = [...sessions].sort((a, b) =>
     (a.date + a.start_time).localeCompare(b.date + b.start_time),
   );
@@ -57,61 +61,57 @@ export default function PublicEventsPage({
           </div>
         </div>
         <div className="public-nav-right">
+          <LanguageSwitcher />
           <div className="public-user-pill">
             <div className="public-user-avatar">{getInitials(user.name)}</div>
             <span>{user.name}</span>
-            <span className="public-user-role">Attendee</span>
+            <span className="public-user-role">{t('public.attendee')}</span>
           </div>
           <button className="public-logout-btn" onClick={onLogout}>
-            Kijelentkezés
+            {t('common.logout')}
           </button>
         </div>
       </header>
 
       <section className="public-hero">
         <div>
-          <div className="public-hero-eyebrow">Nyilvános programok</div>
-          <h1 className="public-hero-title">Események és Előadások</h1>
-          <p className="public-hero-sub">
-            Fedezze fel a legújabb szakmai programokat, és foglaljon helyet a
-            legérdekesebb előadásokra.
-          </p>
+          <div className="public-hero-eyebrow">{t('public.programsEyebrow')}</div>
+          <h1 className="public-hero-title">{t('public.heroTitle')}</h1>
+          <p className="public-hero-sub">{t('public.heroSub')}</p>
         </div>
         <div className="public-hero-stats">
           <div className="public-stat">
             <div className="public-stat-num">{totalSessions}</div>
-            <div className="public-stat-label">Aktív esemény</div>
+            <div className="public-stat-label">{t('public.activeEvents')}</div>
           </div>
           <div className="public-stat-divider" />
           <div className="public-stat">
             <div className="public-stat-num">{uniqueDays}</div>
-            <div className="public-stat-label">Programnap</div>
+            <div className="public-stat-label">{t('public.programDays')}</div>
           </div>
         </div>
       </section>
 
       <main className="public-main">
-        {loading && <div className="public-status">Adatok betöltése...</div>}
+        {loading && <div className="public-status">{t('common.loading')}</div>}
         {error && <div className="public-status error">{error}</div>}
 
         {!loading && upcoming.length === 0 && !error && (
           <div className="public-empty">
             <div className="empty-icon">📅</div>
-            <h3>Nincsenek elérhető események</h3>
-            <p>Jelenleg nincs egyetlen ütemezett előadás sem a rendszerben.</p>
+            <h3>{t('public.emptyTitle')}</h3>
+            <p>{t('public.emptySub')}</p>
           </div>
         )}
 
         {sortedDates.map((ds) => {
-          const header = formatDayHeader(ds);
+          const header = formatDayHeader(ds, locale);
           const isToday = isTodayDateKey(ds);
 
           return (
             <section key={ds} className="public-day">
               <header className="public-day-header">
-                <div
-                  className={'public-day-circle' + (isToday ? ' today' : '')}
-                >
+                <div className={'public-day-circle' + (isToday ? ' today' : '')}>
                   {header.dayNum}
                 </div>
                 <div>
@@ -119,7 +119,7 @@ export default function PublicEventsPage({
                     {header.weekday}, {header.monthShort} {header.dayNum}.
                   </div>
                   {isToday && (
-                    <div className="public-day-today-tag">Mai programok</div>
+                    <div className="public-day-today-tag">{t('public.todayPrograms')}</div>
                   )}
                 </div>
               </header>
