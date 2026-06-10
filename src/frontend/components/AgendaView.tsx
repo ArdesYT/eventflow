@@ -1,9 +1,10 @@
-import type { Session } from '../../backend/types';
+import type { Session, SessionSavesMap } from '../../backend/types';
 import { useI18n } from '../i18n/I18nProvider';
 import { formatWeekdayLong } from '../i18n/dateFormat';
 
 interface AgendaViewProps {
   sessions: Session[];
+  sessionSaves?: SessionSavesMap;
   onEventClick: (id: number) => void;
   onDelete: (id: number) => void;
 }
@@ -19,7 +20,7 @@ function toDateStr(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
-export default function AgendaView({ sessions, onEventClick, onDelete }: AgendaViewProps) {
+export default function AgendaView({ sessions, sessionSaves, onEventClick, onDelete }: AgendaViewProps) {
   const { t, locale } = useI18n();
   const today = new Date();
   const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
@@ -56,7 +57,9 @@ export default function AgendaView({ sessions, onEventClick, onDelete }: AgendaV
               <div className={`agenda-date-circle${isToday ? ' today' : ''}`}>{d}</div>
               <span className="agenda-date-text">{label}</span>
             </div>
-            {grouped[ds].map((ev) => (
+            {grouped[ds].map((ev) => {
+              const saveCount = sessionSaves?.[ev.id]?.length ?? 0;
+              return (
               <div key={ev.id} className="agenda-event" onClick={() => onEventClick(ev.id)}>
                 <div
                   className="agenda-event-accent"
@@ -70,6 +73,9 @@ export default function AgendaView({ sessions, onEventClick, onDelete }: AgendaV
                     </span>
                     <span>{ev.room_name}</span>
                     <span>🎤 {ev.speaker_name}</span>
+                    {saveCount > 0 && (
+                      <span className="agenda-save-badge">⭐ {saveCount}</span>
+                    )}
                   </div>
                 </div>
                 <div className="agenda-event-side">
@@ -86,7 +92,8 @@ export default function AgendaView({ sessions, onEventClick, onDelete }: AgendaV
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         );
       })}

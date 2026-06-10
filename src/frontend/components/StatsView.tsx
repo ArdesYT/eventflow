@@ -1,9 +1,10 @@
-import type { Session } from '../../backend/types';
+import type { Session, SessionSavesMap } from '../../backend/types';
 import AgendaView from './AgendaView';
 import { useI18n } from '../i18n/I18nProvider';
 
 interface StatsViewProps {
   sessions: Session[];
+  sessionSaves?: SessionSavesMap;
   onEventClick: (id: number) => void;
   onDelete: (id: number) => void;
 }
@@ -12,7 +13,7 @@ function toDateStr(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
-export default function StatsView({ sessions, onEventClick, onDelete }: StatsViewProps) {
+export default function StatsView({ sessions, sessionSaves, onEventClick, onDelete }: StatsViewProps) {
   const { t } = useI18n();
   const today = new Date();
   const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
@@ -81,7 +82,12 @@ export default function StatsView({ sessions, onEventClick, onDelete }: StatsVie
       </div>
 
       <div className="section-title">{t('stats.upcoming')}</div>
-      <AgendaView sessions={upcoming} onEventClick={onEventClick} onDelete={onDelete} />
+      <AgendaView
+        sessions={upcoming}
+        sessionSaves={sessionSaves}
+        onEventClick={onEventClick}
+        onDelete={onDelete}
+      />
     </>
   );
 }

@@ -103,7 +103,44 @@ export function useI18n(): I18nContextValue {
 
 /** Map known API / legacy error strings to translation keys. */
 export function translateError(message: string, t: I18nContextValue['t']): string {
+  if (message.startsWith('errors.')) return t(message);
+
   const lower = message.toLowerCase();
+  if (
+    lower.includes('lejárt') ||
+    lower.includes('munkamenet') ||
+    lower.includes('expired') ||
+    lower.includes('abgelaufen') ||
+    lower.includes('invalid token')
+  ) {
+    return t('errors.sessionExpired');
+  }
+  if (
+    lower.includes('bejelentkezés szükséges') ||
+    lower.includes('unauthorized') ||
+    lower.includes('authentication')
+  ) {
+    return t('errors.unauthorized');
+  }
+  if (
+    lower.includes('jogosultság') ||
+    lower.includes('adminisztrátor') ||
+    lower.includes('forbidden') ||
+    lower.includes('berechtigung') ||
+    lower.includes('permission')
+  ) {
+    return t('errors.forbidden');
+  }
+  if (
+    lower.includes('foglalt') ||
+    lower.includes('belegt') ||
+    lower.includes('busy') ||
+    lower.includes('2-hour') ||
+    lower.includes('2 óra') ||
+    lower.includes('2-stunden')
+  ) {
+    return t('errors.roomBusy');
+  }
   if (
     lower.includes('csatlakoz') ||
     lower.includes('server') ||
@@ -117,7 +154,8 @@ export function translateError(message: string, t: I18nContextValue['t']): strin
     lower.includes('jelszó') ||
     lower.includes('password') ||
     lower.includes('hibás') ||
-    lower.includes('ungültig')
+    lower.includes('ungültig') ||
+    lower.includes('invalid credentials')
   ) {
     return t('errors.invalidCredentials');
   }

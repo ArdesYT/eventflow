@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import type { Session, ViewType, BookingFormData, CreateSessionBody, User } from '../backend/types';
+import { useState, useMemo, useEffect } from 'react';
+import type { Session, SessionSavesMap, ViewType, BookingFormData, CreateSessionBody, User } from '../backend/types';
 import MiniCalendar from './components/MiniCalendar';
 import CalendarView from './components/CalendarView';
 import AgendaView from './components/AgendaView';
@@ -32,6 +32,8 @@ function getInitials(name: string): string {
 interface AppProps {
   initialUser: User;
   sessions: Session[];
+  sessionSaves: SessionSavesMap | null;
+  onRefreshSessionSaves: () => void;
   loading: boolean;
   error: string | null;
   onCreate: (body: CreateSessionBody) => Promise<void>;
@@ -42,6 +44,8 @@ interface AppProps {
 export default function App({
   initialUser,
   sessions,
+  sessionSaves,
+  onRefreshSessionSaves,
   loading,
   error,
   onCreate,
@@ -81,6 +85,10 @@ export default function App({
     () => sessions.find((s) => s.id === detailId) ?? null,
     [sessions, detailId],
   );
+
+  useEffect(() => {
+    if (detailId !== null) onRefreshSessionSaves();
+  }, [detailId, onRefreshSessionSaves]);
 
   function navigateMonth(dir: -1 | 1) {
     setCurMonth((m) => {
@@ -265,6 +273,7 @@ export default function App({
                 searchTerm.trim() && filteredSessions.length > 0 && filteredSessionsInCurrentMonth.length === 0 ? (
                   <SessionsView
                     sessions={filteredSessions}
+                    sessionSaves={sessionSaves}
                     searchTerm={searchTerm}
                     onEventClick={(id) => setDetailId(id)}
                   />
@@ -284,6 +293,7 @@ export default function App({
               {currentView === 'calendar' && calSubView === 'agenda' && (
                 <AgendaView
                   sessions={filteredSessions}
+                  sessionSaves={sessionSaves}
                   onEventClick={(id) => setDetailId(id)}
                   onDelete={deleteSession}
                 />
@@ -291,6 +301,7 @@ export default function App({
               {currentView === 'sessions' && (
                 <SessionsView
                   sessions={filteredSessions}
+                  sessionSaves={sessionSaves}
                   searchTerm={searchTerm}
                   onEventClick={(id) => setDetailId(id)}
                 />
@@ -298,6 +309,7 @@ export default function App({
               {currentView === 'agenda' && (
                 <AgendaView
                   sessions={filteredSessions}
+                  sessionSaves={sessionSaves}
                   onEventClick={(id) => setDetailId(id)}
                   onDelete={deleteSession}
                 />
@@ -305,6 +317,7 @@ export default function App({
               {currentView === 'stats' && (
                 <StatsView
                   sessions={filteredSessions}
+                  sessionSaves={sessionSaves}
                   onEventClick={(id) => setDetailId(id)}
                   onDelete={deleteSession}
                 />
@@ -328,6 +341,8 @@ export default function App({
       {detailSession && (
         <DetailModal
           session={detailSession}
+          savedBy={sessionSaves?.[detailSession.id]}
+          savesLoaded={sessionSaves !== null}
           onClose={() => setDetailId(null)}
           onDelete={deleteSession}
         />

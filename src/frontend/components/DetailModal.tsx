@@ -1,8 +1,10 @@
-import type { Session } from '../../backend/types';
+import type { Session, SessionSaveUser } from '../../backend/types';
 import { useI18n } from '../i18n/I18nProvider';
 
 interface DetailModalProps {
   session: Session;
+  savedBy?: SessionSaveUser[];
+  savesLoaded?: boolean;
   onClose: () => void;
   onDelete: (id: number) => void;
   onEdit?: (id: number) => void;
@@ -15,8 +17,26 @@ const ACCENT: Record<string, string> = {
   red: '#e02424',
 };
 
-export default function DetailModal({ session, onClose, onDelete, onEdit }: DetailModalProps) {
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+export default function DetailModal({
+  session,
+  savedBy,
+  savesLoaded,
+  onClose,
+  onDelete,
+  onEdit,
+}: DetailModalProps) {
   const { t } = useI18n();
+  const showSaves = savesLoaded !== undefined;
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -63,6 +83,30 @@ export default function DetailModal({ session, onClose, onDelete, onEdit }: Deta
               <span className="detail-value" style={{ fontWeight: 400 }}>
                 {session.description}
               </span>
+            </div>
+          )}
+          {showSaves && (
+            <div className="detail-row detail-row-saves">
+              <span className="detail-label">{t('detail.savedBy')}</span>
+              <div className="detail-value detail-saves-value">
+                {!savesLoaded ? (
+                  <span className="detail-saves-empty">{t('detail.savesUnavailable')}</span>
+                ) : !savedBy?.length ? (
+                  <span className="detail-saves-empty">{t('detail.noSaves')}</span>
+                ) : (
+                  <ul className="saved-by-list">
+                    {savedBy.map((u) => (
+                      <li key={u.id} className="saved-by-item">
+                        <div className="saved-by-avatar">{getInitials(u.name)}</div>
+                        <div className="saved-by-info">
+                          <span className="saved-by-name">{u.name}</span>
+                          <span className="saved-by-email">{u.email}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           )}
         </div>

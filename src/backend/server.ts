@@ -5,36 +5,16 @@ import type { Pool, PoolConnection } from 'mariadb';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
-import type { Session, UserRole } from './types';
+import type { Session, SessionSaveUser, SessionSavesMap, Speaker, User, UserRole } from './types';
+import {
+    createAuthMiddleware,
+    requireAdmin,
+    requireRoles,
+    signToken,
+    type AuthenticatedRequest,
+} from './auth';
 
 const VALID_ROLES: UserRole[] = ['admin', 'booker', 'attendee'];
-
-async function requireAdmin(
-    req: Request,
-    res: Response,
-): Promise<{ id: number; role: string } | null> {
-    const userId = Number(req.headers['x-user-id']);
-    if (!userId) {
-        res.status(401).json({ message: 'Bejelentkezés szükséges.' });
-        return null;
-    }
-
-    let conn: PoolConnection | undefined;
-    try {
-        conn = await pool.getConnection();
-        const rows = await conn.query(
-            'SELECT id, role FROM users WHERE id = ?',
-            [userId],
-        );
-        if (!rows.length || rows[0].role !== 'admin') {
-            res.status(403).json({ message: 'Csak adminisztrátorok számára.' });
-            return null;
-        }
-        return rows[0];
-    } finally {
-        if (conn) conn.release();
-    }
-}
 
 dotenv.config();
 
@@ -53,6 +33,19 @@ const pool: Pool = mariadb.createPool({
     timezone: 'Z'
 });
 
+const authenticate = createAuthMiddleware(pool);
+const requireBookerOrAdmin = requireRoles('booker', 'admin');
+const requireAttendee = requireRoles('attendee');
+
+function toSafeUser(row: Record<string, unknown>): User {
+    return {
+        id: Number(row.id),
+        name: String(row.name),
+        email: String(row.email),
+        role: String(row.role).trim().toLowerCase() as UserRole,
+    };
+}
+
 // --- API VÉGPONTOK ---
 
 // 1. Összes előadás lekérése
@@ -60,6 +53,43 @@ const pool: Pool = mariadb.createPool({
 function formatDatetime(d: Date): string {
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+async function resolveSpeakerId(
+    conn: PoolConnection,
+    speakerId: number | undefined,
+    speakerName: string | undefined,
+): Promise<number> {
+    const id = Number(speakerId);
+    if (Number.isFinite(id) && id > 0) {
+        const rows = await conn.query('SELECT id FROM speakers WHERE id = ?', [id]);
+        if (rows.length) return Number(rows[0].id);
+    }
+
+    const name = speakerName?.trim();
+    if (name) {
+        const existing = await conn.query('SELECT id FROM speakers WHERE name = ? LIMIT 1', [name]);
+        if (existing.length) return Number(existing[0].id);
+        const r = await conn.query('INSERT INTO speakers (name) VALUES (?)', [name]);
+        const newId = Number(r.insertId);
+        if (!Number.isFinite(newId) || newId <= 0) {
+            throw new Error(`Speaker insert failed for name: ${name}`);
+        }
+        return newId;
+    }
+
+    return 1;
+}
+
+function formatSessionRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
+    return rows.map((row) => ({
+        ...row,
+        start_time: row.start_time instanceof Date ? formatDatetime(row.start_time) : row.start_time,
+        end_time: row.end_time instanceof Date ? formatDatetime(row.end_time) : row.end_time,
+        date: row.start_time instanceof Date
+            ? `${row.start_time.getFullYear()}-${String(row.start_time.getMonth() + 1).padStart(2, '0')}-${String(row.start_time.getDate()).padStart(2, '0')}`
+            : String(row.start_time).slice(0, 10),
+    }));
 }
 
 app.get('/api/sessions', async (_req: Request, res: Response) => {
@@ -74,25 +104,64 @@ app.get('/api/sessions', async (_req: Request, res: Response) => {
             WHERE s.start_time != '0000-00-00 00:00:00'
             ORDER BY s.start_time ASC
         `;
-        const rows: any[] = await conn.query(query);
-
-        // MariaDB returns DATETIME columns as JS Date objects.
-        // Convert them to plain strings so the frontend gets consistent
-        // "YYYY-MM-DD HH:mm:ss" values instead of ISO timestamps.
-        const formatted = rows.map(row => ({
-            ...row,
-            start_time: row.start_time instanceof Date ? formatDatetime(row.start_time) : row.start_time,
-            end_time:   row.end_time   instanceof Date ? formatDatetime(row.end_time)   : row.end_time,
-            // Derive the date string the frontend uses for calendar grouping
-            date: row.start_time instanceof Date
-                ? `${row.start_time.getFullYear()}-${String(row.start_time.getMonth() + 1).padStart(2, '0')}-${String(row.start_time.getDate()).padStart(2, '0')}`
-                : (row.start_time as string).slice(0, 10),
-        }));
-
-        res.json(formatted);
+        const rows: Record<string, unknown>[] = await conn.query(query);
+        res.json(formatSessionRows(rows));
     } catch (err) {
         console.error("Lekérdezési hiba:", err);
         res.status(500).json({ message: "Nem sikerült lekérni az előadásokat." });
+    } finally {
+        if (conn) conn.release();
+    }
+});
+
+// 1b. Előadók listája (booker / admin)
+app.get('/api/speakers', authenticate, requireBookerOrAdmin, async (_req: AuthenticatedRequest, res: Response) => {
+    let conn: PoolConnection | undefined;
+    try {
+        conn = await pool.getConnection();
+        const rows: Record<string, unknown>[] = await conn.query(
+            'SELECT id, name FROM speakers ORDER BY name ASC',
+        );
+        const speakers: Speaker[] = rows.map((row) => ({
+            id: Number(row.id),
+            name: String(row.name),
+        }));
+        res.json(speakers);
+    } catch (err) {
+        console.error('Speakers list error:', err);
+        res.status(500).json({ message: 'Nem sikerült lekérni az előadókat.' });
+    } finally {
+        if (conn) conn.release();
+    }
+});
+
+// 1c. Mely látogatók mentették el az előadásokat (booker / admin)
+app.get('/api/sessions/saves', authenticate, requireBookerOrAdmin, async (_req: AuthenticatedRequest, res: Response) => {
+    let conn: PoolConnection | undefined;
+    try {
+        conn = await pool.getConnection();
+        const rows: Record<string, unknown>[] = await conn.query(
+            `SELECT us.session_id, u.id, u.name, u.email
+             FROM user_schedule us
+             JOIN users u ON u.id = us.user_id
+             ORDER BY us.session_id ASC, u.name ASC`,
+        );
+
+        const saves: SessionSavesMap = {};
+        for (const row of rows) {
+            const sessionId = Number(row.session_id);
+            if (!saves[sessionId]) saves[sessionId] = [];
+            saves[sessionId].push({
+                id: Number(row.id),
+                name: String(row.name),
+                email: String(row.email),
+            } satisfies SessionSaveUser);
+        }
+
+        res.json(saves);
+    } catch (err) {
+        console.error('Session saves list error:', err);
+        res.status(500).json({ message: 'Nem sikerült lekérni a mentések listáját.' });
     } finally {
         if (conn) conn.release();
     }
@@ -155,8 +224,9 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
             return res.status(401).json({ message: "Hibás email vagy jelszó!" });
         }
 
-        const { password_hash, ...safeUser } = user;
-        res.json(safeUser);
+        const safeUser = toSafeUser(user);
+        const token = signToken(safeUser);
+        res.json({ user: safeUser, token });
     } catch (err) {
         console.error("Bejelentkezési hiba:", err);
         res.status(500).json({ message: "Szerver hiba." });
@@ -165,8 +235,92 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     }
 });
 
+// 3b. Aktuális felhasználó (JWT)
+app.get('/api/auth/me', authenticate, (req: AuthenticatedRequest, res: Response) => {
+    res.json(req.authUser);
+});
+
+// 3c. Látogató mentett programja
+app.get('/api/my-schedule', authenticate, requireAttendee, async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.authUser!.id;
+    let conn: PoolConnection | undefined;
+    try {
+        conn = await pool.getConnection();
+        const rows: Record<string, unknown>[] = await conn.query(
+            `SELECT s.*, r.name AS room_name, sp.name AS speaker_name
+             FROM user_schedule us
+             JOIN sessions s ON s.id = us.session_id
+             LEFT JOIN rooms r ON s.room_id = r.id
+             LEFT JOIN speakers sp ON s.speaker_id = sp.id
+             WHERE us.user_id = ? AND s.start_time != '0000-00-00 00:00:00'
+             ORDER BY s.start_time ASC`,
+            [userId],
+        );
+        res.json(formatSessionRows(rows));
+    } catch (err) {
+        console.error('My schedule list error:', err);
+        res.status(500).json({ message: 'Nem sikerült lekérni a mentett programot.' });
+    } finally {
+        if (conn) conn.release();
+    }
+});
+
+app.post('/api/my-schedule/:sessionId', authenticate, requireAttendee, async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.authUser!.id;
+    const sessionId = Number(req.params.sessionId);
+    if (!sessionId) {
+        return res.status(400).json({ message: 'Érvénytelen előadás azonosító.' });
+    }
+
+    let conn: PoolConnection | undefined;
+    try {
+        conn = await pool.getConnection();
+        const sessions = await conn.query('SELECT id FROM sessions WHERE id = ?', [sessionId]);
+        if (!sessions.length) {
+            return res.status(404).json({ message: 'Az előadás nem található.' });
+        }
+
+        await conn.query(
+            'INSERT IGNORE INTO user_schedule (user_id, session_id) VALUES (?, ?)',
+            [userId, sessionId],
+        );
+        res.status(201).json({ message: 'Előadás mentve a programba.' });
+    } catch (err) {
+        console.error('My schedule add error:', err);
+        res.status(500).json({ message: 'Nem sikerült menteni az előadást.' });
+    } finally {
+        if (conn) conn.release();
+    }
+});
+
+app.delete('/api/my-schedule/:sessionId', authenticate, requireAttendee, async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.authUser!.id;
+    const sessionId = Number(req.params.sessionId);
+    if (!sessionId) {
+        return res.status(400).json({ message: 'Érvénytelen előadás azonosító.' });
+    }
+
+    let conn: PoolConnection | undefined;
+    try {
+        conn = await pool.getConnection();
+        const result = await conn.query(
+            'DELETE FROM user_schedule WHERE user_id = ? AND session_id = ?',
+            [userId, sessionId],
+        );
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Az előadás nincs a mentett programban.' });
+        }
+        res.json({ message: 'Előadás eltávolítva a programból.' });
+    } catch (err) {
+        console.error('My schedule remove error:', err);
+        res.status(500).json({ message: 'Nem sikerült eltávolítani az előadást.' });
+    } finally {
+        if (conn) conn.release();
+    }
+});
+
 // 4. Új előadás hozzáadása
-app.post('/api/sessions', async (req: Request<{}, {}, Session>, res: Response) => {
+app.post('/api/sessions', authenticate, requireBookerOrAdmin, async (req: AuthenticatedRequest, res: Response) => {
     const { title, description, start_time, end_time, room_id, speaker_id, color } = req.body;
 
     if (!title || !start_time || !end_time) {
@@ -181,23 +335,11 @@ app.post('/api/sessions', async (req: Request<{}, {}, Session>, res: Response) =
     let conn: PoolConnection | undefined;
     try {
         conn = await pool.getConnection();
-        // If the provided speaker_id does not match a speakers row, try to
-        // create a speaker from the provided speaker_name (if any). This
-        // allows using a user id/name as the booker without failing FK.
-        let finalSpeakerId = speaker_id;
-        if (speaker_id) {
-            const rows = await conn.query('SELECT id FROM speakers WHERE id = ?', [speaker_id]);
-            if (!rows.length) {
-                // try to create from speaker_name in the body
-                const providedName = (req.body as any).speaker_name;
-                if (providedName) {
-                    const r = await conn.query('INSERT INTO speakers (name) VALUES (?)', [providedName]);
-                    finalSpeakerId = r.insertId;
-                } else {
-                    finalSpeakerId = 1; // fallback to default speaker id
-                }
-            }
-        }
+        const finalSpeakerId = await resolveSpeakerId(
+            conn,
+            Number(speaker_id),
+            (req.body as { speaker_name?: string }).speaker_name,
+        );
         const sql = `
             INSERT INTO sessions (title, description, start_time, end_time, room_id, speaker_id, color) 
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -214,7 +356,7 @@ app.post('/api/sessions', async (req: Request<{}, {}, Session>, res: Response) =
 });
 
 // 5. Előadás frissítése
-app.patch('/api/sessions/:id', async (req: Request, res: Response) => {
+app.patch('/api/sessions/:id', authenticate, requireBookerOrAdmin, async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const { title, description, start_time, end_time, room_id, speaker_id, color } = req.body as Session;
 
@@ -225,20 +367,11 @@ app.patch('/api/sessions/:id', async (req: Request, res: Response) => {
     let conn: PoolConnection | undefined;
     try {
         conn = await pool.getConnection();
-        // If speaker_id doesn't match, allow creating a speaker from speaker_name
-        let finalSpeakerId = speaker_id;
-        if (speaker_id) {
-            const rows = await conn.query('SELECT id FROM speakers WHERE id = ?', [speaker_id]);
-            if (!rows.length) {
-                const providedName = (req.body as any).speaker_name;
-                if (providedName) {
-                    const r = await conn.query('INSERT INTO speakers (name) VALUES (?)', [providedName]);
-                    finalSpeakerId = r.insertId;
-                } else {
-                    finalSpeakerId = 1; // fallback to default speaker id
-                }
-            }
-        }
+        const finalSpeakerId = await resolveSpeakerId(
+            conn,
+            Number(speaker_id),
+            (req.body as { speaker_name?: string }).speaker_name,
+        );
         const result = await conn.query(
             'UPDATE sessions SET title = ?, description = ?, start_time = ?, end_time = ?, room_id = ?, speaker_id = ?, color = ? WHERE id = ?',
             [title, description ?? '', start_time, end_time, room_id, finalSpeakerId, color ?? 'blue', id],
@@ -258,7 +391,7 @@ app.patch('/api/sessions/:id', async (req: Request, res: Response) => {
 });
 
 // 6. Előadás törlése
-app.delete('/api/sessions/:id', async (req: Request, res: Response) => {
+app.delete('/api/sessions/:id', authenticate, requireBookerOrAdmin, async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
 
     let conn: PoolConnection | undefined;
@@ -279,10 +412,8 @@ app.delete('/api/sessions/:id', async (req: Request, res: Response) => {
     }
 });
 
-// 6. Admin — felhasználók listázása
-app.get('/api/admin/users', async (req: Request, res: Response) => {
-    if (!(await requireAdmin(req, res))) return;
-
+// 7. Admin — felhasználók listázása
+app.get('/api/admin/users', authenticate, requireAdmin, async (_req: AuthenticatedRequest, res: Response) => {
     let conn: PoolConnection | undefined;
     try {
         conn = await pool.getConnection();
@@ -298,11 +429,9 @@ app.get('/api/admin/users', async (req: Request, res: Response) => {
     }
 });
 
-// 7. Admin — felhasználó szerepkör módosítása
-app.patch('/api/admin/users/:id', async (req: Request, res: Response) => {
-    const admin = await requireAdmin(req, res);
-    if (!admin) return;
-
+// 8. Admin — felhasználó szerepkör módosítása
+app.patch('/api/admin/users/:id', authenticate, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    const admin = req.authUser!;
     const { id } = req.params;
     const { role } = req.body as { role?: string };
 
@@ -337,11 +466,9 @@ app.patch('/api/admin/users/:id', async (req: Request, res: Response) => {
     }
 });
 
-// 8. Admin — felhasználó törlése
-app.delete('/api/admin/users/:id', async (req: Request, res: Response) => {
-    const admin = await requireAdmin(req, res);
-    if (!admin) return;
-
+// 9. Admin — felhasználó törlése
+app.delete('/api/admin/users/:id', authenticate, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    const admin = req.authUser!;
     const { id } = req.params;
     if (Number(id) === admin.id) {
         return res.status(400).json({ message: 'Saját fiók nem törölhető.' });

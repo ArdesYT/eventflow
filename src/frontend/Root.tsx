@@ -1,14 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { BookingFormData, User, Session, UserRole } from '../backend/types';
+import type { BookingFormData, User, Session, SessionSavesMap, UserRole } from '../backend/types';
 import LoginPage from './components/LoginPage';
 import PublicEventsPage from './components/PublicEventsPage';
 import App from './App';
-import AdminApp from './AdminApp';
+import AdminApp from './components/admin/AdminApp';
 import { apiUrl } from './lib/api';
-import { loadStoredUser, saveStoredUser } from './lib/authStorage';
+import { loadStoredAuth, saveAuth, clearAuth } from './lib/authStorage';
+import { authFetch } from './lib/authFetch';
 import { DEMO_USERS } from './lib/demoUsers';
 import { normalizeSession, parseSessionDateTime } from './lib/sessionFormat';
 import { fetchAdminUsers, updateUserRole, deleteAdminUser } from './lib/adminApi';
+import {
+  addToMySchedule,
+  fetchMySchedule,
+  fetchSessionSaves,
+  removeFromMySchedule,
+} from './lib/scheduleApi';
+import { loadOfflineSchedule, saveOfflineSchedule } from './lib/scheduleStorage';
 import { useI18n, translateError } from './i18n/I18nProvider';
 
 const POLL_INTERVAL_MS = 5000;
@@ -45,18 +53,28 @@ async function isBackendReachable(): Promise<boolean> {
 
 export default function Root() {
   const { t } = useI18n();
-  const [user, setUser] = useState<User | null>(() => loadStoredUser());
+  const [user, setUser] = useState<User | null>(() => loadStoredAuth()?.user ?? null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [savedSessions, setSavedSessions] = useState<Session[]>([]);
+  const [scheduleBusyId, setScheduleBusyId] = useState<number | null>(null);
+  const [sessionSaves, setSessionSaves] = useState<SessionSavesMap | null>(null);
   const [backendMode, setBackendMode] = useState<boolean | null>(null);
 
   const displayError = error
     ? error.startsWith('errors.')
       ? t(error)
       : translateError(error, t)
+    : null;
+
+  const displayScheduleError = scheduleError
+    ? scheduleError.startsWith('errors.')
+      ? t(scheduleError)
+      : translateError(scheduleError, t)
     : null;
 
   const fetchSessions = useCallback(async () => {
@@ -74,10 +92,10 @@ export default function Root() {
     }
   }, []);
 
-  const fetchUsers = useCallback(async (adminId: number) => {
+  const fetchUsers = useCallback(async () => {
     setUsersLoading(true);
     try {
-      const list = await fetchAdminUsers(adminId);
+      const list = await fetchAdminUsers();
       setUsers(list.map((u) => ({ ...u, role: u.role?.trim().toLowerCase() as UserRole })));
     } catch (e) {
       console.error('fetchUsers failed:', e);
@@ -92,6 +110,26 @@ export default function Root() {
       const reachable = await isBackendReachable();
       setBackendMode(reachable);
       if (reachable) {
+        const auth = loadStoredAuth();
+        if (auth?.token) {
+          try {
+            const res = await authFetch('/api/auth/me');
+            if (!res.ok) {
+              clearAuth();
+              setUser(null);
+            } else {
+              const fresh = (await res.json()) as User;
+              const u = { ...fresh, role: fresh.role?.trim().toLowerCase() as UserRole };
+              saveAuth(u, auth.token);
+              setUser(u);
+            }
+          } catch {
+            /* keep cached user on transient network errors */
+          }
+        } else if (auth?.user) {
+          clearAuth();
+          setUser(null);
+        }
         await fetchSessions();
       } else {
         setSessions(SEED_SESSIONS);
@@ -104,18 +142,129 @@ export default function Root() {
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
     if (backendMode) {
-      fetchUsers(user.id);
+      fetchUsers();
     } else {
       setUsers(demoUsersList());
     }
   }, [user, backendMode, fetchUsers]);
 
+  const fetchSessionSavesMap = useCallback(async () => {
+    if (!user || !backendMode) return;
+    const role = user.role?.trim().toLowerCase();
+    if (role !== 'admin' && role !== 'booker') return;
+
+    try {
+      const data = await fetchSessionSaves();
+      setSessionSaves(data);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '';
+      if (msg !== 'errors.savesNotAvailable') {
+        console.error('fetchSessionSaves failed:', e);
+      }
+      setSessionSaves(null);
+    }
+  }, [user, backendMode]);
+
+  const fetchSavedSchedule = useCallback(async () => {
+    if (!user || user.role?.trim().toLowerCase() !== 'attendee' || !backendMode) return;
+
+    try {
+      const data = await fetchMySchedule();
+      setSavedSessions(mapApiSessions(data));
+      setScheduleError(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'errors.saveError';
+      if (msg === 'errors.scheduleNotAvailable') {
+        setScheduleError(msg);
+      } else {
+        console.error('fetchSavedSchedule failed:', e);
+      }
+    }
+  }, [user, backendMode]);
+
   useEffect(() => {
-    if (!user) return;
-    if (user.role !== 'attendee' || !backendMode) return;
-    const id = setInterval(fetchSessions, POLL_INTERVAL_MS);
+    if (!user || user.role?.trim().toLowerCase() !== 'attendee') return;
+    if (backendMode) {
+      fetchSavedSchedule();
+    } else {
+      const ids = loadOfflineSchedule(user.id);
+      setSavedSessions(sessions.filter((s) => ids.includes(s.id)));
+    }
+  }, [user, backendMode, sessions, fetchSavedSchedule]);
+
+  useEffect(() => {
+    if (!user || !backendMode) return;
+    const role = user.role?.trim().toLowerCase();
+    if (role === 'admin' || role === 'booker') {
+      fetchSessionSavesMap();
+    }
+  }, [user, backendMode, fetchSessionSavesMap]);
+
+  useEffect(() => {
+    if (!user || !backendMode) return;
+    const role = user.role?.trim().toLowerCase();
+
+    const id = setInterval(() => {
+      fetchSessions();
+      if (role === 'attendee') {
+        fetchSavedSchedule();
+      } else if (role === 'admin' || role === 'booker') {
+        fetchSessionSavesMap();
+      }
+    }, POLL_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [user, backendMode, fetchSessions]);
+  }, [user, backendMode, fetchSessions, fetchSavedSchedule, fetchSessionSavesMap]);
+
+  async function handleSaveSession(sessionId: number) {
+    if (!user) return;
+    const session = sessions.find((s) => s.id === sessionId);
+    if (!session) return;
+
+    setScheduleBusyId(sessionId);
+    setScheduleError(null);
+    try {
+      if (backendMode) {
+        await addToMySchedule(sessionId);
+        setSavedSessions((prev) =>
+          [...prev.filter((s) => s.id !== sessionId), session].sort((a, b) =>
+            (a.date + a.start_time).localeCompare(b.date + b.start_time),
+          ),
+        );
+      } else {
+        const ids = loadOfflineSchedule(user.id);
+        if (!ids.includes(sessionId)) {
+          saveOfflineSchedule(user.id, [...ids, sessionId]);
+          setSavedSessions((prev) => [...prev, session]);
+        }
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'errors.saveError';
+      setScheduleError(msg);
+    } finally {
+      setScheduleBusyId(null);
+    }
+  }
+
+  async function handleRemoveSession(sessionId: number) {
+    if (!user) return;
+
+    setScheduleBusyId(sessionId);
+    setScheduleError(null);
+    try {
+      if (backendMode) {
+        await removeFromMySchedule(sessionId);
+      } else {
+        const ids = loadOfflineSchedule(user.id).filter((id) => id !== sessionId);
+        saveOfflineSchedule(user.id, ids);
+      }
+      setSavedSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'errors.deleteError';
+      setScheduleError(msg);
+    } finally {
+      setScheduleBusyId(null);
+    }
+  }
 
   async function handleLogin(credentials: {
     email: string;
@@ -132,8 +281,10 @@ export default function Root() {
         throw new Error(data.message ?? 'errors.invalidCredentials');
       }
       const data = await res.json();
-      const u: User = data.user ?? data;
-      return { ...u, role: u.role?.trim().toLowerCase() as UserRole };
+      const raw = data.user ?? data;
+      const u: User = { ...raw, role: raw.role?.trim().toLowerCase() as UserRole };
+      if (data.token) saveAuth(u, data.token);
+      return u;
     }
     const match = DEMO_USERS.find(
       (u) => u.email === credentials.email && u.password === credentials.password,
@@ -173,9 +324,8 @@ export default function Root() {
 
   async function handleCreate(body: object): Promise<void> {
     if (backendMode) {
-      const res = await fetch(apiUrl('/api/sessions'), {
+      const res = await authFetch('/api/sessions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -206,7 +356,7 @@ export default function Root() {
 
   async function handleDelete(id: number): Promise<void> {
     if (backendMode) {
-      const res = await fetch(apiUrl(`/api/sessions/${id}`), { method: 'DELETE' });
+      const res = await authFetch(`/api/sessions/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.message ?? 'errors.deleteError');
@@ -229,9 +379,8 @@ export default function Root() {
         speaker_name: data.speaker_name,
         color: data.color,
       };
-      const res = await fetch(apiUrl(`/api/sessions/${id}`), {
+      const res = await authFetch(`/api/sessions/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -264,13 +413,14 @@ export default function Root() {
 
   async function handleUpdateUserRole(userId: number, role: UserRole) {
     if (backendMode && user?.role === 'admin') {
-      const updated = await updateUserRole(user.id, userId, role);
+      const updated = await updateUserRole(userId, role);
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...updated, role: updated.role as UserRole } : u)),
       );
       if (userId === user.id) {
-        setUser((u) => (u ? { ...u, role } : u));
-        saveStoredUser({ ...user, role });
+        const next = { ...user, role };
+        setUser(next);
+        saveAuth(next, loadStoredAuth()?.token ?? null);
       }
     } else {
       setUsers((prev) =>
@@ -281,7 +431,7 @@ export default function Root() {
 
   async function handleDeleteUser(userId: number) {
     if (backendMode && user?.role === 'admin') {
-      await deleteAdminUser(user.id, userId);
+      await deleteAdminUser(userId);
       setUsers((prev) => prev.filter((u) => u.id !== userId));
     } else {
       setUsers((prev) => prev.filter((u) => u.id !== userId));
@@ -289,7 +439,7 @@ export default function Root() {
   }
 
   function handleLogout() {
-    saveStoredUser(null);
+    clearAuth();
     setUser(null);
   }
 
@@ -299,12 +449,11 @@ export default function Root() {
         offlineMode={backendMode === false}
         onLogin={async (credentials) => {
           const loggedInUser = await handleLogin(credentials);
-          saveStoredUser(loggedInUser);
+          if (!backendMode) saveAuth(loggedInUser, null);
           setUser(loggedInUser);
         }}
         onRegister={async (credentials) => {
           const registeredUser = await handleRegister(credentials);
-          saveStoredUser(registeredUser);
           setUser(registeredUser);
         }}
       />
@@ -319,6 +468,8 @@ export default function Root() {
         initialUser={user}
         sessions={sessions}
         users={users}
+        sessionSaves={sessionSaves}
+        onRefreshSessionSaves={fetchSessionSavesMap}
         loading={loading}
         usersLoading={usersLoading}
         error={displayError}
@@ -337,6 +488,8 @@ export default function Root() {
       <App
         initialUser={user}
         sessions={sessions}
+        sessionSaves={sessionSaves}
+        onRefreshSessionSaves={fetchSessionSavesMap}
         loading={loading}
         error={displayError}
         onCreate={handleCreate}
@@ -349,9 +502,14 @@ export default function Root() {
   return (
     <PublicEventsPage
       sessions={sessions}
+      savedSessions={savedSessions}
       loading={loading}
       error={displayError}
+      scheduleError={displayScheduleError}
+      scheduleBusyId={scheduleBusyId}
       user={user}
+      onSaveSession={handleSaveSession}
+      onRemoveSession={handleRemoveSession}
       onLogout={handleLogout}
     />
   );

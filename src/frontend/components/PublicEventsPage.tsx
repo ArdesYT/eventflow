@@ -1,13 +1,21 @@
+import { useMemo, useState } from 'react';
 import type { Session, User } from '../../backend/types';
 import { formatDayHeader, isTodayDateKey } from '../lib/sessionFormat';
 import { useI18n } from '../i18n/I18nProvider';
 import LanguageSwitcher from './LanguageSwitcher';
 
+type Tab = 'all' | 'saved';
+
 interface PublicEventsPageProps {
   sessions: Session[];
+  savedSessions: Session[];
   loading: boolean;
   error: string | null;
+  scheduleError: string | null;
+  scheduleBusyId: number | null;
   user: User;
+  onSaveSession: (sessionId: number) => Promise<void>;
+  onRemoveSession: (sessionId: number) => Promise<void>;
   onLogout: () => void;
 }
 
@@ -28,28 +36,98 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-export default function PublicEventsPage({
-  sessions,
-  loading,
-  error,
-  user,
-  onLogout,
-}: PublicEventsPageProps) {
-  const { t, locale } = useI18n();
-
-  const upcoming = [...sessions].sort((a, b) =>
-    (a.date + a.start_time).localeCompare(b.date + b.start_time),
-  );
-
+function groupByDate(items: Session[]): { sortedDates: string[]; grouped: Record<string, Session[]> } {
   const grouped: Record<string, Session[]> = {};
-  upcoming.forEach((s) => {
+  items.forEach((s) => {
     if (!grouped[s.date]) grouped[s.date] = [];
     grouped[s.date].push(s);
   });
+  return { sortedDates: Object.keys(grouped).sort(), grouped };
+}
 
-  const sortedDates = Object.keys(grouped).sort();
-  const totalSessions = upcoming.length;
-  const uniqueDays = sortedDates.length;
+export default function PublicEventsPage({
+  sessions,
+  savedSessions,
+  loading,
+  error,
+  scheduleError,
+  scheduleBusyId,
+  user,
+  onSaveSession,
+  onRemoveSession,
+  onLogout,
+}: PublicEventsPageProps) {
+  const { t, locale } = useI18n();
+  const [tab, setTab] = useState<Tab>('all');
+
+  const savedIds = useMemo(() => new Set(savedSessions.map((s) => s.id)), [savedSessions]);
+
+  const upcoming = useMemo(
+    () =>
+      [...sessions].sort((a, b) =>
+        (a.date + a.start_time).localeCompare(b.date + b.start_time),
+      ),
+    [sessions],
+  );
+
+  const displaySessions = tab === 'all' ? upcoming : savedSessions;
+  const { sortedDates, grouped } = groupByDate(displaySessions);
+  const uniqueDays = new Set(upcoming.map((s) => s.date)).size;
+
+  function renderSessionCard(ev: Session, showRemoveOnly: boolean) {
+    const isSaved = savedIds.has(ev.id);
+    const busy = scheduleBusyId === ev.id;
+
+    return (
+      <article key={ev.id} className="public-session-card">
+        <div
+          className="public-session-accent"
+          style={{ background: ACCENT[ev.color] ?? ACCENT.blue }}
+        />
+        <div className="public-session-time">
+          <div className="public-time-start">{ev.start_time}</div>
+          <div className="public-time-end">{ev.end_time}</div>
+        </div>
+        <div className="public-session-body">
+          <div className="public-session-title-row">
+            <div className="public-session-title">{ev.title}</div>
+            {showRemoveOnly ? (
+              <button
+                type="button"
+                className="public-save-btn remove"
+                disabled={busy}
+                onClick={() => onRemoveSession(ev.id)}
+              >
+                {busy ? t('booking.saving') : t('public.removeSaved')}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={'public-save-btn' + (isSaved ? ' saved' : '')}
+                disabled={busy || isSaved}
+                onClick={() => (isSaved ? undefined : onSaveSession(ev.id))}
+              >
+                {busy ? t('booking.saving') : isSaved ? t('public.savedSession') : t('public.saveSession')}
+              </button>
+            )}
+          </div>
+          <div className="public-session-meta">
+            <div className="public-session-speaker">
+              <div className="public-speaker-dot">{getInitials(ev.speaker_name)}</div>
+              <span>{ev.speaker_name}</span>
+            </div>
+            <div
+              className="public-session-room"
+              style={{ background: (ACCENT[ev.color] ?? ACCENT.blue) + '22' }}
+            >
+              {ev.room_name}
+            </div>
+          </div>
+          {ev.description && <p className="public-session-desc">{ev.description}</p>}
+        </div>
+      </article>
+    );
+  }
 
   return (
     <div className="public-page">
@@ -81,7 +159,7 @@ export default function PublicEventsPage({
         </div>
         <div className="public-hero-stats">
           <div className="public-stat">
-            <div className="public-stat-num">{totalSessions}</div>
+            <div className="public-stat-num">{upcoming.length}</div>
             <div className="public-stat-label">{t('public.activeEvents')}</div>
           </div>
           <div className="public-stat-divider" />
@@ -92,16 +170,53 @@ export default function PublicEventsPage({
         </div>
       </section>
 
+      <div className="public-tabs">
+        <button
+          type="button"
+          className={'public-tab' + (tab === 'all' ? ' active' : '')}
+          onClick={() => setTab('all')}
+        >
+          {t('public.allPrograms')}
+        </button>
+        <button
+          type="button"
+          className={'public-tab' + (tab === 'saved' ? ' active' : '')}
+          onClick={() => setTab('saved')}
+        >
+          {t('public.mySchedule')}
+          {savedSessions.length > 0 && (
+            <span className="public-tab-badge">{savedSessions.length}</span>
+          )}
+        </button>
+      </div>
+
       <main className="public-main">
         {loading && <div className="public-status">{t('common.loading')}</div>}
         {error && <div className="public-status error">{error}</div>}
+        {scheduleError && <div className="public-status error">{scheduleError}</div>}
 
-        {!loading && upcoming.length === 0 && !error && (
+        {!loading && tab === 'all' && upcoming.length === 0 && !error && (
           <div className="public-empty">
             <div className="empty-icon">📅</div>
             <h3>{t('public.emptyTitle')}</h3>
             <p>{t('public.emptySub')}</p>
           </div>
+        )}
+
+        {!loading && tab === 'saved' && savedSessions.length === 0 && (
+          <div className="public-empty">
+            <div className="empty-icon">⭐</div>
+            <h3>{t('public.savedEmptyTitle')}</h3>
+            <p>{t('public.savedEmptySub')}</p>
+          </div>
+        )}
+
+        {tab === 'saved' && savedSessions.length > 0 && (
+          <p className="public-saved-summary">
+            {savedSessions.length === 1
+              ? t('public.savedCount', { count: savedSessions.length })
+              : t('public.savedCount_plural', { count: savedSessions.length })}
+          </p>
         )}
 
         {sortedDates.map((ds) => {
@@ -125,40 +240,7 @@ export default function PublicEventsPage({
               </header>
 
               <div className="public-session-list">
-                {grouped[ds].map((ev) => (
-                  <article key={ev.id} className="public-session-card">
-                    <div
-                      className="public-session-accent"
-                      style={{ background: ACCENT[ev.color] ?? ACCENT.blue }}
-                    />
-                    <div className="public-session-time">
-                      <div className="public-time-start">{ev.start_time}</div>
-                      <div className="public-time-end">{ev.end_time}</div>
-                    </div>
-                    <div className="public-session-body">
-                      <div className="public-session-title">{ev.title}</div>
-                      <div className="public-session-meta">
-                        <div className="public-session-speaker">
-                          <div className="public-speaker-dot">
-                            {getInitials(ev.speaker_name)}
-                          </div>
-                          <span>{ev.speaker_name}</span>
-                        </div>
-                        <div
-                          className="public-session-room"
-                          style={{
-                            background: (ACCENT[ev.color] ?? ACCENT.blue) + '22',
-                          }}
-                        >
-                          {ev.room_name}
-                        </div>
-                      </div>
-                      {ev.description && (
-                        <p className="public-session-desc">{ev.description}</p>
-                      )}
-                    </div>
-                  </article>
-                ))}
+                {grouped[ds].map((ev) => renderSessionCard(ev, tab === 'saved'))}
               </div>
             </section>
           );
