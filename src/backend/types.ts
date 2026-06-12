@@ -1,8 +1,66 @@
 export type EventColor = 'blue' | 'amber' | 'green' | 'red';
 
+export type SessionStatus = 'scheduled' | 'cancelled';
+
 export type ViewType = 'calendar' | 'sessions' | 'agenda' | 'stats';
 
-export type AdminViewType = 'overview' | 'users' | 'sessions' | 'rooms';
+export type AdminViewType = 'overview' | 'users' | 'sessions' | 'rooms' | 'speakers' | 'audit' | 'event';
+
+export interface Room {
+  id: number;
+  name: string;
+  capacity?: number;
+}
+
+export interface EventProfile {
+  id: number;
+  name: string;
+  slug: string;
+  venue: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  description: string | null;
+  is_active: boolean;
+}
+
+export interface UpdateEventBody {
+  name?: string;
+  venue?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  description?: string | null;
+}
+
+export type SessionTemplateId = 'keynote' | 'panel' | 'workshop';
+
+export type ActivityAction =
+  | 'session.create'
+  | 'session.update'
+  | 'session.delete'
+  | 'session.cancel'
+  | 'session.restore'
+  | 'session.bulk_update'
+  | 'speaker.merge'
+  | 'user.role_change'
+  | 'user.delete'
+  | 'user.rooms_update';
+
+export interface ActivityLogEntry {
+  id: number;
+  user_id: number | null;
+  user_name: string | null;
+  action: ActivityAction;
+  entity_type: string;
+  entity_id: number | null;
+  details: string | null;
+  created_at: string;
+}
+
+export interface BulkUpdateSessionsBody {
+  ids: number[];
+  date_offset_days?: number;
+  room_id?: number;
+}
 
 // ── Raw DB columns in the sessions table ──────────────────────────────────────
 export interface SessionRow {
@@ -20,9 +78,12 @@ export interface SessionRow {
 // Adds room_name + speaker_name via LEFT JOIN, plus a plain date string
 // that the frontend uses for calendar grouping.
 export interface Session extends SessionRow {
-  date: string;         // YYYY-MM-DD (parsed from start_time, or its own DB column)
+  date: string;         // YYYY-MM-DD start (parsed from start_time)
+  end_date: string;     // YYYY-MM-DD end (parsed from end_time; equals date when single-day)
   room_name: string;
   speaker_name: string;
+  speaker_bio?: string | null;
+  status?: SessionStatus;
 }
 
 // ── Data the frontend submits when creating a booking ─────────────────────────
@@ -30,6 +91,7 @@ export interface BookingFormData {
   title: string;
   description: string;
   date: string;
+  end_date: string;
   start_time: string;
   end_time: string;
   room_id: number;      // FK — sent to the DB
@@ -60,6 +122,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  assigned_room_ids?: number[];
 }
 
 export interface AuthState {
@@ -80,6 +143,23 @@ export interface AuthResponse {
 export interface Speaker {
   id: number;
   name: string;
+  bio?: string | null;
+  session_count?: number;
+}
+
+export interface CreateSpeakerBody {
+  name: string;
+  bio?: string;
+}
+
+export interface UpdateSpeakerBody {
+  name?: string;
+  bio?: string | null;
+}
+
+export interface MergeSpeakersBody {
+  keep_id: number;
+  merge_ids: number[];
 }
 
 /** Attendee who saved a session to their programme (booker/admin view). */

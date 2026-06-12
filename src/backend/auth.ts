@@ -33,7 +33,16 @@ export function signToken(user: Pick<User, 'id' | 'role' | 'email'>): string {
 }
 
 export function verifyToken(token: string): JwtPayload {
-  return jwt.verify(token, JWT_SECRET) as JwtPayload;
+  const decoded = jwt.verify(token, JWT_SECRET);
+  if (typeof decoded === 'string' || !decoded || typeof decoded !== 'object') {
+    throw new Error('Invalid token payload');
+  }
+  const p = decoded as Record<string, unknown>;
+  return {
+    sub: Number(p.sub),
+    role: String(p.role).trim().toLowerCase() as UserRole,
+    email: String(p.email),
+  };
 }
 
 function extractBearerToken(req: Request): string | null {

@@ -1,12 +1,23 @@
 import { useState, useMemo, useEffect } from 'react';
-import type { Session, SessionSavesMap, ViewType, BookingFormData, CreateSessionBody, User } from '../backend/types';
+import type { Room, Session, SessionSavesMap, ViewType, BookingFormData, CreateSessionBody, Speaker, User } from '../backend/types';
+import { fetchSpeakers, speakersFromSessions } from './lib/speakersApi';
+import {
+  bookingFormToApiBody,
+  duplicateBookingFormData,
+  hasRoomConflict,
+  toBookingFormData,
+} from './lib/sessionBooking';
+import { sessionSpansDate } from './lib/sessionFormat';
+import { downloadIcsFile } from './lib/icsExport';
 import MiniCalendar from './components/MiniCalendar';
+import SessionFilters from './components/SessionFilters';
 import CalendarView from './components/CalendarView';
 import AgendaView from './components/AgendaView';
 import SessionsView from './components/SessionsView';
 import StatsView from './components/StatsView';
 import BookingModal from './components/BookingModal';
 import DetailModal from './components/DetailModal';
+import BulkSessionToolbar from './components/BulkSessionToolbar';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import { useI18n, translateError } from './i18n/I18nProvider';
 import './App.css';
@@ -31,25 +42,33 @@ function getInitials(name: string): string {
 
 interface AppProps {
   initialUser: User;
+  rooms: Room[];
   sessions: Session[];
   sessionSaves: SessionSavesMap | null;
   onRefreshSessionSaves: () => void;
   loading: boolean;
   error: string | null;
   onCreate: (body: CreateSessionBody) => Promise<void>;
+  onUpdate: (id: number, data: BookingFormData) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
+  onSetSessionStatus: (id: number, status: 'scheduled' | 'cancelled') => Promise<void>;
+  onBulkUpdateSessions?: (body: { ids: number[]; dateOffsetDays: number; roomId?: number }) => Promise<void>;
   onLogout: () => void;
 }
 
 export default function App({
   initialUser,
+  rooms,
   sessions,
   sessionSaves,
   onRefreshSessionSaves,
   loading,
   error,
   onCreate,
+  onUpdate,
   onDelete,
+  onSetSessionStatus,
+  onBulkUpdateSessions,
   onLogout,
 }: AppProps) {
   const { t } = useI18n();
@@ -61,24 +80,43 @@ export default function App({
   const [curYear, setCurYear] = useState(() => new Date().getFullYear());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [speakerFilter, setSpeakerFilter] = useState('');
+  const [roomFilter, setRoomFilter] = useState('');
   const [bookingDate, setBookingDate] = useState<string | undefined>();
   const [showBooking, setShowBooking] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
+  const [duplicateValues, setDuplicateValues] = useState<BookingFormData | undefined>();
+  const [speakers, setSpeakers] = useState<Speaker[]>([]);
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [bulkSelectMode, setBulkSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
-  const filteredSessions = sessions.filter((s) => {
+  const allowedRoomIds = initialUser.assigned_room_ids;
+
+  const filteredSessions = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    if (!query) return true;
-    return (
-      s.title.toLowerCase().includes(query) ||
-      s.speaker_name.toLowerCase().includes(query) ||
-      s.room_name.toLowerCase().includes(query)
-    );
-  });
+    return sessions.filter((s) => {
+      if (speakerFilter && s.speaker_name !== speakerFilter) return false;
+      if (roomFilter && s.room_name !== roomFilter) return false;
+      if (!query) return true;
+      return (
+        s.title.toLowerCase().includes(query) ||
+        s.speaker_name.toLowerCase().includes(query) ||
+        s.room_name.toLowerCase().includes(query)
+      );
+    });
+  }, [sessions, searchTerm, speakerFilter, roomFilter]);
 
   const filteredSessionsInCurrentMonth = filteredSessions.filter((s) => {
     const currentMonth = String(curMonth + 1).padStart(2, '0');
     const prefix = `${curYear}-${currentMonth}`;
-    return s.date.startsWith(prefix);
+    const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const ds = `${prefix}-${String(d).padStart(2, '0')}`;
+      if (sessionSpansDate(s, ds)) return true;
+    }
+    return false;
   });
 
   const detailSession = useMemo(
@@ -86,9 +124,50 @@ export default function App({
     [sessions, detailId],
   );
 
+  const editingSession = useMemo(
+    () => sessions.find((s) => s.id === editingSessionId) ?? null,
+    [sessions, editingSessionId],
+  );
+
+  function closeBooking() {
+    setShowBooking(false);
+    setEditingSessionId(null);
+    setDuplicateValues(undefined);
+    setSaveError(null);
+  }
+
+  function openNewBooking(date?: string) {
+    setEditingSessionId(null);
+    setDuplicateValues(undefined);
+    setBookingDate(date);
+    setSaveError(null);
+    setShowBooking(true);
+  }
+
   useEffect(() => {
     if (detailId !== null) onRefreshSessionSaves();
   }, [detailId, onRefreshSessionSaves]);
+
+  useEffect(() => {
+    if (!showBooking) {
+      setSpeakers([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    fetchSpeakers()
+      .then((list) => {
+        if (!cancelled) setSpeakers(list);
+      })
+      .catch(() => {
+        if (!cancelled) setSpeakers(speakersFromSessions(sessions));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showBooking, sessions]);
 
   function navigateMonth(dir: -1 | 1) {
     setCurMonth((m) => {
@@ -113,44 +192,70 @@ export default function App({
 
   function selectDay(ds: string) {
     setSelectedDate(ds);
-    setBookingDate(ds);
+    openNewBooking(ds);
+  }
+
+  function handleEditSession(id: number) {
+    setDetailId(null);
+    setDuplicateValues(undefined);
+    setEditingSessionId(id);
+    setSaveError(null);
     setShowBooking(true);
+  }
+
+  function handleDuplicateSession(id: number) {
+    const session = sessions.find((s) => s.id === id);
+    if (!session) return;
+    setDetailId(null);
+    setEditingSessionId(null);
+    setDuplicateValues(duplicateBookingFormData(session, t('detail.duplicateSuffix')));
+    setBookingDate(session.date);
+    setSaveError(null);
+    setShowBooking(true);
+  }
+
+  function handleExportIcs() {
+    downloadIcsFile(filteredSessions, 'eventflow-program.ics', t('export.calendarName'));
+  }
+
+  function toggleSelectSession(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkApply(opts: { dateOffsetDays: number; roomId?: number }) {
+    if (!onBulkUpdateSessions || selectedIds.size === 0) return;
+    setBulkBusy(true);
+    try {
+      await onBulkUpdateSessions({
+        ids: [...selectedIds],
+        dateOffsetDays: opts.dateOffsetDays,
+        roomId: opts.roomId,
+      });
+      setSelectedIds(new Set());
+      setBulkSelectMode(false);
+    } finally {
+      setBulkBusy(false);
+    }
   }
 
   async function saveBooking(data: BookingFormData) {
     setSaving(true);
     setSaveError(null);
     try {
-      // Conflict check: enforce 2-hour gap in the same room on the same date
-      const newStart = new Date(`${data.date}T${data.start_time}:00`);
-      const newEnd = new Date(`${data.date}T${data.end_time}:00`);
-      const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
-      const conflict = sessions.some((s) => {
-        if (s.room_id !== data.room_id) return false;
-        if (s.date !== data.date) return false;
-        const existingStart = new Date(`${s.date}T${s.start_time}:00`);
-        const existingEnd = new Date(`${s.date}T${s.end_time}:00`);
-        // ok if new start is at least 2 hours after existing end, or existing start at least 2 hours after new end
-        if (newStart.getTime() >= existingEnd.getTime() + TWO_HOURS_MS) return false;
-        if (existingStart.getTime() >= newEnd.getTime() + TWO_HOURS_MS) return false;
-        return true; // conflict
-      });
-
-      if (conflict) {
+      if (hasRoomConflict(sessions, data, editingSessionId ?? undefined)) {
         throw new Error('errors.roomBusy');
       }
-      const body: CreateSessionBody = {
-        title: data.title,
-        description: data.description,
-        start_time: `${data.date} ${data.start_time}:00`,
-        end_time: `${data.date} ${data.end_time}:00`,
-        room_id: data.room_id,
-        speaker_id: data.speaker_id,
-        speaker_name: data.speaker_name,
-        color: data.color,
-      };
-      await onCreate(body);
-      setShowBooking(false);
+      if (editingSessionId !== null) {
+        await onUpdate(editingSessionId, data);
+      } else {
+        await onCreate(bookingFormToApiBody(data));
+      }
+      closeBooking();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'errors.saveError';
       setSaveError(msg);
@@ -242,11 +347,16 @@ export default function App({
               />
             </div>
             <button
+              type="button"
+              className="btn-export"
+              onClick={handleExportIcs}
+              title={t('export.ics')}
+            >
+              {t('export.ics')}
+            </button>
+            <button
               className="btn-new"
-              onClick={() => {
-                setBookingDate(undefined);
-                setShowBooking(true);
-              }}
+              onClick={() => openNewBooking(undefined)}
             >
               {t('nav.newBooking')}
             </button>
@@ -267,13 +377,22 @@ export default function App({
         <div className="content-area">
           {loading && <div className="loader">{t('common.loading')}</div>}
           {error && <div className="error-banner">{error}</div>}
+          {!loading && !error && (currentView === 'sessions' || currentView === 'agenda') && (
+            <SessionFilters
+              sessions={sessions}
+              speakerFilter={speakerFilter}
+              roomFilter={roomFilter}
+              onSpeakerChange={setSpeakerFilter}
+              onRoomChange={setRoomFilter}
+            />
+          )}
           {!loading && !error && (
             <>
               {currentView === 'calendar' && calSubView === 'month' && (
                 searchTerm.trim() && filteredSessions.length > 0 && filteredSessionsInCurrentMonth.length === 0 ? (
                   <SessionsView
                     sessions={filteredSessions}
-                    sessionSaves={sessionSaves}
+                    sessionSaves={sessionSaves ?? undefined}
                     searchTerm={searchTerm}
                     onEventClick={(id) => setDetailId(id)}
                   />
@@ -293,23 +412,54 @@ export default function App({
               {currentView === 'calendar' && calSubView === 'agenda' && (
                 <AgendaView
                   sessions={filteredSessions}
-                  sessionSaves={sessionSaves}
+                  sessionSaves={sessionSaves ?? undefined}
                   onEventClick={(id) => setDetailId(id)}
                   onDelete={deleteSession}
                 />
               )}
               {currentView === 'sessions' && (
-                <SessionsView
-                  sessions={filteredSessions}
-                  sessionSaves={sessionSaves}
-                  searchTerm={searchTerm}
-                  onEventClick={(id) => setDetailId(id)}
-                />
+                <>
+                  {onBulkUpdateSessions && (
+                    <div className="sessions-toolbar-row">
+                      <button
+                        type="button"
+                        className={'btn-export' + (bulkSelectMode ? ' active' : '')}
+                        onClick={() => {
+                          setBulkSelectMode((v) => !v);
+                          setSelectedIds(new Set());
+                        }}
+                      >
+                        {bulkSelectMode ? t('bulk.cancelSelect') : t('bulk.selectMode')}
+                      </button>
+                    </div>
+                  )}
+                  {bulkSelectMode && selectedIds.size > 0 && (
+                    <BulkSessionToolbar
+                      selectedCount={selectedIds.size}
+                      busy={bulkBusy}
+                      allowedRoomIds={allowedRoomIds}
+                      rooms={rooms}
+                      onClear={() => setSelectedIds(new Set())}
+                      onApply={handleBulkApply}
+                    />
+                  )}
+                  <SessionsView
+                    sessions={filteredSessions}
+                    sessionSaves={sessionSaves ?? undefined}
+                    searchTerm={searchTerm}
+                    selectable={bulkSelectMode}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelectSession}
+                    onEventClick={(id) =>
+                      bulkSelectMode ? toggleSelectSession(id) : setDetailId(id)
+                    }
+                  />
+                </>
               )}
               {currentView === 'agenda' && (
                 <AgendaView
                   sessions={filteredSessions}
-                  sessionSaves={sessionSaves}
+                  sessionSaves={sessionSaves ?? undefined}
                   onEventClick={(id) => setDetailId(id)}
                   onDelete={deleteSession}
                 />
@@ -317,7 +467,7 @@ export default function App({
               {currentView === 'stats' && (
                 <StatsView
                   sessions={filteredSessions}
-                  sessionSaves={sessionSaves}
+                  sessionSaves={sessionSaves ?? undefined}
                   onEventClick={(id) => setDetailId(id)}
                   onDelete={deleteSession}
                 />
@@ -330,10 +480,22 @@ export default function App({
       {showBooking && (
         <BookingModal
           initialDate={bookingDate}
+          initialValues={
+            editingSession
+              ? toBookingFormData(editingSession)
+              : duplicateValues
+          }
           currentUserId={initialUser.id}
           currentUserName={initialUser.name}
+          allowSpeakerEdit
+          allowNewSpeaker={false}
+          speakers={speakers}
+          sessions={sessions}
+          rooms={rooms}
+          editingSessionId={editingSessionId}
+          allowedRoomIds={allowedRoomIds}
           onSave={saveBooking}
-          onClose={() => setShowBooking(false)}
+          onClose={closeBooking}
           saving={saving}
           saveError={displaySaveError}
         />
@@ -345,6 +507,16 @@ export default function App({
           savesLoaded={sessionSaves !== null}
           onClose={() => setDetailId(null)}
           onDelete={deleteSession}
+          onEdit={handleEditSession}
+          onDuplicate={handleDuplicateSession}
+          onSetStatus={async (id, status) => {
+            try {
+              await onSetSessionStatus(id, status);
+            } catch (e: unknown) {
+              const msg = e instanceof Error ? e.message : 'errors.saveError';
+              alert(translateError(msg, t));
+            }
+          }}
         />
       )}
     </div>

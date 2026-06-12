@@ -29,7 +29,21 @@ export default function MiniCalendar({
   let startDow = new Date(curYear, curMonth, 1).getDay() - 1;
   if (startDow < 0) startDow = 6;
 
-  const eventDates = new Set(sessions.map((s) => s.date));
+  const eventDates = new Set<string>();
+  sessions.forEach((s) => {
+    const end = s.end_date ?? s.date;
+    const [sy, sm, sd] = s.date.split('-').map(Number);
+    const [ey, em, ed] = end.split('-').map(Number);
+    const cur = new Date(sy, sm - 1, sd);
+    const last = new Date(ey, em - 1, ed);
+    while (cur <= last) {
+      const pad = (n: number) => String(n).padStart(2, '0');
+      eventDates.add(
+        `${cur.getFullYear()}-${pad(cur.getMonth() + 1)}-${pad(cur.getDate())}`,
+      );
+      cur.setDate(cur.getDate() + 1);
+    }
+  });
 
   const cells: ReactNode[] = [];
   for (let i = 0; i < startDow; i++) cells.push(<div key={`b${i}`} />);

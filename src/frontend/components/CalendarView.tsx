@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Session } from '../../backend/types';
+import { isMultiDaySession, sessionSpansDate } from '../lib/sessionFormat';
 import { useI18n } from '../i18n/I18nProvider';
 import { formatMonthYear, getWeekdayLabels } from '../i18n/dateFormat';
 
@@ -35,7 +36,7 @@ export default function CalendarView({
   let startDow = new Date(curYear, curMonth, 1).getDay() - 1;
   if (startDow < 0) startDow = 6;
 
-  const getSessionsForDate = (ds: string) => sessions.filter((s) => s.date === ds);
+  const getSessionsForDate = (ds: string) => sessions.filter((s) => sessionSpansDate(s, ds));
   const cells: ReactNode[] = [];
 
   for (let i = 0; i < startDow; i++) {
@@ -65,7 +66,7 @@ export default function CalendarView({
         {dayEvents.slice(0, 3).map((ev) => (
           <div
             key={ev.id}
-            className={`cal-event ${ev.color}`}
+            className={`cal-event ${ev.color}${isMultiDaySession(ev) ? ' multiday' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
               onEventClick(ev.id);

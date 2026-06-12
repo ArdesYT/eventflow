@@ -5,11 +5,12 @@ import LanguageSwitcher from './LanguageSwitcher';
 
 interface LoginPageProps {
   offlineMode: boolean;
+  onBrowseGuest?: () => void;
   onLogin: (credentials: { email: string; password: string }) => Promise<void>;
   onRegister: (credentials: { name: string; email: string; password: string }) => Promise<void>;
 }
 
-export default function LoginPage({ offlineMode, onLogin, onRegister }: LoginPageProps) {
+export default function LoginPage({ offlineMode, onBrowseGuest, onLogin, onRegister }: LoginPageProps) {
   const { t } = useI18n();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
@@ -204,6 +205,16 @@ export default function LoginPage({ offlineMode, onLogin, onRegister }: LoginPag
               </p>
             ) : null}
           </div>
+
+          {onBrowseGuest && (
+            <button
+              type="button"
+              className="login-browse-btn"
+              onClick={onBrowseGuest}
+            >
+              {t('login.browseWithoutLogin')}
+            </button>
+          )}
 
           <div className="login-hints">
             <p className="login-hint-title">{t('login.demoAccounts')}</p>

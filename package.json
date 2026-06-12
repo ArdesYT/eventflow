@@ -1,11 +1,14 @@
 {
   "name": "eventflow",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "scripts": {
     "dev": "vite",
     "server": "ts-node --transpile-only src/backend/server.ts",
+    "start": "ts-node --transpile-only src/backend/server.ts",
+    "seed": "ts-node src/backend/seed-demo-data.ts",
     "build": "tsc -b && vite build",
+    "test": "node --require ts-node/register/transpile-only --test src/backend/sessionConflicts.test.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },

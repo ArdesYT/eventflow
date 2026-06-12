@@ -1,5 +1,16 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import type { BookingFormData, EventColor, Speaker } from '../../backend/types';
+import type { BookingFormData, EventColor, Room, Session, SessionTemplateId, Speaker } from '../../backend/types';
+import { FALLBACK_ROOMS, roomLabel } from '../lib/rooms';
+import {
+  applySessionTemplate,
+  bookingDayCount,
+  bookingDurationMinutes,
+  findBookingConflicts,
+  formatDuration,
+  SESSION_TEMPLATES,
+  validateBookingTimes,
+} from '../lib/sessionBooking';
+import LocalizedDateInput from './LocalizedDateInput';
 import { useI18n } from '../i18n/I18nProvider';
 
 const NEW_SPEAKER_ID = 0;
@@ -12,22 +23,15 @@ interface BookingModalProps {
   currentUserId?: number;
   currentUserName?: string;
   allowSpeakerEdit?: boolean;
+  allowNewSpeaker?: boolean;
   speakers?: Speaker[];
+  sessions?: Session[];
+  rooms?: Room[];
+  editingSessionId?: number | null;
+  allowedRoomIds?: number[];
   onSave: (data: BookingFormData) => void;
   onClose: () => void;
 }
-
-// Mirror your rooms / speakers tables here, or fetch them from
-// GET /api/rooms and GET /api/speakers at mount time.
-const ROOMS = [
-  { id: 1, key: 'mainHall' },
-  { id: 2, key: 'roomA'    },
-  { id: 3, key: 'roomB'    },
-  { id: 4, key: 'workshop' },
-  { id: 5, key: 'outdoorStage' },
-];
-
-// Logged-in booker becomes the speaker for created sessions.
 
 const COLORS: EventColor[] = ['blue', 'amber', 'green', 'red'];
 
@@ -42,31 +46,45 @@ export default function BookingModal({
   currentUserId,
   currentUserName,
   allowSpeakerEdit = false,
+  allowNewSpeaker = true,
   speakers = [],
+  sessions = [],
+  rooms = FALLBACK_ROOMS,
+  editingSessionId = null,
+  allowedRoomIds,
   onSave,
   onClose,
   saving = false,
   saveError = null,
 }: BookingModalProps) {
-  const { t } = useI18n();
+  const { t, bcp47 } = useI18n();
   const [customSpeakerName, setCustomSpeakerName] = useState('');
+  const [speakerFilter, setSpeakerFilter] = useState('');
   const [form, setForm] = useState<BookingFormData>({
     title:        '',
     description:  '',
     date:         initialDate ?? todayStr(),
+    end_date:     initialDate ?? todayStr(),
     start_time:   '09:00',
     end_time:     '10:00',
-    room_id:      ROOMS[0].id,
+    room_id:      rooms[0]?.id ?? 1,
     speaker_id:   currentUserId ?? 1,
-    room_name:    t(`rooms.${ROOMS[0].key}`),
+    room_name:    rooms[0] ? roomLabel(rooms[0], t) : '',
     speaker_name: currentUserName ?? 'Speaker',
     color:        'blue',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof BookingFormData, string>>>({});
   const initializedEditKeyRef = useRef<string | null>(null);
+  const speakerTouchedRef = useRef(false);
 
   useEffect(() => {
-    if (initialDate) setForm(f => ({ ...f, date: initialDate }));
+    if (initialDate) {
+      setForm((f) => ({
+        ...f,
+        date: initialDate,
+        end_date: f.end_date < initialDate ? initialDate : f.end_date || initialDate,
+      }));
+    }
   }, [initialDate]);
 
   useEffect(() => {
@@ -77,6 +95,7 @@ export default function BookingModal({
 
     const editKey = [
       initialValues.date,
+      initialValues.end_date,
       initialValues.start_time,
       initialValues.end_time,
       initialValues.speaker_id,
@@ -87,7 +106,9 @@ export default function BookingModal({
 
     initializedEditKeyRef.current = editKey;
     setForm(initialValues);
-    setCustomSpeakerName('');
+    setCustomSpeakerName(
+      initialValues.speaker_id === NEW_SPEAKER_ID ? initialValues.speaker_name : '',
+    );
   }, [initialValues, speakers]);
 
   const speakerOptions = useMemo(() => {
@@ -102,28 +123,49 @@ export default function BookingModal({
     return list;
   }, [speakers, form.speaker_id, form.speaker_name]);
 
+  const filteredSpeakerOptions = useMemo(() => {
+    const q = speakerFilter.trim().toLowerCase();
+    if (!q) return speakerOptions;
+    return speakerOptions.filter((s) => s.name.toLowerCase().includes(q));
+  }, [speakerOptions, speakerFilter]);
+
+  const showSpeakerFilter = allowSpeakerEdit && speakerOptions.length > 4;
+
   const isCustomSpeaker =
     allowSpeakerEdit &&
+    allowNewSpeaker &&
     (form.speaker_id === NEW_SPEAKER_ID ||
       !speakerOptions.some((s) => s.id === form.speaker_id));
 
   useEffect(() => {
-    if (!initialValues && currentUserName) {
-      setForm((f) => ({
-        ...f,
-        speaker_id: currentUserId ?? f.speaker_id,
-        speaker_name: currentUserName,
-      }));
-    }
-  }, [currentUserId, currentUserName, initialValues]);
+    if (initialValues || !currentUserName || !allowSpeakerEdit) return;
+    if (speakerTouchedRef.current) return;
+
+    const byName = speakers.find(
+      (s) => s.name.toLowerCase() === currentUserName.toLowerCase(),
+    );
+    const byId =
+      allowNewSpeaker && currentUserId
+        ? speakers.find((s) => s.id === currentUserId)
+        : undefined;
+    const self = byName ?? byId;
+
+    if (!self) return;
+
+    setForm((f) => ({
+      ...f,
+      speaker_id: self.id,
+      speaker_name: self.name,
+    }));
+  }, [currentUserId, currentUserName, initialValues, allowSpeakerEdit, allowNewSpeaker, speakers]);
 
   // Keep the visible `room_name` translated when locale (t) or selected room changes.
   useEffect(() => {
     setForm((f) => {
-      const room = ROOMS.find((r) => r.id === f.room_id) ?? ROOMS[0];
-      return { ...f, room_name: t(`rooms.${room.key}`) };
+      const room = rooms.find((r) => r.id === f.room_id) ?? rooms[0];
+      return { ...f, room_name: room ? roomLabel(room, t) : f.room_name };
     });
-  }, [t, form.room_id]);
+  }, [t, form.room_id, rooms]);
 
   function set<K extends keyof BookingFormData>(key: K, value: BookingFormData[K]) {
     setForm(f => ({ ...f, [key]: value }));
@@ -131,20 +173,76 @@ export default function BookingModal({
   }
 
   function handleRoomChange(id: number) {
-    const room = ROOMS.find(r => r.id === id)!;
-    setForm(f => ({ ...f, room_id: room.id, room_name: t(`rooms.${room.key}`) }));
+    const room = rooms.find((r) => r.id === id)!;
+    setForm((f) => ({ ...f, room_id: room.id, room_name: roomLabel(room, t) }));
   }
 
+
+  function handleStartDateChange(value: string) {
+    setForm((f) => ({
+      ...f,
+      date: value,
+      end_date: f.end_date < value ? value : f.end_date,
+    }));
+    setErrors((e) => ({ ...e, date: undefined, end_date: undefined }));
+  }
 
   function validate(): boolean {
     const errs: typeof errors = {};
     if (!form.title.trim()) errs.title = t('common.required');
     if (!form.date) errs.date = t('common.required');
+    if (!form.end_date) errs.end_date = t('common.required');
+    const timeError = validateBookingTimes(form);
+    if (timeError === 'endBeforeStart') errs.end_date = t('booking.endBeforeStart');
+    if (timeError === 'invalidRange') errs.end_time = t('booking.invalidTimeRange');
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
 
+  const isMultiDay = form.end_date > form.date;
+
+  const availableRooms = useMemo(() => {
+    if (!allowedRoomIds?.length) return rooms;
+    return rooms.filter((r) => allowedRoomIds.includes(r.id));
+  }, [allowedRoomIds, rooms]);
+
+  useEffect(() => {
+    if (!allowedRoomIds?.length) return;
+    if (!allowedRoomIds.includes(form.room_id) && availableRooms.length) {
+      const room = availableRooms[0];
+      setForm((f) => ({ ...f, room_id: room.id, room_name: roomLabel(room, t) }));
+    }
+  }, [allowedRoomIds, availableRooms, form.room_id, t]);
+
+  const durationPreview = useMemo(() => {
+    if (validateBookingTimes(form)) return null;
+    const days = bookingDayCount(form);
+    const minutes = bookingDurationMinutes(form);
+    if (!days || !minutes) return null;
+    return { days, minutes, label: formatDuration(minutes) };
+  }, [form]);
+
+  const conflicts = useMemo(
+    () =>
+      findBookingConflicts(
+        sessions,
+        form,
+        editingSessionId ?? undefined,
+      ),
+    [sessions, form, editingSessionId],
+  );
+
+  const hasConflictPreview =
+    conflicts.roomOverlap.length > 0 ||
+    conflicts.roomBuffer.length > 0 ||
+    conflicts.speakerOverlap.length > 0;
+
+  function applyTemplate(templateId: SessionTemplateId) {
+    setForm((f) => applySessionTemplate(f, templateId, t('booking.templatePrefix')));
+  }
+
   function handleSpeakerSelect(speakerId: number) {
+    speakerTouchedRef.current = true;
     if (speakerId === NEW_SPEAKER_ID) {
       setCustomSpeakerName('');
       setForm((f) => ({
@@ -166,6 +264,7 @@ export default function BookingModal({
   }
 
   function handleCustomSpeakerName(value: string) {
+    speakerTouchedRef.current = true;
     setCustomSpeakerName(value);
     setForm((f) => ({
       ...f,
@@ -176,10 +275,22 @@ export default function BookingModal({
 
   function handleSave() {
     if (!validate()) return;
-    const payload =
-      isCustomSpeaker && customSpeakerName.trim()
-        ? { ...form, speaker_id: NEW_SPEAKER_ID, speaker_name: customSpeakerName.trim() }
-        : form;
+    const payload = isCustomSpeaker
+      ? {
+          ...form,
+          speaker_id: NEW_SPEAKER_ID,
+          speaker_name: (customSpeakerName || form.speaker_name).trim(),
+        }
+      : form;
+    if (
+      allowSpeakerEdit &&
+      !allowNewSpeaker &&
+      (payload.speaker_id === NEW_SPEAKER_ID ||
+        !speakerOptions.some((s) => s.id === payload.speaker_id))
+    ) {
+      setErrors((e) => ({ ...e, speaker_name: t('booking.speakerRequired') }));
+      return;
+    }
     if (allowSpeakerEdit && !payload.speaker_name.trim()) {
       setErrors((e) => ({ ...e, speaker_name: t('common.required') }));
       return;
@@ -197,6 +308,24 @@ export default function BookingModal({
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
+        {!initialValues && (
+          <div className="form-group">
+            <label className="form-label">{t('booking.templatesLabel')}</label>
+            <div className="booking-template-row">
+              {SESSION_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  className={`booking-template-btn color-${tpl.color}`}
+                  onClick={() => applyTemplate(tpl.id)}
+                >
+                  {t(`booking.templates.${tpl.id}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="form-group">
           <label className="form-label">{t('booking.sessionTitle')}</label>
           <input
@@ -209,14 +338,29 @@ export default function BookingModal({
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">{t('booking.date')}</label>
-            <input
-              className={`form-input${errors.date ? ' error' : ''}`}
-              type="date"
+            <label className="form-label">{t('booking.startDate')}</label>
+            <LocalizedDateInput
               value={form.date}
-              onChange={e => set('date', e.target.value)}
+              hasError={!!errors.date}
+              onChange={handleStartDateChange}
             />
           </div>
+          <div className="form-group">
+            <label className="form-label">{t('booking.endDate')}</label>
+            <LocalizedDateInput
+              value={form.end_date}
+              min={form.date}
+              hasError={!!errors.end_date}
+              onChange={(v) => set('end_date', v)}
+            />
+          </div>
+        </div>
+
+        {isMultiDay && (
+          <p className="booking-multiday-hint">{t('booking.multiDayHint')}</p>
+        )}
+
+        <div className="form-row">
           <div className="form-group">
             <label className="form-label">{t('booking.room')}</label>
             <select
@@ -224,10 +368,28 @@ export default function BookingModal({
               value={form.room_id}
               onChange={e => handleRoomChange(Number(e.target.value))}
             >
-              {ROOMS.map(r => (
-                <option key={r.id} value={r.id}>{t(`rooms.${r.key}`)}</option>
+              {availableRooms.map((r) => (
+                <option key={r.id} value={r.id}>{roomLabel(r, t)}</option>
               ))}
             </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('booking.durationPreview')}</label>
+            <div className="booking-duration-preview" aria-live="polite">
+              {durationPreview ? (
+                <>
+                  <span className="booking-duration-days">
+                    {durationPreview.days === 1
+                      ? t('booking.dayCount', { count: 1 })
+                      : t('booking.dayCount_plural', { count: durationPreview.days })}
+                  </span>
+                  <span className="booking-duration-sep">·</span>
+                  <span className="booking-duration-time">{durationPreview.label}</span>
+                </>
+              ) : (
+                <span className="booking-duration-empty">{t('booking.durationInvalid')}</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -237,6 +399,7 @@ export default function BookingModal({
             <input
               className="form-input"
               type="time"
+              lang={bcp47}
               value={form.start_time}
               onChange={e => set('start_time', e.target.value)}
             />
@@ -244,30 +407,80 @@ export default function BookingModal({
           <div className="form-group">
             <label className="form-label">{t('booking.endTime')}</label>
             <input
-              className="form-input"
+              className={`form-input${errors.end_time ? ' error' : ''}`}
               type="time"
+              lang={bcp47}
               value={form.end_time}
               onChange={e => set('end_time', e.target.value)}
             />
           </div>
         </div>
 
+        {hasConflictPreview && (
+          <div className="booking-conflict-preview" role="alert">
+            {conflicts.roomOverlap.length > 0 && (
+              <div className="booking-conflict-block">
+                <strong>{t('booking.roomOverlap')}</strong>
+                <ul>
+                  {conflicts.roomOverlap.map((s) => (
+                    <li key={s.id}>{s.title}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {conflicts.roomBuffer.length > 0 && (
+              <div className="booking-conflict-block">
+                <strong>{t('booking.roomBuffer')}</strong>
+                <ul>
+                  {conflicts.roomBuffer.map((s) => (
+                    <li key={s.id}>{s.title}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {conflicts.speakerOverlap.length > 0 && (
+              <div className="booking-conflict-block">
+                <strong>{t('booking.speakerOverlap')}</strong>
+                <ul>
+                  {conflicts.speakerOverlap.map((s) => (
+                    <li key={s.id}>{s.title}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="form-group">
           <label className="form-label">{t('booking.speaker')}</label>
           {allowSpeakerEdit ? (
             <>
+              {showSpeakerFilter && (
+                <input
+                  className="form-input"
+                  style={{ marginBottom: 8 }}
+                  placeholder={t('booking.speakerSearch')}
+                  value={speakerFilter}
+                  onChange={(e) => setSpeakerFilter(e.target.value)}
+                />
+              )}
               <select
                 className="form-select"
                 value={isCustomSpeaker ? NEW_SPEAKER_ID : form.speaker_id}
                 onChange={(e) => handleSpeakerSelect(Number(e.target.value))}
               >
-                {speakerOptions.map((s) => (
+                {filteredSpeakerOptions.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
+                    {currentUserName &&
+                    s.name.toLowerCase() === currentUserName.toLowerCase()
+                      ? ` (${t('booking.speakerSelf')})`
+                      : ''}
                   </option>
                 ))}
-                <option value={NEW_SPEAKER_ID}>{t('booking.newSpeaker')}</option>
+                {allowNewSpeaker && (
+                  <option value={NEW_SPEAKER_ID}>{t('booking.newSpeaker')}</option>
+                )}
               </select>
               {isCustomSpeaker && (
                 <input

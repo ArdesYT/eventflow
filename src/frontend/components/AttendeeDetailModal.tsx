@@ -1,4 +1,4 @@
-import type { Session, SessionSaveUser } from '../../backend/types';
+import type { Session } from '../../backend/types';
 import {
   formatDuration,
   formatSessionTimeRange,
@@ -7,15 +7,15 @@ import {
 import { formatSessionDateRange, isMultiDaySession, isSessionCancelled } from '../lib/sessionFormat';
 import { useI18n } from '../i18n/I18nProvider';
 
-interface DetailModalProps {
+interface AttendeeDetailModalProps {
   session: Session;
-  savedBy?: SessionSaveUser[];
-  savesLoaded?: boolean;
+  isSaved: boolean;
+  busy: boolean;
+  guestMode?: boolean;
   onClose: () => void;
-  onDelete: (id: number) => void;
-  onEdit?: (id: number) => void;
-  onDuplicate?: (id: number) => void;
-  onSetStatus?: (id: number, status: 'scheduled' | 'cancelled') => void;
+  onSave: () => void;
+  onRemove: () => void;
+  onLoginRequest?: () => void;
 }
 
 const ACCENT: Record<string, string> = {
@@ -25,34 +25,23 @@ const ACCENT: Record<string, string> = {
   red: '#e02424',
 };
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-export default function DetailModal({
+export default function AttendeeDetailModal({
   session,
-  savedBy,
-  savesLoaded,
+  isSaved,
+  busy,
+  guestMode = false,
   onClose,
-  onDelete,
-  onEdit,
-  onDuplicate,
-  onSetStatus,
-}: DetailModalProps) {
+  onSave,
+  onRemove,
+  onLoginRequest,
+}: AttendeeDetailModalProps) {
   const { t, locale } = useI18n();
-  const showSaves = savesLoaded !== undefined;
   const durationMin = sessionDurationMinutes(session);
   const cancelled = isSessionCancelled(session);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal attendee-detail-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
@@ -75,6 +64,7 @@ export default function DetailModal({
             ×
           </button>
         </div>
+
         <div>
           <div className="detail-row">
             <span className="detail-label">
@@ -120,79 +110,25 @@ export default function DetailModal({
               </span>
             </div>
           )}
-          {showSaves && (
-            <div className="detail-row detail-row-saves">
-              <span className="detail-label">{t('detail.savedBy')}</span>
-              <div className="detail-value detail-saves-value">
-                {!savesLoaded ? (
-                  <span className="detail-saves-empty">{t('detail.savesUnavailable')}</span>
-                ) : !savedBy?.length ? (
-                  <span className="detail-saves-empty">{t('detail.noSaves')}</span>
-                ) : (
-                  <ul className="saved-by-list">
-                    {savedBy.map((u) => (
-                      <li key={u.id} className="saved-by-item">
-                        <div className="saved-by-avatar">{getInitials(u.name)}</div>
-                        <div className="saved-by-info">
-                          <span className="saved-by-name">{u.name}</span>
-                          <span className="saved-by-email">{u.email}</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          )}
         </div>
+
         <div className="btn-row">
-          {onDuplicate && (
-            <button
-              type="button"
-              className="btn-cancel detail-duplicate-btn"
-              onClick={() => {
-                onDuplicate(session.id);
-                onClose();
-              }}
-            >
-              {t('detail.duplicate')}
+          {guestMode ? (
+            <button type="button" className="btn-save" onClick={onLoginRequest}>
+              {t('public.loginToSave')}
+            </button>
+          ) : cancelled ? (
+            <span className="attendee-cancelled-note">{t('session.cancelledHint')}</span>
+          ) : isSaved ? (
+            <button type="button" className="btn-danger" disabled={busy} onClick={onRemove}>
+              {busy ? t('booking.saving') : t('public.removeSaved')}
+            </button>
+          ) : (
+            <button type="button" className="btn-save" disabled={busy} onClick={onSave}>
+              {busy ? t('booking.saving') : t('public.saveSession')}
             </button>
           )}
-          {onEdit && !cancelled && (
-            <button
-              type="button"
-              className="btn-save"
-              onClick={() => {
-                onEdit(session.id);
-                onClose();
-              }}
-            >
-              {t('common.edit')}
-            </button>
-          )}
-          {onSetStatus && (
-            <button
-              type="button"
-              className={cancelled ? 'btn-save' : 'btn-cancel session-cancel-btn'}
-              onClick={() => {
-                onSetStatus(session.id, cancelled ? 'scheduled' : 'cancelled');
-                onClose();
-              }}
-            >
-              {cancelled ? t('session.restore') : t('session.cancel')}
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn-danger"
-            onClick={() => {
-              onDelete(session.id);
-              onClose();
-            }}
-          >
-            {t('common.delete')}
-          </button>
-          <button type="button" className="btn-save" onClick={onClose}>
+          <button type="button" className="btn-cancel" onClick={onClose}>
             {t('common.close')}
           </button>
         </div>

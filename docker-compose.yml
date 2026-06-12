@@ -1,0 +1,41 @@
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpass
+      MARIADB_DATABASE: eventflow
+      MARIADB_USER: eventflow
+      MARIADB_PASSWORD: eventflow
+    volumes:
+      - eventflow_db:/var/lib/mysql
+      - ./src/backend/eventflow.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: eventflow
+      DB_PASS: eventflow
+      DB_NAME: eventflow
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env for production}
+      CLIENT_URL: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  eventflow_db:

@@ -1,5 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { BookingFormData, User, Session, SessionSavesMap, UserRole } from '../backend/types';
+import type {
+  BookingFormData,
+  EventProfile,
+  Room,
+  User,
+  Session,
+  SessionSavesMap,
+  UserRole,
+} from '../backend/types';
+import { fetchActiveEvent, updateEventProfile } from './lib/eventApi';
+import { FALLBACK_ROOMS } from './lib/rooms';
+import { fetchRooms } from './lib/roomsApi';
 import LoginPage from './components/LoginPage';
 import PublicEventsPage from './components/PublicEventsPage';
 import App from './App';
@@ -9,7 +20,23 @@ import { loadStoredAuth, saveAuth, clearAuth } from './lib/authStorage';
 import { authFetch } from './lib/authFetch';
 import { DEMO_USERS } from './lib/demoUsers';
 import { normalizeSession, parseSessionDateTime } from './lib/sessionFormat';
-import { fetchAdminUsers, updateUserRole, deleteAdminUser } from './lib/adminApi';
+import { bookingFormToApiBody } from './lib/sessionBooking';
+import {
+  bulkUpdateSessions,
+  fetchAdminUsers,
+  seedDemoData,
+  setSessionStatus,
+  updateUserRole,
+  updateUserRooms,
+  deleteAdminUser,
+} from './lib/adminApi';
+import {
+  notificationsEnabled,
+  requestNotificationPermission,
+  setNotificationsEnabled,
+  stopSessionNotifications,
+  syncSessionNotifications,
+} from './lib/sessionNotifications';
 import {
   addToMySchedule,
   fetchMySchedule,
@@ -21,13 +48,25 @@ import { useI18n, translateError } from './i18n/I18nProvider';
 
 const POLL_INTERVAL_MS = 5000;
 
+const DEFAULT_EVENT: EventProfile = {
+  id: 1,
+  name: 'EventFlow 2026',
+  slug: 'eventflow-2026',
+  venue: 'Budapest Congress Center',
+  start_date: '2026-03-20',
+  end_date: '2026-03-25',
+  description: 'Az esemény hivatalos programja és előadásai.',
+  is_active: true,
+};
+
 const SEED_SESSIONS: Session[] = [
-  { id: 1, title: 'Opening Keynote', date: '2026-03-20', start_time: '09:00', end_time: '10:30', room_id: 1, speaker_id: 1, room_name: 'Main Hall', speaker_name: 'Dr. Anna Kovács', color: 'blue', description: 'Kickoff of EventFlow 2026.' },
-  { id: 2, title: 'AI & Society Panel', date: '2026-03-20', start_time: '11:00', end_time: '12:00', room_id: 2, speaker_id: 2, room_name: 'Room A', speaker_name: 'Péter Nagy', color: 'amber', description: '' },
-  { id: 3, title: 'Workshop: Design Sys.', date: '2026-03-21', start_time: '13:00', end_time: '15:00', room_id: 4, speaker_id: 3, room_name: 'Workshop', speaker_name: 'Eszter Molnár', color: 'green', description: 'Hands-on workshop.' },
-  { id: 4, title: 'Startup Pitches', date: '2026-03-22', start_time: '14:00', end_time: '16:00', room_id: 1, speaker_id: 5, room_name: 'Main Hall', speaker_name: 'Multiple', color: 'red', description: '' },
-  { id: 5, title: 'Closing Ceremony', date: '2026-03-25', start_time: '17:00', end_time: '18:00', room_id: 1, speaker_id: 1, room_name: 'Main Hall', speaker_name: 'Dr. Anna Kovács', color: 'blue', description: '' },
-  { id: 6, title: 'Tech Talk: Web3', date: '2026-03-23', start_time: '10:00', end_time: '11:00', room_id: 3, speaker_id: 4, room_name: 'Room B', speaker_name: 'Balázs Kiss', color: 'amber', description: '' },
+  { id: 1, title: 'Opening Keynote', date: '2026-03-20', end_date: '2026-03-20', start_time: '09:00', end_time: '10:30', room_id: 1, speaker_id: 1, room_name: 'Main Hall', speaker_name: 'Dr. Anna Kovács', speaker_bio: 'Kutató és konferencia-előadó, 15+ év tapasztalattal.', color: 'blue', description: 'Kickoff of EventFlow 2026.' },
+  { id: 2, title: 'AI & Society Panel', date: '2026-03-20', end_date: '2026-03-20', start_time: '11:00', end_time: '12:00', room_id: 2, speaker_id: 2, room_name: 'Room A', speaker_name: 'Péter Nagy', color: 'amber', description: '' },
+  { id: 3, title: 'Workshop: Design Sys.', date: '2026-03-21', end_date: '2026-03-21', start_time: '13:00', end_time: '15:00', room_id: 4, speaker_id: 3, room_name: 'Workshop', speaker_name: 'Eszter Molnár', color: 'green', description: 'Hands-on workshop.' },
+  { id: 4, title: 'Startup Pitches', date: '2026-03-22', end_date: '2026-03-22', start_time: '14:00', end_time: '16:00', room_id: 1, speaker_id: 5, room_name: 'Main Hall', speaker_name: 'Multiple', color: 'red', description: '' },
+  { id: 5, title: 'Closing Ceremony', date: '2026-03-25', end_date: '2026-03-25', start_time: '17:00', end_time: '18:00', room_id: 1, speaker_id: 1, room_name: 'Main Hall', speaker_name: 'Dr. Anna Kovács', speaker_bio: 'Kutató és konferencia-előadó, 15+ év tapasztalattal.', color: 'blue', description: '' },
+  { id: 6, title: 'Tech Talk: Web3', date: '2026-03-23', end_date: '2026-03-23', start_time: '10:00', end_time: '11:00', room_id: 3, speaker_id: 4, room_name: 'Room B', speaker_name: 'Balázs Kiss', color: 'amber', description: '' },
+  { id: 7, title: 'EventFlow Expo', date: '2026-03-20', end_date: '2026-03-22', start_time: '10:00', end_time: '18:00', room_id: 1, speaker_id: 1, room_name: 'Main Hall', speaker_name: 'Dr. Anna Kovács', color: 'green', description: 'Többnapos kiállítás és networking.' },
 ];
 
 function mapApiSessions(rows: unknown[]): Session[] {
@@ -42,10 +81,11 @@ function demoUsersList(): User[] {
 
 async function isBackendReachable(): Promise<boolean> {
   try {
-    const res = await fetch(apiUrl('/api/sessions'), {
+    const res = await fetch(apiUrl('/api/health'), {
       signal: AbortSignal.timeout(2000),
     });
-    return res.ok;
+    const data = await res.json().catch(() => ({}));
+    return res.ok && data.db === 'connected';
   } catch {
     return false;
   }
@@ -64,6 +104,10 @@ export default function Root() {
   const [scheduleBusyId, setScheduleBusyId] = useState<number | null>(null);
   const [sessionSaves, setSessionSaves] = useState<SessionSavesMap | null>(null);
   const [backendMode, setBackendMode] = useState<boolean | null>(null);
+  const [guestBrowse, setGuestBrowse] = useState(false);
+  const [loadingDemo, setLoadingDemo] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>(FALLBACK_ROOMS);
+  const [eventProfile, setEventProfile] = useState<EventProfile>(DEFAULT_EVENT);
 
   const displayError = error
     ? error.startsWith('errors.')
@@ -131,9 +175,19 @@ export default function Root() {
           setUser(null);
         }
         await fetchSessions();
+        try {
+          const [roomList, ev] = await Promise.all([fetchRooms(), fetchActiveEvent()]);
+          setRooms(roomList);
+          setEventProfile(ev);
+        } catch {
+          setRooms(FALLBACK_ROOMS);
+          setEventProfile(DEFAULT_EVENT);
+        }
       } else {
         setSessions(SEED_SESSIONS);
         setUsers(demoUsersList());
+        setRooms(FALLBACK_ROOMS);
+        setEventProfile(DEFAULT_EVENT);
         setLoading(false);
       }
     })();
@@ -191,6 +245,19 @@ export default function Root() {
       setSavedSessions(sessions.filter((s) => ids.includes(s.id)));
     }
   }, [user, backendMode, sessions, fetchSavedSchedule]);
+
+  useEffect(() => {
+    if (!user || user.role?.trim().toLowerCase() !== 'attendee') {
+      stopSessionNotifications();
+      return;
+    }
+    if (!notificationsEnabled()) {
+      stopSessionNotifications();
+      return;
+    }
+    syncSessionNotifications(savedSessions, t);
+    return () => stopSessionNotifications();
+  }, [user, savedSessions, t]);
 
   useEffect(() => {
     if (!user || !backendMode) return;
@@ -342,6 +409,7 @@ export default function Root() {
         title: b.title ?? '',
         description: b.description ?? '',
         date: start?.date ?? '',
+        end_date: end?.date ?? start?.date ?? '',
         start_time: start?.time ?? '',
         end_time: end?.time ?? '',
         room_id: b.room_id ?? 1,
@@ -369,19 +437,9 @@ export default function Root() {
 
   async function handleUpdateSession(id: number, data: BookingFormData): Promise<void> {
     if (backendMode) {
-      const body = {
-        title: data.title,
-        description: data.description,
-        start_time: `${data.date} ${data.start_time}:00`,
-        end_time: `${data.date} ${data.end_time}:00`,
-        room_id: data.room_id,
-        speaker_id: data.speaker_id,
-        speaker_name: data.speaker_name,
-        color: data.color,
-      };
       const res = await authFetch(`/api/sessions/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify(body),
+        body: JSON.stringify(bookingFormToApiBody(data)),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -397,6 +455,7 @@ export default function Root() {
                 title: data.title,
                 description: data.description,
                 date: data.date,
+                end_date: data.end_date || data.date,
                 start_time: data.start_time,
                 end_time: data.end_time,
                 room_id: data.room_id,
@@ -429,6 +488,48 @@ export default function Root() {
     }
   }
 
+  async function handleBulkUpdateSessions(body: {
+    ids: number[];
+    dateOffsetDays: number;
+    roomId?: number;
+  }) {
+    if (!backendMode) return;
+    await bulkUpdateSessions({
+      ids: body.ids,
+      date_offset_days: body.dateOffsetDays,
+      room_id: body.roomId,
+    });
+    await fetchSessions();
+  }
+
+  async function handleUpdateUserRooms(userId: number, roomIds: number[]) {
+    if (backendMode && user?.role === 'admin') {
+      const updated = await updateUserRooms(userId, roomIds);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...updated, role: updated.role as UserRole } : u)),
+      );
+    }
+  }
+
+  async function handleUpdateEvent(data: Partial<EventProfile>) {
+    if (!backendMode || user?.role !== 'admin') return;
+    const updated = await updateEventProfile(data);
+    setEventProfile(updated);
+  }
+
+  async function handleToggleNotifications(enable: boolean): Promise<boolean> {
+    if (enable) {
+      const perm = await requestNotificationPermission();
+      if (perm !== 'granted') return false;
+      setNotificationsEnabled(true);
+      syncSessionNotifications(savedSessions, t);
+      return true;
+    }
+    setNotificationsEnabled(false);
+    stopSessionNotifications();
+    return true;
+  }
+
   async function handleDeleteUser(userId: number) {
     if (backendMode && user?.role === 'admin') {
       await deleteAdminUser(userId);
@@ -438,23 +539,71 @@ export default function Root() {
     }
   }
 
+  async function handleSetSessionStatus(id: number, status: 'scheduled' | 'cancelled') {
+    if (backendMode) {
+      await setSessionStatus(id, status);
+      await fetchSessions();
+    } else {
+      setSessions((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, status } : s)),
+      );
+    }
+  }
+
+  async function handleLoadDemo() {
+    if (!backendMode || user?.role !== 'admin') return;
+    setLoadingDemo(true);
+    try {
+      await seedDemoData();
+      await fetchSessions();
+      setError(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'errors.seedFailed';
+      setError(msg);
+    } finally {
+      setLoadingDemo(false);
+    }
+  }
+
   function handleLogout() {
     clearAuth();
     setUser(null);
+    setGuestBrowse(false);
+  }
+
+  if (!user && guestBrowse) {
+    return (
+      <PublicEventsPage
+        guestMode
+        event={eventProfile}
+        sessions={sessions}
+        savedSessions={[]}
+        loading={loading}
+        error={displayError}
+        scheduleError={null}
+        scheduleBusyId={null}
+        onSaveSession={async () => {}}
+        onRemoveSession={async () => {}}
+        onLoginRequest={() => setGuestBrowse(false)}
+      />
+    );
   }
 
   if (!user) {
     return (
       <LoginPage
         offlineMode={backendMode === false}
+        onBrowseGuest={() => setGuestBrowse(true)}
         onLogin={async (credentials) => {
           const loggedInUser = await handleLogin(credentials);
           if (!backendMode) saveAuth(loggedInUser, null);
           setUser(loggedInUser);
+          setGuestBrowse(false);
         }}
         onRegister={async (credentials) => {
           const registeredUser = await handleRegister(credentials);
           setUser(registeredUser);
+          setGuestBrowse(false);
         }}
       />
     );
@@ -475,9 +624,19 @@ export default function Root() {
         error={displayError}
         backendMode={backendMode === true}
         onUpdateUserRole={handleUpdateUserRole}
+        onUpdateUserRooms={handleUpdateUserRooms}
+        onBulkUpdateSessions={handleBulkUpdateSessions}
         onDeleteUser={handleDeleteUser}
         onDeleteSession={handleDelete}
+        onCreateSession={handleCreate}
         onUpdateSession={handleUpdateSession}
+        onRefreshSessions={fetchSessions}
+        onSetSessionStatus={handleSetSessionStatus}
+        event={eventProfile}
+        onUpdateEvent={handleUpdateEvent}
+        rooms={rooms}
+        onLoadDemo={backendMode ? handleLoadDemo : undefined}
+        loadingDemo={loadingDemo}
         onLogout={handleLogout}
       />
     );
@@ -487,13 +646,17 @@ export default function Root() {
     return (
       <App
         initialUser={user}
+        rooms={rooms}
         sessions={sessions}
         sessionSaves={sessionSaves}
         onRefreshSessionSaves={fetchSessionSavesMap}
         loading={loading}
         error={displayError}
         onCreate={handleCreate}
+        onUpdate={handleUpdateSession}
         onDelete={handleDelete}
+        onSetSessionStatus={handleSetSessionStatus}
+        onBulkUpdateSessions={handleBulkUpdateSessions}
         onLogout={handleLogout}
       />
     );
@@ -501,6 +664,7 @@ export default function Root() {
 
   return (
     <PublicEventsPage
+      event={eventProfile}
       sessions={sessions}
       savedSessions={savedSessions}
       loading={loading}
@@ -508,8 +672,12 @@ export default function Root() {
       scheduleError={displayScheduleError}
       scheduleBusyId={scheduleBusyId}
       user={user}
+      onLoadDemo={user.role === 'admin' && backendMode ? handleLoadDemo : undefined}
+      loadingDemo={loadingDemo}
       onSaveSession={handleSaveSession}
       onRemoveSession={handleRemoveSession}
+      onToggleNotifications={handleToggleNotifications}
+      notificationsOn={notificationsEnabled()}
       onLogout={handleLogout}
     />
   );

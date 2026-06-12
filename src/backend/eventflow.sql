@@ -58,7 +58,37 @@ CREATE TABLE `sessions` (
   `end_time` datetime NOT NULL,
   `room_id` int(11) DEFAULT NULL,
   `speaker_id` int(11) DEFAULT NULL,
-  `color` varchar(10) NOT NULL DEFAULT 'blue'
+  `color` varchar(10) NOT NULL DEFAULT 'blue',
+  `status` enum('scheduled','cancelled') NOT NULL DEFAULT 'scheduled'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tábla szerkezet ehhez a táblához `user_rooms`
+--
+
+CREATE TABLE `user_rooms` (
+  `user_id` int(11) NOT NULL,
+  `room_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tábla szerkezet ehhez a táblához `activity_log`
+--
+
+CREATE TABLE `activity_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `action` varchar(64) NOT NULL,
+  `entity_type` varchar(64) NOT NULL,
+  `entity_id` int(11) DEFAULT NULL,
+  `details` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_activity_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -66,14 +96,13 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `title`, `description`, `start_time`, `end_time`, `room_id`, `speaker_id`, `color`) VALUES
-(14, 'asd', '', '0000-00-00 00:00:00', '0000-00-00 00:00:00', 1, 1, 'blue'),
-(15, 'asd', '', '0000-00-00 00:00:00', '0000-00-00 00:00:00', 1, 1, 'blue'),
-(16, 'asd', '', '0000-00-00 00:00:00', '0000-00-00 00:00:00', 1, 1, 'blue'),
-(17, 'asd', '', '0000-00-00 00:00:00', '0000-00-00 00:00:00', 1, 1, 'blue'),
-(18, 'asd', '', '0000-00-00 00:00:00', '0000-00-00 00:00:00', 1, 1, 'blue'),
-(19, 'asd', '', '0000-00-00 00:00:00', '0000-00-00 00:00:00', 3, 1, 'blue'),
-(20, 'asd', '', '0000-00-00 00:00:00', '0000-00-00 00:00:00', 1, 1, 'blue'),
-(21, 'asd', '', '0000-00-00 00:00:00', '0000-00-00 00:00:00', 1, 1, 'blue');
+(1, 'Opening Keynote', 'Kickoff of EventFlow 2026.', '2026-03-20 09:00:00', '2026-03-20 10:30:00', 1, 1, 'blue'),
+(2, 'AI & Society Panel', '', '2026-03-20 11:00:00', '2026-03-20 12:00:00', 2, 2, 'amber'),
+(3, 'Workshop: Design Sys.', 'Hands-on workshop.', '2026-03-21 13:00:00', '2026-03-21 15:00:00', 4, 3, 'green'),
+(4, 'Startup Pitches', '', '2026-03-22 14:00:00', '2026-03-22 16:00:00', 1, 5, 'red'),
+(5, 'Closing Ceremony', '', '2026-03-25 17:00:00', '2026-03-25 18:00:00', 1, 1, 'blue'),
+(6, 'Tech Talk: Web3', '', '2026-03-23 10:00:00', '2026-03-23 11:00:00', 3, 4, 'amber'),
+(7, 'EventFlow Expo', 'Többnapos kiállítás és networking.', '2026-03-20 10:00:00', '2026-03-22 18:00:00', 1, 1, 'green');
 
 -- --------------------------------------------------------
 
