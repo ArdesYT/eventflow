@@ -1,15 +1,16 @@
-import { useState } from 'react';
-import type { Session, User, AdminViewType, BookingFormData } from '../backend/types';
-import AdminOverview from './components/admin/AdminOverview';
-import UsersView from './components/admin/UsersView';
-import SessionsView from './components/SessionsView';
-import AgendaView from './components/AgendaView';
-import BookingModal from './components/BookingModal';
-import DetailModal from './components/DetailModal';
-import RoomsUsage from './components/admin/RoomsUsage';
-import LanguageSwitcher from './components/LanguageSwitcher';
-import { useI18n, translateError } from './i18n/I18nProvider';
-import './App.css';
+import { useState, useEffect } from 'react';
+import type { Session, SessionSavesMap, Speaker, User, AdminViewType, BookingFormData } from '../../../backend/types';
+import { fetchSpeakers, speakersFromSessions } from '../../lib/speakersApi';
+import AdminOverview from './AdminOverview';
+import UsersView from './UsersView';
+import SessionsView from '../SessionsView';
+import AgendaView from '../AgendaView';
+import BookingModal from '../BookingModal';
+import DetailModal from '../DetailModal';
+import RoomsUsage from './RoomsUsage';
+import LanguageSwitcher from '../LanguageSwitcher';
+import { useI18n, translateError } from '../../i18n/I18nProvider';
+import '../../App.css';
 
 const NAV_ITEMS: { view: AdminViewType; icon: string; labelKey: string }[] = [
   { view: 'overview', icon: '📊', labelKey: 'admin.nav.overview' },
@@ -38,6 +39,8 @@ interface AdminAppProps {
   initialUser: User;
   sessions: Session[];
   users: User[];
+  sessionSaves: SessionSavesMap | null;
+  onRefreshSessionSaves: () => void;
   loading: boolean;
   usersLoading: boolean;
   error: string | null;
@@ -53,6 +56,8 @@ export default function AdminApp({
   initialUser,
   sessions,
   users,
+  sessionSaves,
+  onRefreshSessionSaves,
   loading,
   usersLoading,
   error,
@@ -71,6 +76,7 @@ export default function AdminApp({
   const [userActionError, setUserActionError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+  const [speakers, setSpeakers] = useState<Speaker[]>([]);
 
   const filteredSessions = sessions.filter((s) => {
     const query = searchTerm.trim().toLowerCase();
@@ -84,6 +90,22 @@ export default function AdminApp({
 
   const detailSession = sessions.find((s) => s.id === detailId) ?? null;
   const editingSession = sessions.find((s) => s.id === editingSessionId) ?? null;
+
+  useEffect(() => {
+    if (detailId !== null) onRefreshSessionSaves();
+  }, [detailId, onRefreshSessionSaves]);
+
+  useEffect(() => {
+    if (editingSessionId === null) return;
+
+    if (backendMode) {
+      fetchSpeakers()
+        .then(setSpeakers)
+        .catch(() => setSpeakers(speakersFromSessions(sessions)));
+    } else {
+      setSpeakers(speakersFromSessions(sessions));
+    }
+  }, [editingSessionId, backendMode, sessions]);
 
   async function handleRoleChange(userId: number, role: User['role']) {
     setUserActionError(null);
@@ -263,6 +285,7 @@ export default function AdminApp({
               <div className="section-title">{t('admin.sessions.allTitle')}</div>
               <SessionsView
                 sessions={filteredSessions}
+                sessionSaves={sessionSaves ?? undefined}
                 searchTerm={searchTerm}
                 onEventClick={(id) => setDetailId(id)}
               />
@@ -271,6 +294,7 @@ export default function AdminApp({
               </div>
               <AgendaView
                 sessions={filteredSessions}
+                sessionSaves={sessionSaves ?? undefined}
                 onEventClick={(id) => setDetailId(id)}
                 onDelete={handleDeleteSession}
               />
@@ -282,6 +306,8 @@ export default function AdminApp({
       {detailSession && (
         <DetailModal
           session={detailSession}
+          savedBy={sessionSaves?.[detailSession.id]}
+          savesLoaded={sessionSaves !== null}
           onClose={() => setDetailId(null)}
           onDelete={handleDeleteSession}
           onEdit={handleEditSession}
@@ -291,6 +317,8 @@ export default function AdminApp({
       {editingSession && (
         <BookingModal
           initialValues={toBookingFormData(editingSession)}
+          allowSpeakerEdit
+          speakers={speakers}
           onSave={handleSaveSession}
           onClose={() => {
             setEditingSessionId(null);

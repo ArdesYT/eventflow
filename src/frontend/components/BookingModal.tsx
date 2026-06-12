@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
-import type { BookingFormData, EventColor } from '../../backend/types';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import type { BookingFormData, EventColor, Speaker } from '../../backend/types';
 import { useI18n } from '../i18n/I18nProvider';
+
+const NEW_SPEAKER_ID = 0;
 
 interface BookingModalProps {
   saving?: boolean;
@@ -9,6 +11,8 @@ interface BookingModalProps {
   initialValues?: BookingFormData;
   currentUserId?: number;
   currentUserName?: string;
+  allowSpeakerEdit?: boolean;
+  speakers?: Speaker[];
   onSave: (data: BookingFormData) => void;
   onClose: () => void;
 }
@@ -32,8 +36,20 @@ function todayStr(): string {
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
 }
 
-export default function BookingModal({ initialDate, initialValues, currentUserId, currentUserName, onSave, onClose, saving = false, saveError = null }: BookingModalProps) {
+export default function BookingModal({
+  initialDate,
+  initialValues,
+  currentUserId,
+  currentUserName,
+  allowSpeakerEdit = false,
+  speakers = [],
+  onSave,
+  onClose,
+  saving = false,
+  saveError = null,
+}: BookingModalProps) {
   const { t } = useI18n();
+  const [customSpeakerName, setCustomSpeakerName] = useState('');
   const [form, setForm] = useState<BookingFormData>({
     title:        '',
     description:  '',
@@ -47,16 +63,49 @@ export default function BookingModal({ initialDate, initialValues, currentUserId
     color:        'blue',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof BookingFormData, string>>>({});
+  const initializedEditKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (initialDate) setForm(f => ({ ...f, date: initialDate }));
   }, [initialDate]);
 
   useEffect(() => {
-    if (initialValues) {
-      setForm(initialValues);
+    if (!initialValues) {
+      initializedEditKeyRef.current = null;
+      return;
     }
-  }, [initialValues]);
+
+    const editKey = [
+      initialValues.date,
+      initialValues.start_time,
+      initialValues.end_time,
+      initialValues.speaker_id,
+      initialValues.title,
+    ].join('\0');
+
+    if (initializedEditKeyRef.current === editKey) return;
+
+    initializedEditKeyRef.current = editKey;
+    setForm(initialValues);
+    setCustomSpeakerName('');
+  }, [initialValues, speakers]);
+
+  const speakerOptions = useMemo(() => {
+    const list = [...speakers];
+    if (
+      form.speaker_id &&
+      form.speaker_id !== NEW_SPEAKER_ID &&
+      !list.some((s) => s.id === form.speaker_id)
+    ) {
+      list.unshift({ id: form.speaker_id, name: form.speaker_name });
+    }
+    return list;
+  }, [speakers, form.speaker_id, form.speaker_name]);
+
+  const isCustomSpeaker =
+    allowSpeakerEdit &&
+    (form.speaker_id === NEW_SPEAKER_ID ||
+      !speakerOptions.some((s) => s.id === form.speaker_id));
 
   useEffect(() => {
     if (!initialValues && currentUserName) {
@@ -95,8 +144,47 @@ export default function BookingModal({ initialDate, initialValues, currentUserId
     return Object.keys(errs).length === 0;
   }
 
+  function handleSpeakerSelect(speakerId: number) {
+    if (speakerId === NEW_SPEAKER_ID) {
+      setCustomSpeakerName('');
+      setForm((f) => ({
+        ...f,
+        speaker_id: NEW_SPEAKER_ID,
+        speaker_name: '',
+      }));
+      return;
+    }
+    const speaker = speakerOptions.find((s) => s.id === speakerId);
+    if (speaker) {
+      setForm((f) => ({
+        ...f,
+        speaker_id: speaker.id,
+        speaker_name: speaker.name,
+      }));
+      setCustomSpeakerName('');
+    }
+  }
+
+  function handleCustomSpeakerName(value: string) {
+    setCustomSpeakerName(value);
+    setForm((f) => ({
+      ...f,
+      speaker_id: NEW_SPEAKER_ID,
+      speaker_name: value,
+    }));
+  }
+
   function handleSave() {
-    if (validate()) onSave(form);
+    if (!validate()) return;
+    const payload =
+      isCustomSpeaker && customSpeakerName.trim()
+        ? { ...form, speaker_id: NEW_SPEAKER_ID, speaker_name: customSpeakerName.trim() }
+        : form;
+    if (allowSpeakerEdit && !payload.speaker_name.trim()) {
+      setErrors((e) => ({ ...e, speaker_name: t('common.required') }));
+      return;
+    }
+    onSave(payload);
   }
 
   return (
@@ -167,11 +255,33 @@ export default function BookingModal({ initialDate, initialValues, currentUserId
 
         <div className="form-group">
           <label className="form-label">{t('booking.speaker')}</label>
-          <input
-            className="form-input"
-            value={form.speaker_name}
-            readOnly
-          />
+          {allowSpeakerEdit ? (
+            <>
+              <select
+                className="form-select"
+                value={isCustomSpeaker ? NEW_SPEAKER_ID : form.speaker_id}
+                onChange={(e) => handleSpeakerSelect(Number(e.target.value))}
+              >
+                {speakerOptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+                <option value={NEW_SPEAKER_ID}>{t('booking.newSpeaker')}</option>
+              </select>
+              {isCustomSpeaker && (
+                <input
+                  className={`form-input${errors.speaker_name ? ' error' : ''}`}
+                  style={{ marginTop: 8 }}
+                  placeholder={t('booking.newSpeakerPlaceholder')}
+                  value={customSpeakerName}
+                  onChange={(e) => handleCustomSpeakerName(e.target.value)}
+                />
+              )}
+            </>
+          ) : (
+            <input className="form-input" value={form.speaker_name} readOnly />
+          )}
         </div>
 
         <div className="form-group">

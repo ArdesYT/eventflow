@@ -71,3 +71,22 @@ export interface LoginCredentials {
   email: string;
   password: string;
 }
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+}
+
+export interface Speaker {
+  id: number;
+  name: string;
+}
+
+/** Attendee who saved a session to their programme (booker/admin view). */
+export interface SessionSaveUser {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export type SessionSavesMap = Record<number, SessionSaveUser[]>;

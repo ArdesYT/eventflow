@@ -1,8 +1,9 @@
-import type { Session } from '../../backend/types';
+import type { Session, SessionSavesMap } from '../../backend/types';
 import { useI18n } from '../i18n/I18nProvider';
 
 interface SessionsViewProps {
   sessions: Session[];
+  sessionSaves?: SessionSavesMap;
   searchTerm: string;
   onEventClick: (id: number) => void;
 }
@@ -18,6 +19,7 @@ function getInitials(name: string): string {
 
 export default function SessionsView({
   sessions,
+  sessionSaves,
   searchTerm,
   onEventClick,
 }: SessionsViewProps) {
@@ -50,11 +52,20 @@ export default function SessionsView({
           : t('sessions.count_plural', { count: filtered.length })}
       </p>
       <div className="sessions-grid">
-        {filtered.map((s) => (
+        {filtered.map((s) => {
+          const saveCount = sessionSaves?.[s.id]?.length ?? 0;
+          return (
           <div key={s.id} className="session-card" onClick={() => onEventClick(s.id)}>
             <div className="session-card-header">
               <span className="room-badge">{s.room_name}</span>
-              <span className="session-time-label">{s.start_time}</span>
+              <div className="session-card-header-right">
+                {saveCount > 0 && (
+                  <span className="session-save-badge" title={t('detail.savedBy')}>
+                    ⭐ {saveCount}
+                  </span>
+                )}
+                <span className="session-time-label">{s.start_time}</span>
+              </div>
             </div>
             <div className="session-title">{s.title}</div>
             <div className="session-speaker">
@@ -68,7 +79,8 @@ export default function SessionsView({
               </span>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );
