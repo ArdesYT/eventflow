@@ -3,11 +3,11 @@
 Konferencia- és eseményprogram-kezelő webalkalmazás: előadások ütemezése, látogatói program, adminisztráció.
 
 **Verzió:** 1.0.0  
-**Stack:** React (Vite) · Express · MariaDB · JWT auth  
+**Stack:** React (Vite) · Express · MariaDB · JWT (Bearer token)  
 **Nyelvek:** magyar, német, angol
 
 Teljes dokumentáció: [documentation/EventFlow_Dokumentacio.docx](documentation/EventFlow_Dokumentacio.docx)  
-Frissítés: `python documentation/update_docx.py` (stílus megőrizve)
+Frissítés a docx-hez: `python documentation/update_docx.py`
 
 ---
 
@@ -29,13 +29,39 @@ Demó fiókok: `admin@example.com` / `admin123` · `booker@example.com` / `booke
 ```bash
 npm install
 cp .env.example .env
-# MariaDB: importáld src/backend/eventflow.sql (vagy használd a Docker db szolgáltatást)
+# MariaDB: lásd „Adatbázis beállítása” alább
 npm run seed
 npm run server   # Backend → http://localhost:3000
 npm run dev      # Frontend → http://localhost:5173
 ```
 
 Üres adatbázis esetén az admin felületen: **Demo adatok betöltése**, vagy `npm run seed`.
+
+---
+
+## Adatbázis beállítása
+
+### XAMPP / helyi MariaDB
+
+1. Indítsd el a MySQL/MariaDB szolgáltatást.
+2. phpMyAdmin: hozd létre az `eventflow` adatbázist, importáld a `src/backend/eventflow.sql` fájlt.
+3. A `.env` fájlban a hitelesítő adatok egyezzenek a MariaDB felhasználóval:
+
+```env
+DB_HOST=localhost
+DB_USER=eventflow      # vagy root XAMPP-nál
+DB_PASS=eventflow      # XAMPP root alapértelmezés: üres
+DB_NAME=eventflow
+```
+
+Ha `Access denied for user 'eventflow'` hibát kapsz, hozd létre a felhasználót phpMyAdminban, vagy állítsd át a `.env`-et root fiókra.
+
+### Docker (csak adatbázis)
+
+```bash
+docker compose up db -d
+# .env: DB_USER=eventflow, DB_PASS=eventflow
+```
 
 ---
 
@@ -58,11 +84,28 @@ docker compose up --build -d
 ```bash
 npm ci
 npm run build
-# .env: NODE_ENV=production, JWT_SECRET=...
+```
+
+`.env` production példa:
+
+```env
+NODE_ENV=production
+PORT=3000
+JWT_SECRET=hosszú-véletlen-kulcs
+CLIENT_URL=http://localhost:3000
+DB_HOST=localhost
+DB_USER=eventflow
+DB_PASS=eventflow
+DB_NAME=eventflow
+```
+
+```bash
 npm run start
 ```
 
-Production módban a backend kiszolgálja a `dist/` frontendet is.
+Nyisd meg: http://localhost:3000
+
+A backend kiszolgálja a `dist/` frontendet is. A `dist/index.html` fájlt **ne** nyisd meg közvetlenül — az API nélkül nem működik.
 
 ---
 
@@ -71,7 +114,7 @@ Production módban a backend kiszolgálja a `dist/` frontendet is.
 | Parancs | Leírás |
 |---------|--------|
 | `npm run dev` | Frontend dev szerver (Vite) |
-| `npm run server` | Backend API |
+| `npm run server` | Backend API (development) |
 | `npm run start` | Production backend (+ statikus frontend) |
 | `npm run build` | TypeScript + Vite production build |
 | `npm run seed` | Demo felhasználók, termek, előadók, előadások |
@@ -86,32 +129,98 @@ Production módban a backend kiszolgálja a `dist/` frontendet is.
 |---------|------|--------|
 | `JWT_SECRET` | **Kötelező** | JWT aláíró kulcs (dev alapértelmezés productionben tiltott) |
 | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME` | Igen | MariaDB |
-| `CLIENT_URL` | Ajánlott | CORS origin |
+| `CLIENT_URL` | Ajánlott | CORS origin (productionben: http://localhost:3000) |
 | `NODE_ENV` | `production` | Statikus fájlok kiszolgálása |
 | `PORT` | Nem | Alapértelmezett: 3000 |
-| `JWT_EXPIRES_IN` | Nem | Alapértelmezett: 7d |
+| `JWT_EXPIRES_IN` | Nem | Alapértelmezett: 7d (.env), fallback: 1d (kód) |
 | `BCRYPT_SALT_ROUNDS` | Nem | Alapértelmezett: 10 |
 
 ---
 
-## Fő funkciók (összefoglaló)
+## Hitelesítés
+
+A rendszer **JWT Bearer token** alapú hitelesítést használ (nem `X-User-Id` fejlécet).
+
+1. `POST /api/auth/login` → `{ user, token }`
+2. A frontend elmenti a tokent (`authStorage.ts`) és minden védett kéréshez hozzáadja: `Authorization: Bearer <token>` (`authFetch.ts`)
+3. A backend middleware (`auth.ts`): `authenticate`, `requireAdmin`, `requireBookerOrAdmin`, `requireAttendee`
+
+---
+
+## Fő funkciók
 
 - **Esemény profil** — név, helyszín, dátumok, leírás; nyilvános hero + visszaszámláló
 - **Előadások** — egy- és többnapos, sablonok (Keynote / Panel / Workshop), lemondás státusz
-- **Ütközéskezelés** — terem (2 órás szabály), előadó; élő előnézet + szerveroldali validáció
+- **Ütközéskezelés** — terem (2 órás szabály + átfedés), előadó; kliens előnézet + **szerveroldali validáció** (`sessionConflicts.ts`)
 - **Látogatói oldal** — keresés, szűrők, lista / napirend / naptár, „Ma” szűrő, előadók fül
-- **Mentett program** — ütközés megerősítő modal, böngésző értesítés 15 perccel előtte
+- **Mentett program** — `user_schedule` tábla, ütközés-modal, böngésző értesítés 15 perccel előtte
 - **Admin** — felhasználók, booker termek, duplikált előadók egyesítése, audit napló, termek foglaltság
 - **Tömeges szerkesztés** — nap eltolás / terem csere több előadáson
 - **Export** — ICS (iCalendar)
 
 ---
 
-## API (rövid)
+## API végpontok
 
-Nyilvános: `GET /api/health` · `GET /api/event` · `GET /api/rooms` · `GET /api/sessions`  
-Auth: `POST /api/auth/login` · `POST /api/auth/register` · `GET /api/auth/me`  
-Részletes lista: [documentation/EventFlow_Dokumentacio.docx](documentation/EventFlow_Dokumentacio.docx) — 5. fejezet
+Minden védett végpont: `Authorization: Bearer <JWT>` fejléc.
+
+### Nyilvános
+
+| Metódus | Útvonal | Leírás |
+|---------|---------|--------|
+| GET | `/api/health` | Állapot, DB kapcsolat |
+| GET | `/api/event` | Esemény profil |
+| GET | `/api/rooms` | Termek listája |
+| GET | `/api/sessions` | Összes előadás |
+
+### Auth
+
+| Metódus | Útvonal | Leírás |
+|---------|---------|--------|
+| POST | `/api/auth/register` | Regisztráció (attendee) |
+| POST | `/api/auth/login` | Bejelentkezés → `{ user, token }` |
+| GET | `/api/auth/me` | Aktuális felhasználó |
+
+### Mentett program (attendee)
+
+| Metódus | Útvonal | Leírás |
+|---------|---------|--------|
+| GET | `/api/my-schedule` | Saját mentett előadások |
+| POST | `/api/my-schedule/:sessionId` | Előadás mentése |
+| DELETE | `/api/my-schedule/:sessionId` | Mentés törlése |
+
+### Előadások (booker / admin)
+
+| Metódus | Útvonal | Leírás |
+|---------|---------|--------|
+| POST | `/api/sessions` | Új előadás (szerveroldali ütközésellenőrzés) |
+| PATCH | `/api/sessions/:id` | Szerkesztés |
+| PATCH | `/api/sessions/:id/status` | Lemondás / visszaállítás |
+| DELETE | `/api/sessions/:id` | Törlés |
+| PATCH | `/api/sessions/bulk` | Tömeges módosítás |
+| GET | `/api/sessions/saves` | Mentések száma előadásonként |
+
+### Előadók (booker / admin)
+
+| Metódus | Útvonal | Leírás |
+|---------|---------|--------|
+| GET | `/api/speakers` | Lista |
+| POST/PATCH/DELETE | `/api/speakers` | CRUD (admin) |
+| POST | `/api/speakers/merge` | Duplikátum egyesítés |
+
+### Admin
+
+| Metódus | Útvonal | Leírás |
+|---------|---------|--------|
+| GET | `/api/admin/users` | Felhasználók |
+| PATCH | `/api/admin/users/:id` | Szerepkör módosítás |
+| PUT | `/api/admin/users/:id/rooms` | Booker termek |
+| DELETE | `/api/admin/users/:id` | Felhasználó törlés |
+| GET | `/api/admin/activity-log` | Audit napló |
+| PATCH | `/api/admin/event` | Esemény profil |
+| POST | `/api/admin/seed-demo` | Demo adatok betöltése |
+
+Részletes leírás: [documentation/EventFlow_Dokumentacio.docx](documentation/EventFlow_Dokumentacio.docx) — 5. fejezet
 
 ---
 
@@ -119,9 +228,12 @@ Részletes lista: [documentation/EventFlow_Dokumentacio.docx](documentation/Even
 
 ```
 src/
-  backend/          Express API, auth, DB migrációk, seed
+  backend/          Express API, auth, DB migrációk, seed, ütközésellenőrzés
   frontend/         React UI, i18n (hu/de/en), komponensek
-documentation/      EventFlow_Dokumentacio.docx + build_docx.py
+    lib/
+      authStorage.ts, authFetch.ts    JWT perzisztencia és API hívások
+      scheduleApi.ts, scheduleStorage.ts   Mentett program
+documentation/      EventFlow_Dokumentacio.docx, update_docx.py
 docker-compose.yml  Production stack (app + MariaDB)
 ```
 

@@ -1,10 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 import type { Pool, PoolConnection } from 'mariadb';
 import type { User, UserRole } from './types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-change-me';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
+const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '1d') as SignOptions['expiresIn'];
 
 export interface JwtPayload {
   sub: number;
@@ -29,7 +29,7 @@ export function signToken(user: Pick<User, 'id' | 'role' | 'email'>): string {
     role: user.role,
     email: user.email,
   };
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 export function verifyToken(token: string): JwtPayload {
