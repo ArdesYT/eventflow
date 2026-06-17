@@ -1,3 +1,8 @@
+/**
+ * Ütközés figyelmeztető modal — résztvevői nézet (PublicEventsPage).
+ * Megjelenik, ha a felhasználó menteni akar egy előadást, ami átfed a saját programjával.
+ * Props: session (mentendő), conflicts (ütköző előadások), busy, onConfirm (mentés mégis), onClose.
+ */
 import type { Session } from '../../backend/types';
 import { useI18n } from '../i18n/I18nProvider';
 

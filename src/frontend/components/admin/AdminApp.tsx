@@ -1,3 +1,8 @@
+/**
+ * Admin főalkalmazás — Root rendereli admin szerepkör esetén.
+ * Nézetek: áttekintés, felhasználók, előadások, termek, előadók, audit, eseményprofil.
+ * Props: initialUser, event, rooms, sessions, users, CRUD callback-ek, backendMode, onLogout.
+ */
 import { useState, useEffect } from 'react';
 import type {
   CreateSessionBody,
@@ -37,9 +42,11 @@ import RoomsUsage from './RoomsUsage';
 import ActivityLogView from './ActivityLogView';
 import BulkSessionToolbar from '../BulkSessionToolbar';
 import LanguageSwitcher from '../LanguageSwitcher';
+import MobileBottomNav from '../MobileBottomNav';
 import { fetchActivityLog } from '../../lib/adminApi';
 import type { ActivityLogEntry } from '../../../backend/types';
-import { useI18n, translateError } from '../../i18n/I18nProvider';
+import { useI18n } from '../../i18n/I18nProvider';
+import { translateError } from '../../i18n/translateError';
 import '../../App.css';
 
 const NAV_ITEMS: { view: AdminViewType; icon: string; labelKey: string }[] = [
@@ -71,6 +78,7 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
+/** Admin alkalmazás props — teljes admin state és CRUD callback-ek. */
 interface AdminAppProps {
   initialUser: User;
   event: EventProfile;
@@ -125,20 +133,26 @@ export default function AdminApp({
   onLogout,
 }: AdminAppProps) {
   const { t } = useI18n();
+  // Aktív admin nézet és keresés
   const [currentView, setCurrentView] = useState<AdminViewType>('overview');
   const [searchTerm, setSearchTerm] = useState('');
+  // Előadás részletek és szerkesztés/duplikálás
   const [detailId, setDetailId] = useState<number | null>(null);
   const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
   const [duplicateValues, setDuplicateValues] = useState<BookingFormData | undefined>();
   const [userActionError, setUserActionError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+  // Előadók listája (szerkesztés/speakers nézet)
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   const [speakersLoading, setSpeakersLoading] = useState(false);
   const [speakerSearch, setSpeakerSearch] = useState('');
+  // Tömeges előadás-módosítás
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Audit napló (audit nézet)
   const [auditLog, setAuditLog] = useState<ActivityLogEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
 
@@ -155,10 +169,12 @@ export default function AdminApp({
   const detailSession = sessions.find((s) => s.id === detailId) ?? null;
   const editingSession = sessions.find((s) => s.id === editingSessionId) ?? null;
 
+  // Részletek modal: mentő felhasználók frissítése
   useEffect(() => {
     if (detailId !== null) onRefreshSessionSaves();
   }, [detailId, onRefreshSessionSaves]);
 
+  // Előadók betöltése szerkesztés, duplikálás vagy speakers nézet esetén
   useEffect(() => {
     const needsSpeakers =
       editingSessionId !== null || duplicateValues !== undefined || currentView === 'speakers';
@@ -191,6 +207,7 @@ export default function AdminApp({
     };
   }, [editingSessionId, duplicateValues, currentView, backendMode, sessions]);
 
+  // Audit napló betöltése audit nézet megnyitásakor
   useEffect(() => {
     if (currentView !== 'audit' || !backendMode) return;
     setAuditLoading(true);
@@ -346,7 +363,15 @@ export default function AdminApp({
 
   return (
     <div className="app-wrapper admin-app">
-      <aside className="sidebar admin-sidebar">
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          aria-label={t('common.close')}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <aside className={`sidebar admin-sidebar${sidebarOpen ? ' sidebar--open' : ''}`}>
         <div className="sidebar-logo">
           <div className="sidebar-logo-title">EventFlow</div>
           <div className="sidebar-logo-sub">{t('admin.dashboardTitle')}</div>
@@ -356,7 +381,10 @@ export default function AdminApp({
             <div
               key={view}
               className={`nav-item${currentView === view ? ' active' : ''}`}
-              onClick={() => setCurrentView(view)}
+              onClick={() => {
+                setCurrentView(view);
+                setSidebarOpen(false);
+              }}
             >
               <span className="nav-icon">{icon}</span>
               <span>{t(labelKey)}</span>
@@ -374,6 +402,14 @@ export default function AdminApp({
       <div className="main-area">
         <div className="topbar">
           <div className="topbar-left">
+            <button
+              type="button"
+              className="mobile-menu-btn"
+              aria-label={t('nav.menu')}
+              onClick={() => setSidebarOpen((open) => !open)}
+            >
+              ☰
+            </button>
             <h1 className="page-title">{t(PAGE_TITLE_KEYS[currentView])}</h1>
             <span className="hint-badge admin admin-topbar-badge">
               {t('login.admin')}
@@ -544,6 +580,17 @@ export default function AdminApp({
           )}
         </div>
       </div>
+
+      <MobileBottomNav
+        scrollable
+        items={NAV_ITEMS.map(({ view, icon, labelKey }) => ({
+          id: view,
+          icon,
+          label: t(labelKey),
+          active: currentView === view,
+          onClick: () => setCurrentView(view),
+        }))}
+      />
 
       {detailSession && (
         <DetailModal

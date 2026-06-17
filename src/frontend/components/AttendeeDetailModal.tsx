@@ -1,3 +1,8 @@
+/**
+ * Résztvevői előadás-részletek modal — PublicEventsPage.
+ * Megjeleníti az előadás adatait; mentés/eltávolítás a saját programhoz (vagy bejelentkezés vendég módban).
+ * Props: session, isSaved, busy, guestMode, onClose, onSave, onRemove, onLoginRequest.
+ */
 import type { Session } from '../../backend/types';
 import {
   formatDuration,

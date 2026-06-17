@@ -1,3 +1,7 @@
+/**
+ * Audit napló táblázat — admin audit nézet.
+ * Props: entries (ActivityLogEntry[]), loading.
+ */
 import type { ActivityLogEntry } from '../../../backend/types';
 import { useI18n } from '../../i18n/I18nProvider';
 import { formatDateKey, formatTimeKey } from '../../i18n/dateFormat';

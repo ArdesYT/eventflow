@@ -1,3 +1,8 @@
+/**
+ * Terem kihasználtság — havi összesítő és napi idővonal.
+ * AdminApp rooms nézet; havi sávdiagram + napi timeline 8–20 óra között.
+ * Props: sessions, rooms (opcionális, alapértelmezés FALLBACK_ROOMS).
+ */
 import { useMemo, useState } from 'react';
 import type { Session } from '../../../backend/types';
 import type { Room } from '../../../backend/types';
@@ -52,6 +57,7 @@ export default function RoomsUsage({
   const [monthKey, setMonthKey] = useState(() => monthKeyFromDate(new Date()));
   const [dayKey, setDayKey] = useState(todayStr);
 
+  // Havi előadásszám teremenként a kiválasztott hónapban
   const counts = useMemo(() => {
     const map = new Map<number, number>();
     for (const r of rooms) map.set(r.id, 0);
@@ -63,6 +69,7 @@ export default function RoomsUsage({
     return rooms.map((r) => ({ room: r, count: map.get(r.id) ?? 0 }));
   }, [sessions, monthKey, rooms]);
 
+  // Adott nap előadásai (többnapos eseményeket is figyelembe veszi)
   const daySessions = useMemo(
     () => sessions.filter((s) => sessionSpansDate(s, dayKey)),
     [sessions, dayKey],

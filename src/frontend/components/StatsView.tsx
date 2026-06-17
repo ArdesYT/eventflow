@@ -1,3 +1,8 @@
+/**
+ * Statisztika és áttekintés nézet — booker dashboard (App stats nézet).
+ * Összesítő kártyák, terem szerinti eloszlás, közelgő előadások AgendaView-val.
+ * Props: sessions, sessionSaves, onEventClick, onDelete.
+ */
 import type { Session, SessionSavesMap } from '../../backend/types';
 import AgendaView from './AgendaView';
 import { useI18n } from '../i18n/I18nProvider';

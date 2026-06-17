@@ -1,3 +1,8 @@
+/**
+ * Oldalsáv mini-naptár — hónap navigáció és eseményes napok jelölése.
+ * Használat: App sidebar; a fő naptárral szinkronban (curMonth/curYear props).
+ * Props: curMonth, curYear, sessions, onNavigate, onSelectDate.
+ */
 import type { ReactNode } from 'react';
 import type { Session } from '../../backend/types';
 import { useI18n } from '../i18n/I18nProvider';
@@ -29,6 +34,7 @@ export default function MiniCalendar({
   let startDow = new Date(curYear, curMonth, 1).getDay() - 1;
   if (startDow < 0) startDow = 6;
 
+  // Összes olyan nap, amelyen legalább egy előadás fut (többnapos eseményeknél is)
   const eventDates = new Set<string>();
   sessions.forEach((s) => {
     const end = s.end_date ?? s.date;

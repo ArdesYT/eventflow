@@ -1,8 +1,15 @@
+/**
+ * Bejelentkezés és regisztráció oldal — Root rendereli, ha nincs bejelentkezett user.
+ * Offline módban csak demo fiókok; online módban regisztráció is elérhető.
+ * Props: offlineMode, onBrowseGuest, onLogin, onRegister.
+ */
 import { useState } from 'react';
 import { DEMO_USERS, getDemoUser } from '../lib/demoUsers';
-import { useI18n, translateError } from '../i18n/I18nProvider';
+import { useI18n } from '../i18n/I18nProvider';
+import { translateError } from '../i18n/translateError';
 import LanguageSwitcher from './LanguageSwitcher';
 
+/** Bejelentkezési oldal props — offline flag és auth callback-ek. */
 interface LoginPageProps {
   offlineMode: boolean;
   onBrowseGuest?: () => void;
@@ -12,6 +19,7 @@ interface LoginPageProps {
 
 export default function LoginPage({ offlineMode, onBrowseGuest, onLogin, onRegister }: LoginPageProps) {
   const { t } = useI18n();
+  // login | register — űrlap mód váltása
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -19,6 +27,7 @@ export default function LoginPage({ offlineMode, onBrowseGuest, onLogin, onRegis
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Űrlap beküldés — validáció, majd onLogin vagy onRegister hívása
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email || !password || (mode === 'register' && !name.trim())) {
@@ -45,6 +54,7 @@ export default function LoginPage({ offlineMode, onBrowseGuest, onLogin, onRegis
     }
   }
 
+  // Demo fiók adatok kitöltése egy kattintással (offline/teszt)
   function fillDemo(role: 'admin' | 'booker' | 'attendee') {
     const demo = getDemoUser(role);
     if (!demo) return;

@@ -1,3 +1,8 @@
+/**
+ * Felhasználók kezelése — szerepkör, booker termek, törlés.
+ * AdminApp users nézet; saját fiók szerepköre és törlése tiltott.
+ * Props: users, currentUserId, onRoleChange, onRoomsChange, onDelete.
+ */
 import { useState } from 'react';
 import type { User, UserRole } from '../../../backend/types';
 import { ROOMS } from '../../lib/rooms';
@@ -33,6 +38,7 @@ export default function UsersView({
     );
   }
 
+  // Booker hozzárendelt termek váltása — checkbox toggle
   async function toggleRoom(user: User, roomId: number) {
     if (!onRoomsChange) return;
     const current = user.assigned_room_ids ?? [];

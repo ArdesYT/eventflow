@@ -1,3 +1,8 @@
+/**
+ * Alkalmazás gyökér — auth, backend/demo mód, szerepkör-alapú routing.
+ * Root dönti el: LoginPage, PublicEventsPage (attendee/guest), App (booker), AdminApp (admin).
+ * Kezeli a sessions/users/rooms/event state-et, pollingot és a schedule mentéseket.
+ */
 import { useState, useEffect, useCallback } from 'react';
 import type {
   BookingFormData,
@@ -44,10 +49,12 @@ import {
   removeFromMySchedule,
 } from './lib/scheduleApi';
 import { loadOfflineSchedule, saveOfflineSchedule } from './lib/scheduleStorage';
-import { useI18n, translateError } from './i18n/I18nProvider';
+import { useI18n } from './i18n/I18nProvider';
+import { translateError } from './i18n/translateError';
 
 const POLL_INTERVAL_MS = 5000;
 
+/** Offline/demo mód alapértelmezett eseményprofilja. */
 const DEFAULT_EVENT: EventProfile = {
   id: 1,
   name: 'EventFlow 2026',
@@ -69,6 +76,7 @@ const SEED_SESSIONS: Session[] = [
   { id: 7, title: 'EventFlow Expo', date: '2026-03-20', end_date: '2026-03-22', start_time: '10:00', end_time: '18:00', room_id: 1, speaker_id: 1, room_name: 'Main Hall', speaker_name: 'Dr. Anna Kovács', color: 'green', description: 'Többnapos kiállítás és networking.' },
 ];
 
+/** API válaszból normalizált Session tömb. */
 function mapApiSessions(rows: unknown[]): Session[] {
   return rows
     .map((row) => normalizeSession(row as Record<string, unknown>))
@@ -76,7 +84,11 @@ function mapApiSessions(rows: unknown[]): Session[] {
 }
 
 function demoUsersList(): User[] {
-  return DEMO_USERS.map(({ password: _, ...u }) => u);
+  return DEMO_USERS.map((entry) => {
+    const { password, ...user } = entry;
+    void password;
+    return user;
+  });
 }
 
 async function isBackendReachable(): Promise<boolean> {
@@ -93,22 +105,33 @@ async function isBackendReachable(): Promise<boolean> {
 
 export default function Root() {
   const { t } = useI18n();
+
+  // —— Állapot: auth és felhasználó ——
   const [user, setUser] = useState<User | null>(() => loadStoredAuth()?.user ?? null);
+
+  // —— Állapot: előadások és admin felhasználók ——
   const [sessions, setSessions] = useState<Session[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // —— Állapot: résztvevői saját program (schedule) ——
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [savedSessions, setSavedSessions] = useState<Session[]>([]);
   const [scheduleBusyId, setScheduleBusyId] = useState<number | null>(null);
   const [sessionSaves, setSessionSaves] = useState<SessionSavesMap | null>(null);
+
+  // —— Állapot: backend elérhetőség, vendég böngészés, demo ——
   const [backendMode, setBackendMode] = useState<boolean | null>(null);
   const [guestBrowse, setGuestBrowse] = useState(false);
   const [loadingDemo, setLoadingDemo] = useState(false);
+
+  // —— Állapot: termek és eseményprofil ——
   const [rooms, setRooms] = useState<Room[]>(FALLBACK_ROOMS);
   const [eventProfile, setEventProfile] = useState<EventProfile>(DEFAULT_EVENT);
 
+  // Hibaüzenetek lokalizálása
   const displayError = error
     ? error.startsWith('errors.')
       ? t(error)
@@ -121,6 +144,7 @@ export default function Root() {
       : translateError(scheduleError, t)
     : null;
 
+  // —— Adatbetöltők (useCallback) ——
   const fetchSessions = useCallback(async () => {
     try {
       const res = await fetch(apiUrl('/api/sessions'));
@@ -149,6 +173,7 @@ export default function Root() {
     }
   }, []);
 
+  // —— Effect: induláskor backend ellenőrzés, auth frissítés, kezdeti adatok ——
   useEffect(() => {
     (async () => {
       const reachable = await isBackendReachable();
@@ -193,6 +218,7 @@ export default function Root() {
     })();
   }, [fetchSessions]);
 
+  // —— Effect: admin felhasználók betöltése admin bejelentkezéskor ——
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
     if (backendMode) {
@@ -202,6 +228,7 @@ export default function Root() {
     }
   }, [user, backendMode, fetchUsers]);
 
+  // Bookerek/adminok: ki mentette az előadásokat (sessionSaves map)
   const fetchSessionSavesMap = useCallback(async () => {
     if (!user || !backendMode) return;
     const role = user.role?.trim().toLowerCase();
@@ -236,6 +263,7 @@ export default function Root() {
     }
   }, [user, backendMode]);
 
+  // —— Effect: attendee saját program betöltése (API vagy offline localStorage) ——
   useEffect(() => {
     if (!user || user.role?.trim().toLowerCase() !== 'attendee') return;
     if (backendMode) {
@@ -246,6 +274,7 @@ export default function Root() {
     }
   }, [user, backendMode, sessions, fetchSavedSchedule]);
 
+  // —— Effect: böngésző értesítések szinkronizálása attendee mentett programjával ——
   useEffect(() => {
     if (!user || user.role?.trim().toLowerCase() !== 'attendee') {
       stopSessionNotifications();
@@ -259,6 +288,7 @@ export default function Root() {
     return () => stopSessionNotifications();
   }, [user, savedSessions, t]);
 
+  // —— Effect: booker/admin sessionSaves betöltése ——
   useEffect(() => {
     if (!user || !backendMode) return;
     const role = user.role?.trim().toLowerCase();
@@ -267,6 +297,7 @@ export default function Root() {
     }
   }, [user, backendMode, fetchSessionSavesMap]);
 
+  // —— Effect: 5 mp-enkénti polling — sessions + role-specifikus adatok frissítése ——
   useEffect(() => {
     if (!user || !backendMode) return;
     const role = user.role?.trim().toLowerCase();
@@ -282,6 +313,7 @@ export default function Root() {
     return () => clearInterval(id);
   }, [user, backendMode, fetchSessions, fetchSavedSchedule, fetchSessionSavesMap]);
 
+  // —— Kezelők: schedule mentés/eltávolítás (attendee) ——
   async function handleSaveSession(sessionId: number) {
     if (!user) return;
     const session = sessions.find((s) => s.id === sessionId);
@@ -333,6 +365,7 @@ export default function Root() {
     }
   }
 
+  // —— Kezelők: auth (login, register, logout) ——
   async function handleLogin(credentials: {
     email: string;
     password: string;
@@ -357,7 +390,8 @@ export default function Root() {
       (u) => u.email === credentials.email && u.password === credentials.password,
     );
     if (!match) throw new Error('errors.invalidCredentials');
-    const { password: _, ...loggedIn } = match;
+    const { password, ...loggedIn } = match;
+    void password;
     return loggedIn;
   }
 
@@ -389,6 +423,7 @@ export default function Root() {
     return loggedInUser;
   }
 
+  // —— Kezelők: előadás CRUD (create, update, delete, bulk, status) ——
   async function handleCreate(body: object): Promise<void> {
     if (backendMode) {
       const res = await authFetch('/api/sessions', {
@@ -470,6 +505,7 @@ export default function Root() {
     }
   }
 
+  // —— Kezelők: admin felhasználó- és eseménykezelés ——
   async function handleUpdateUserRole(userId: number, role: UserRole) {
     if (backendMode && user?.role === 'admin') {
       const updated = await updateUserRole(userId, role);
@@ -571,6 +607,7 @@ export default function Root() {
     setGuestBrowse(false);
   }
 
+  // —— Render: szerepkör és auth alapú routing ——
   if (!user && guestBrowse) {
     return (
       <PublicEventsPage

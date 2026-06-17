@@ -1,6 +1,15 @@
+/**
+ * Előadók (speakers) API és session-alapú előadólista építés.
+ *
+ * Mit csinál: CRUD, merge, API válasz normalizálás; fallback lista sessionökből.
+ * Ki használja: SpeakersView, BookingModal, SessionsView.
+ * Fő exportok: {@link parseSpeaker}, {@link fetchSpeakers}, {@link createSpeaker}, {@link mergeSpeakers}, {@link speakersFromSessions}.
+ */
+
 import type { CreateSpeakerBody, Speaker, UpdateSpeakerBody } from '../../backend/types';
 import { authFetch } from './authFetch';
 
+/** Ismeretlen API érték → véges szám */
 function toNumber(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'bigint') return Number(value);
@@ -11,6 +20,11 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
+/**
+ * Nyers API/demo sor → Speaker objektum (érvénytelen sor → null).
+ * @param raw - Ismeretlen JSON mezők
+ * @returns Normalizált Speaker vagy null
+ */
 export function parseSpeaker(raw: unknown): Speaker | null {
   if (!raw || typeof raw !== 'object') return null;
   const row = raw as Record<string, unknown>;
@@ -31,6 +45,7 @@ export function parseSpeaker(raw: unknown): Speaker | null {
   };
 }
 
+/** Tömbös API válasz → rendezett Speaker lista */
 function parseSpeakersList(raw: unknown): Speaker[] {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -39,6 +54,7 @@ function parseSpeakersList(raw: unknown): Speaker[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** Közös hiba: 404/409 → i18n kulcsok */
 function speakersRequestError(
   res: Response,
   data: { message?: string },
@@ -53,6 +69,10 @@ function speakersRequestError(
   return new Error(data.message ?? fallback);
 }
 
+/**
+ * Összes előadó lekérése a szerverről.
+ * @returns Név szerint rendezett Speaker tömb
+ */
 export async function fetchSpeakers(): Promise<Speaker[]> {
   const res = await authFetch('/api/speakers');
   if (!res.ok) {
@@ -62,6 +82,11 @@ export async function fetchSpeakers(): Promise<Speaker[]> {
   return parseSpeakersList(await res.json());
 }
 
+/**
+ * Új előadó létrehozása.
+ * @param body - CreateSpeakerBody (név, bio, …)
+ * @returns Létrehozott Speaker
+ */
 export async function createSpeaker(body: CreateSpeakerBody): Promise<Speaker> {
   const res = await authFetch('/api/speakers', {
     method: 'POST',
@@ -76,6 +101,12 @@ export async function createSpeaker(body: CreateSpeakerBody): Promise<Speaker> {
   return speaker;
 }
 
+/**
+ * Meglévő előadó szerkesztése.
+ * @param id - Előadó ID
+ * @param body - Részleges UpdateSpeakerBody
+ * @returns Frissített Speaker
+ */
 export async function updateSpeaker(id: number, body: UpdateSpeakerBody): Promise<Speaker> {
   const res = await authFetch(`/api/speakers/${id}`, {
     method: 'PATCH',
@@ -90,6 +121,12 @@ export async function updateSpeaker(id: number, body: UpdateSpeakerBody): Promis
   return speaker;
 }
 
+/**
+ * Több duplikált előadó egyesítése egy megmaradó rekordba.
+ * @param keepId - Megtartandó előadó ID
+ * @param mergeIds - Egyesítendő (törlendő) ID-k
+ * @returns A megmaradt Speaker
+ */
 export async function mergeSpeakers(
   keepId: number,
   mergeIds: number[],
@@ -108,6 +145,10 @@ export async function mergeSpeakers(
   return speaker;
 }
 
+/**
+ * Előadó törlése.
+ * @param id - Törlendő előadó ID
+ */
 export async function deleteSpeaker(id: number): Promise<void> {
   const res = await authFetch(`/api/speakers/${id}`, { method: 'DELETE' });
   if (!res.ok) {
@@ -119,6 +160,11 @@ export async function deleteSpeaker(id: number): Promise<void> {
   }
 }
 
+/**
+ * Előadók összegyűjtése session listából (ha nincs külön speakers API).
+ * @param sessions - Session sorok speaker_id, speaker_name, speaker_bio mezőkkel
+ * @returns Egyedi Speaker lista session_count-tal, név szerint rendezve
+ */
 export function speakersFromSessions(
   sessions: { speaker_id: number; speaker_name: string; speaker_bio?: string | null }[],
 ): Speaker[] {
@@ -130,6 +176,7 @@ export function speakersFromSessions(
       const prev = map.get(id);
       if (prev) {
         prev.count += 1;
+        // Bio kitöltése, ha korábban hiányzott
         if (!prev.bio && s.speaker_bio) prev.bio = s.speaker_bio;
       } else {
         map.set(id, {

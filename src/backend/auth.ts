@@ -1,17 +1,39 @@
+/**
+ * =============================================================================
+ * auth.ts — JWT alapú hitelesítés és jogosultság-ellenőrzés
+ * =============================================================================
+ *
+ * Felelősség:
+ *  - Bejelentkezés után JWT token kiállítása (signToken)
+ *  - Kérésenkénti token ellenőrzés (createAuthMiddleware)
+ *  - Szerepkör-alapú végpontvédelem (requireRoles, requireAdmin)
+ *
+ * Token formátum: Authorization: Bearer <jwt>
+ * Payload: { sub: userId, role, email }
+ *
+ * A jelszó hash-elés NEM itt történik — a server.ts register/login végpontokban (bcrypt).
+ * =============================================================================
+ */
+
 import type { Request, Response, NextFunction } from 'express';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import type { Pool, PoolConnection } from 'mariadb';
 import type { User, UserRole } from './types';
 
+/** JWT aláírási kulcs — production-ban kötelező egyedi érték (.env JWT_SECRET). */
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-change-me';
+
+/** Token élettartam — pl. "7d", "1d". Alapértelmezés: 1 nap. */
 const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '1d') as SignOptions['expiresIn'];
 
+/** A JWT payload-ban tárolt mezők (decode után). */
 export interface JwtPayload {
-  sub: number;
-  role: UserRole;
+  sub: number;       // users.id
+  role: UserRole;    // admin | booker | attendee
   email: string;
 }
 
+/** A kéréshez csatolt, DB-ből frissített felhasználó (jelszó nélkül). */
 export interface AuthenticatedUser {
   id: number;
   name: string;
@@ -19,10 +41,15 @@ export interface AuthenticatedUser {
   role: UserRole;
 }
 
+/** Express Request kiterjesztése — middleware után req.authUser kitöltődik. */
 export interface AuthenticatedRequest extends Request {
   authUser?: AuthenticatedUser;
 }
 
+/**
+ * JWT token generálása sikeres login/register után.
+ * @param user — legalább id, role, email kell
+ */
 export function signToken(user: Pick<User, 'id' | 'role' | 'email'>): string {
   const payload: JwtPayload = {
     sub: user.id,
@@ -32,6 +59,9 @@ export function signToken(user: Pick<User, 'id' | 'role' | 'email'>): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
+/**
+ * Token dekódolása és validálása. Hibás/lejárt token esetén kivétel.
+ */
 export function verifyToken(token: string): JwtPayload {
   const decoded = jwt.verify(token, JWT_SECRET);
   if (typeof decoded === 'string' || !decoded || typeof decoded !== 'object') {
@@ -45,12 +75,17 @@ export function verifyToken(token: string): JwtPayload {
   };
 }
 
+/** Authorization fejlécből kinyeri a Bearer tokent, vagy null ha nincs/nem Bearer. */
 function extractBearerToken(req: Request): string | null {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) return null;
   return header.slice(7).trim() || null;
 }
 
+/**
+ * Felhasználó betöltése az adatbázisból ID alapján.
+ * A tokenben lévő role-t felülírja a DB aktuális role mezője (biztonság).
+ */
 async function loadUserById(
   pool: Pool,
   userId: number,
@@ -75,6 +110,13 @@ async function loadUserById(
   }
 }
 
+/**
+ * Kötelező bejelentkezést igénylő middleware factory.
+ * Használat: app.get('/api/...', authenticate, handler)
+ *
+ * 401 ha nincs token, érvénytelen token, vagy törölt felhasználó.
+ * Siker esetén: req.authUser beállítva, next().
+ */
 export function createAuthMiddleware(pool: Pool) {
   return async function authenticate(
     req: AuthenticatedRequest,
@@ -102,6 +144,12 @@ export function createAuthMiddleware(pool: Pool) {
   };
 }
 
+/**
+ * Szerepkör-szűrő middleware factory.
+ * @param roles — engedélyezett szerepkörök (pl. 'booker', 'admin')
+ *
+ * Példa: const requireBookerOrAdmin = requireRoles('booker', 'admin');
+ */
 export function requireRoles(...roles: UserRole[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.authUser) {
@@ -116,6 +164,7 @@ export function requireRoles(...roles: UserRole[]) {
   };
 }
 
+/** Csak admin szerepkör — admin felület végpontjaihoz. */
 export function requireAdmin(
   req: AuthenticatedRequest,
   res: Response,

@@ -1,3 +1,9 @@
+/**
+ * Előadó- és terem szűrők legördülő listákkal — prezentációs komponens.
+ * Használat: App (sessions/agenda nézet), PublicEventsPage toolbar.
+ * Props: sessions (opciók forrása), speakerFilter/roomFilter, onSpeakerChange/onRoomChange,
+ *        compact (kisebb elrendezés), className.
+ */
 import type { Session } from '../../backend/types';
 import { useI18n } from '../i18n/I18nProvider';
 

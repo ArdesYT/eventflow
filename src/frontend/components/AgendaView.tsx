@@ -1,3 +1,8 @@
+/**
+ * Napirend nézet — előadások dátum szerinti csoportosítva.
+ * Használat: App (calendar agenda alnézet, agenda nézet), AdminApp, StatsView, PublicEventsPage.
+ * Props: sessions, sessionSaves (mentések száma), onEventClick, onDelete (opcionális), readOnly.
+ */
 import type { Session, SessionSavesMap } from '../../backend/types';
 import { formatSessionTimeRange } from '../lib/sessionBooking';
 import { groupSessionsForList, isSessionCancelled } from '../lib/sessionFormat';
@@ -47,6 +52,7 @@ export default function AgendaView({
     );
   }
 
+  // Egyedi esemény sor renderelése — törlés gomb csak nem readOnly módban
   function renderEvent(ev: Session) {
     const saveCount = sessionSaves?.[ev.id]?.length ?? 0;
     const cancelled = isSessionCancelled(ev);

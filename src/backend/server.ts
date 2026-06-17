@@ -1,3 +1,23 @@
+/**
+ * =============================================================================
+ * server.ts — EventFlow backend belépési pont (Express + MariaDB)
+ * =============================================================================
+ *
+ * Felelősség:
+ *  - REST API (/api/*) — előadások, auth, admin, nyilvános esemény
+ *  - JWT middleware, szerepkör-ellenőrzés
+ *  - MariaDB connection pool
+ *  - Production: statikus frontend kiszolgálás (dist/)
+ *  - Indításkor: initDatabase() — dbSchema ensure* migrációk
+ *
+ * Szerepkörök:
+ *  - admin: felhasználók, előadók, audit, esemény profil
+ *  - booker: foglalás, szerkesztés (saját termekkel korlátozva)
+ *  - attendee: mentett program
+ *  - vendég: nincs token — csak GET /api/sessions, /api/event
+ * =============================================================================
+ */
+
 import express from 'express';
 import type { Request, Response } from 'express';
 import * as mariadb from 'mariadb';
@@ -46,9 +66,12 @@ dotenv.config();
 
 const app = express();
 
+// CORS — production-ban állítsd CLIENT_URL-t a frontend originre
 app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
+// JSON request body parse
 app.use(express.json());
 
+/** MariaDB connection pool — max 5 párhuzamos kapcsolat. */
 const pool: Pool = mariadb.createPool({
     host: process.env.DB_HOST || 'localhost',
     port: Number(process.env.DB_PORT) || 3306,
@@ -59,11 +82,14 @@ const pool: Pool = mariadb.createPool({
     timezone: 'Z'
 });
 
+/** Middleware példányok — minden védett útvonalhoz. */
 const authenticate = createAuthMiddleware(pool);
 const requireBookerOrAdmin = requireRoles('booker', 'admin');
 const requireAttendee = requireRoles('attendee');
+/** Login/register: max 20 kérés / 15 perc / IP */
 const authRateLimit = createRateLimiter(20, 15 * 60 * 1000);
 
+/** Production biztonság: ne induljon gyenge JWT_SECRET-tel. */
 if (
     process.env.NODE_ENV === 'production' &&
     (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev-only-change-me')
@@ -72,6 +98,7 @@ if (
     process.exit(1);
 }
 
+/** SQL events sor → EventProfile API válasz (dátumok YYYY-MM-DD). */
 function mapEventRow(row: Record<string, unknown>): EventProfile {
     const fmt = (v: unknown) => {
         if (v instanceof Date) {
@@ -91,10 +118,15 @@ function mapEventRow(row: Record<string, unknown>): EventProfile {
     };
 }
 
+/** "2026-03-20 09:00:00" → "09:00" */
 function parseTimeFromDatetime(value: string): string {
     return String(value).match(/(\d{2}:\d{2})/)?.[1] ?? '00:00';
 }
 
+/**
+ * Szerveroldali ütközésellenőrzés mentés előtt.
+ * Dob: ROOM_BUSY | SPEAKER_BUSY — a handler 409/400-gal fordítja.
+ */
 async function assertNoSessionConflicts(
     conn: PoolConnection,
     candidate: {
@@ -132,6 +164,7 @@ async function assertNoSessionConflicts(
     }
 }
 
+/** users tábla sor → API User (jelszó soha nem megy ki). */
 function toSafeUser(row: Record<string, unknown>): User {
     return {
         id: Number(row.id),
@@ -141,6 +174,7 @@ function toSafeUser(row: Record<string, unknown>): User {
     };
 }
 
+/** Bookernek hozzácsatolja az assigned_room_ids tömböt (user_rooms). */
 async function enrichUser(conn: PoolConnection, user: User): Promise<User> {
     if (user.role === 'booker') {
         const assigned_room_ids = await loadUserRoomIds(conn, user.id);
@@ -151,6 +185,7 @@ async function enrichUser(conn: PoolConnection, user: User): Promise<User> {
     return user;
 }
 
+/** Audit napló bejegyzés — admin tevékenységek nyomon követése. */
 async function logActivity(
     conn: PoolConnection,
     userId: number | null,
@@ -165,6 +200,10 @@ async function logActivity(
     );
 }
 
+/**
+ * Booker csak a hozzárendelt termekbe foglalhat.
+ * Ha nincs egyetlen hozzárendelés sem → jelenleg minden terem engedélyezett.
+ */
 async function assertBookerRoomAccess(
     conn: PoolConnection,
     user: User,
@@ -177,8 +216,11 @@ async function assertBookerRoomAccess(
     }
 }
 
-// --- API VÉGPONTOK ---
+// =============================================================================
+// API VÉGPONTOK — lásd README „API” szekció a teljes listáért
+// =============================================================================
 
+/** Health check — frontend backendMode detektáláshoz (db: connected). */
 app.get('/api/health', async (_req: Request, res: Response) => {
     let conn: PoolConnection | undefined;
     try {
@@ -192,6 +234,7 @@ app.get('/api/health', async (_req: Request, res: Response) => {
     }
 });
 
+/** Nyilvános termek listája — foglalási űrlap dropdown. */
 app.get('/api/rooms', async (_req: Request, res: Response) => {
     let conn: PoolConnection | undefined;
     try {
@@ -212,6 +255,7 @@ app.get('/api/rooms', async (_req: Request, res: Response) => {
     }
 });
 
+/** Aktív esemény profilja — is_active=1, első sor (egy-eseményes modell). */
 app.get('/api/event', async (_req: Request, res: Response) => {
     let conn: PoolConnection | undefined;
     try {
@@ -327,6 +371,7 @@ function formatSessionRows(rows: Record<string, unknown>[]): Record<string, unkn
     });
 }
 
+// 1. Előadások listája (nyilvános — vendég is eléri)
 app.get('/api/sessions', async (_req: Request, res: Response) => {
     let conn: PoolConnection | undefined;
     try {
@@ -704,6 +749,7 @@ app.get('/api/my-schedule', authenticate, requireAttendee, async (req: Authentic
     }
 });
 
+// 3d. Előadás mentése a személyes programba (látogató)
 app.post('/api/my-schedule/:sessionId', authenticate, requireAttendee, async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.authUser!.id;
     const sessionId = Number(req.params.sessionId);
@@ -732,6 +778,7 @@ app.post('/api/my-schedule/:sessionId', authenticate, requireAttendee, async (re
     }
 });
 
+// 3e. Előadás eltávolítása a személyes programból (látogató)
 app.delete('/api/my-schedule/:sessionId', authenticate, requireAttendee, async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.authUser!.id;
     const sessionId = Number(req.params.sessionId);
@@ -1229,12 +1276,14 @@ async function logSessionCountHint(): Promise<void> {
 if (process.env.NODE_ENV === 'production') {
     const distPath = path.join(__dirname, '../../dist');
     app.use(express.static(distPath));
+    // SPA fallback — nem-API útvonalaknál index.html (React Router)
     app.get(/^(?!\/api).*/, (_req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
     });
 }
 
 export async function initDatabase(): Promise<void> {
+    /** Párhuzamosan futtatjuk az összes séma-ensure lépést induláskor. */
     await Promise.all([
         ensureSessionStatusColumn(pool),
         ensureUserRoomsTable(pool),

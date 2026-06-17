@@ -1,9 +1,19 @@
+/**
+ * iCalendar (.ics) export — személyes program letöltése.
+ *
+ * Mit csinál: Session listából RFC 5545 kompatibilis VCALENDAR szöveget készít és letölti.
+ * Ki használja: App, AgendaView („Exportálás naptárba”).
+ * Fő exportok: {@link buildIcsCalendar}, {@link downloadIcsFile}.
+ */
+
 import type { Session } from '../../backend/types';
 
+/** Kétjegyű zero-pad (ICS dátum/idő mezőkhöz) */
 function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
+/** Helyi dátum + idő → ICS UTC formátum (YYYYMMDDTHHMMSSZ) */
 function toIcsUtc(date: string, time: string): string {
   const d = new Date(`${date}T${time}:00`);
   return (
@@ -12,6 +22,7 @@ function toIcsUtc(date: string, time: string): string {
   );
 }
 
+/** ICS speciális karakterek escape-elése a szövegmezőkben */
 function escapeIcs(text: string): string {
   return text
     .replace(/\\/g, '\\\\')
@@ -20,6 +31,7 @@ function escapeIcs(text: string): string {
     .replace(/\n/g, '\\n');
 }
 
+/** RFC 5545 sor tördelés max 75 karakter (folytató sorok szóközzel) */
 function foldLine(line: string): string {
   const max = 75;
   if (line.length <= max) return line;
@@ -32,6 +44,12 @@ function foldLine(line: string): string {
   return out + ' ' + rest;
 }
 
+/**
+ * Teljes ICS naptár szöveg építése session listából.
+ * @param sessions - Exportálandó előadások
+ * @param calendarName - Megjelenő naptár neve (X-WR-CALNAME)
+ * @returns .ics fájl tartalma (CRLF sorvégekkel)
+ */
 export function buildIcsCalendar(sessions: Session[], calendarName: string): string {
   const now = new Date();
   const dtstamp =
@@ -72,6 +90,12 @@ export function buildIcsCalendar(sessions: Session[], calendarName: string): str
   ].join('\r\n');
 }
 
+/**
+ * ICS fájl generálása és böngészős letöltés indítása.
+ * @param sessions - Exportálandó sessionök
+ * @param filename - Letöltendő fájlnév (pl. program.ics)
+ * @param calendarName - Naptár megjelenítendő neve
+ */
 export function downloadIcsFile(sessions: Session[], filename: string, calendarName: string): void {
   const content = buildIcsCalendar(sessions, calendarName);
   const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });

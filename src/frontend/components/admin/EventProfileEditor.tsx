@@ -1,3 +1,7 @@
+/**
+ * Eseményprofil szerkesztő űrlap — admin event nézet.
+ * Props: event (aktuális profil), onSave (részleges EventProfile mentése).
+ */
 import { useState, type FormEvent } from 'react';
 import type { EventProfile } from '../../../backend/types';
 import LocalizedDateInput from '../LocalizedDateInput';
@@ -10,6 +14,7 @@ interface EventProfileEditorProps {
 
 export default function EventProfileEditor({ event, onSave }: EventProfileEditorProps) {
   const { t } = useI18n();
+  // Űrlap mezők — event props-ból inicializálva
   const [name, setName] = useState(event.name);
   const [venue, setVenue] = useState(event.venue ?? '');
   const [startDate, setStartDate] = useState(event.start_date ?? '');

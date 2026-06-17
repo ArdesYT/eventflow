@@ -1,3 +1,8 @@
+/**
+ * Előadás kártyarács — kereshető lista nézet.
+ * Használat: App (sessions nézet, calendar keresés fallback), AdminApp.
+ * Props: sessions, sessionSaves, searchTerm, onEventClick, selectable/selectedIds/onToggleSelect (tömeges művelethez).
+ */
 import type { Session, SessionSavesMap } from '../../backend/types';
 import { formatTimeKey } from '../i18n/dateFormat';
 import { formatSessionDateRange, isMultiDaySession, isSessionCancelled } from '../lib/sessionFormat';

@@ -1,3 +1,8 @@
+/**
+ * Előadók kezelése — lista, CRUD, duplikátumok összevonása.
+ * AdminApp speakers nézet; backend módban API, demo módban csak olvasás.
+ * Props: speakers, loading, backendMode, searchTerm, onCreate/onUpdate/onDelete/onMerge.
+ */
 import { useMemo, useState, type FormEvent } from 'react';
 import type { Speaker } from '../../../backend/types';
 import { groupDuplicateSpeakers } from '../../lib/speakerDuplicates';
@@ -36,6 +41,7 @@ export default function SpeakersView({
 }: SpeakersViewProps) {
   const { t } = useI18n();
   const [mergingKey, setMergingKey] = useState<string | null>(null);
+  // Új előadó űrlap
   const [newName, setNewName] = useState('');
   const [newBio, setNewBio] = useState('');
   const [creating, setCreating] = useState(false);
@@ -58,6 +64,7 @@ export default function SpeakersView({
     );
   }, [speakers, searchTerm]);
 
+  // Duplikált előadók összevonása — első marad, többi mergeIds
   async function handleMergeGroup(group: { key: string; speakers: Speaker[] }) {
     if (!onMerge || group.speakers.length < 2) return;
     const keep = group.speakers[0];

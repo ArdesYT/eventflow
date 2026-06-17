@@ -1,3 +1,8 @@
+/**
+ * Admin áttekintő dashboard — statisztikák, szerepkörök, közelgő előadások.
+ * AdminApp overview nézet; csak megjelenítés, nincs saját state.
+ * Props: users, sessions, event.
+ */
 import type { EventProfile, Session, User } from '../../../backend/types';
 import { formatSessionDateRange } from '../../lib/sessionFormat';
 import { formatTimeKey } from '../../i18n/dateFormat';

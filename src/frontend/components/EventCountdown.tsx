@@ -1,3 +1,8 @@
+/**
+ * Esemény visszaszámláló — PublicEventsPage hero szekció.
+ * Másodpercenként frissül; állapotok: visszaszámlálás, élő, lezárult.
+ * Props: event (EventProfile — start_date/end_date alapján számol).
+ */
 import { useEffect, useState } from 'react';
 import type { EventProfile } from '../../backend/types';
 import { useI18n } from '../i18n/I18nProvider';
@@ -21,6 +26,7 @@ interface EventCountdownProps {
 
 export default function EventCountdown({ event }: EventCountdownProps) {
   const { t } = useI18n();
+  // Óra frissítése másodpercenként a visszaszámlálóhoz
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {

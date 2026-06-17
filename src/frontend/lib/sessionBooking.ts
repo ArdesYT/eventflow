@@ -1,3 +1,11 @@
+/**
+ * Session foglalás űrlap ↔ API, ütközések, sablonok, időformázás.
+ *
+ * Mit csinál: BookingFormData konverzió, terem/előadó ütközés, 2 órás buffer, sablonok.
+ * Ki használja: BookingModal, ScheduleConflictModal, BulkSessionToolbar.
+ * Fő exportok: {@link toBookingFormData}, {@link findBookingConflicts}, {@link SESSION_TEMPLATES}, stb.
+ */
+
 import type {
   BookingFormData,
   CreateSessionBody,
@@ -9,6 +17,11 @@ import { formatDateKey, formatTimeKey } from '../i18n/dateFormat';
 import type { Locale } from '../i18n/locales';
 import { enumerateDateRange, isMultiDaySession, isSessionCancelled } from './sessionFormat';
 
+/**
+ * Meglévő Session → szerkesztő űrlap adatok.
+ * @param session - Forrás session
+ * @returns BookingFormData (idő HH:mm-re vágva)
+ */
 export function toBookingFormData(session: Session): BookingFormData {
   const parseTime = (value: string) => {
     const match = value.match(/(\d{2}:\d{2})(?::\d{2})?$/);
@@ -30,6 +43,11 @@ export function toBookingFormData(session: Session): BookingFormData {
   };
 }
 
+/**
+ * Session másolása új címmel (duplikálás űrlaphoz).
+ * @param session - Forrás session
+ * @param titleSuffix - Hozzáfűzendő szöveg a címhez
+ */
 export function duplicateBookingFormData(
   session: Session,
   titleSuffix: string,
@@ -41,6 +59,11 @@ export function duplicateBookingFormData(
   };
 }
 
+/**
+ * Űrlap adatok → API POST/PATCH body (MySQL datetime stringekkel).
+ * @param data - BookingFormData
+ * @returns CreateSessionBody részhalmaz időpont és meta mezőkkel
+ */
 export function bookingFormToApiBody(
   data: BookingFormData,
 ): Pick<CreateSessionBody, 'title' | 'description' | 'start_time' | 'end_time' | 'room_id' | 'speaker_id' | 'speaker_name' | 'color'> {
@@ -57,12 +80,21 @@ export function bookingFormToApiBody(
   };
 }
 
+/** Dátum + HH:mm → helyi Date objektum */
 function toRange(date: string, time: string): Date {
   return new Date(`${date}T${time}:00`);
 }
 
+/** Terem buffer szabály: minimum 2 óra két foglalás között */
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
+/**
+ * Van-e terem ütközés (átfedés vagy 2 órán belüli buffer) a megadott űrlappal.
+ * @param sessions - Összes meglévő session
+ * @param data - Új/szerkesztett foglalás
+ * @param excludeSessionId - Szerkesztésnél kihagyandó session ID
+ * @returns true, ha ütközés van
+ */
 export function hasRoomConflict(
   sessions: Session[],
   data: BookingFormData,
@@ -78,12 +110,18 @@ export function hasRoomConflict(
     const sEnd = s.end_date ?? s.date;
     const existingStart = toRange(s.date, s.start_time);
     const existingEnd = toRange(sEnd, s.end_time);
+    // 2 órás buffer után nincs ütközés
     if (newStart.getTime() >= existingEnd.getTime() + TWO_HOURS_MS) return false;
     if (existingStart.getTime() >= newEnd.getTime() + TWO_HOURS_MS) return false;
     return true;
   });
 }
 
+/**
+ * Időtartomány validáció az űrlapon.
+ * @param data - BookingFormData
+ * @returns 'endBeforeStart' | 'invalidRange' | null (null = OK)
+ */
 export function validateBookingTimes(data: BookingFormData): 'endBeforeStart' | 'invalidRange' | null {
   const endDate = data.end_date || data.date;
   if (endDate < data.date) return 'endBeforeStart';
@@ -93,6 +131,11 @@ export function validateBookingTimes(data: BookingFormData): 'endBeforeStart' | 
   return null;
 }
 
+/**
+ * Foglalás hossza percekben.
+ * @param data - BookingFormData
+ * @returns Percek száma; 0 érvénytelen vagy nem pozitív tartománynál
+ */
 export function bookingDurationMinutes(data: BookingFormData): number {
   const endDate = data.end_date || data.date;
   const start = toRange(data.date, data.start_time);
@@ -101,12 +144,20 @@ export function bookingDurationMinutes(data: BookingFormData): number {
   return Number.isFinite(diff) && diff > 0 ? Math.round(diff) : 0;
 }
 
+/**
+ * Foglalás napjainak száma (többnapos esetben).
+ * @param data - BookingFormData
+ */
 export function bookingDayCount(data: BookingFormData): number {
   const end = data.end_date || data.date;
   if (end < data.date) return 0;
   return enumerateDateRange(data.date, end).length;
 }
 
+/**
+ * Meglévő session hossza percekben.
+ * @param session - Session idő mezőkkel
+ */
 export function sessionDurationMinutes(session: Session): number {
   const endDate = session.end_date ?? session.date;
   const start = toRange(session.date, session.start_time);
@@ -115,6 +166,10 @@ export function sessionDurationMinutes(session: Session): number {
   return Number.isFinite(diff) && diff > 0 ? Math.round(diff) : 0;
 }
 
+/**
+ * Percek → emberi olvasható időtartam (pl. „1h 30m”, „2d 3h”).
+ * @param minutes - Időtartam percekben
+ */
 export function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
   const h = Math.floor(minutes / 60);
@@ -130,6 +185,11 @@ export function formatDuration(minutes: number): string {
   return m ? `${h}h ${m}m` : `${h}h`;
 }
 
+/**
+ * Két session időben átfed-e egymást.
+ * @param a - Első session
+ * @param b - Második session
+ */
 export function sessionsOverlap(a: Session, b: Session): boolean {
   const aStart = toRange(a.date, a.start_time);
   const aEnd = toRange(a.end_date ?? a.date, a.end_time);
@@ -138,10 +198,20 @@ export function sessionsOverlap(a: Session, b: Session): boolean {
   return aStart < bEnd && bStart < aEnd;
 }
 
+/**
+ * Személyes program ütközések: mentett sessionök, amelyek átfednek a jelölttel.
+ * @param saved - Felhasználó mentett sessionjei
+ * @param candidate - Újonnan mentendő session
+ */
 export function findScheduleConflicts(saved: Session[], candidate: Session): Session[] {
   return saved.filter((s) => s.id !== candidate.id && sessionsOverlap(s, candidate));
 }
 
+/**
+ * Session éppen „élő”-e (kezdődött, még nem ért véget, nem cancelled).
+ * @param session - Ellenőrzendő session
+ * @param now - Referencia időpont (teszteléshez)
+ */
 export function isSessionLive(session: Session, now = new Date()): boolean {
   if (isSessionCancelled(session)) return false;
   const start = toRange(session.date, session.start_time);
@@ -149,12 +219,18 @@ export function isSessionLive(session: Session, now = new Date()): boolean {
   return now >= start && now <= end;
 }
 
+/** Foglalási ütközés előnézet kategóriák szerint */
 export interface BookingConflictPreview {
   roomOverlap: Session[];
   roomBuffer: Session[];
   speakerOverlap: Session[];
 }
 
+/**
+ * Űrlap adatokból ideiglenes Session objektum ütközés-ellenőrzéshez.
+ * @param data - Űrlap
+ * @param excludeSessionId - Szerkesztett session ID (vagy -1 új foglalásnál)
+ */
 export function bookingFormToCandidateSession(
   data: BookingFormData,
   excludeSessionId?: number,
@@ -177,6 +253,7 @@ export function bookingFormToCandidateSession(
   };
 }
 
+/** Terem buffer ütközés: átfedés VAGY 2 órán belüli közelség */
 function hasBufferConflictBetween(
   a: { date: string; end_date?: string; start_time: string; end_time: string },
   b: { date: string; end_date?: string; start_time: string; end_time: string },
@@ -196,6 +273,13 @@ function hasBufferConflictBetween(
   return true;
 }
 
+/**
+ * Részletes ütközés-ellenőrzés foglaláskor: terem átfedés, buffer, előadó átfedés.
+ * @param sessions - Összes aktív session
+ * @param data - Űrlap adatok
+ * @param excludeSessionId - Szerkesztésnél kihagyandó ID
+ * @returns BookingConflictPreview három listával
+ */
 export function findBookingConflicts(
   sessions: Session[],
   data: BookingFormData,
@@ -234,6 +318,10 @@ export function findBookingConflicts(
   return { roomOverlap, roomBuffer, speakerOverlap };
 }
 
+/**
+ * Előre definiált session sablonok (típus, alapcím, időtartam, szín).
+ * @remarks BookingModal sablon választóhoz
+ */
 export const SESSION_TEMPLATES: {
   id: SessionTemplateId;
   defaultTitle: string;
@@ -245,6 +333,7 @@ export const SESSION_TEMPLATES: {
   { id: 'workshop', defaultTitle: 'Workshop', durationMinutes: 120, color: 'green' },
 ];
 
+/** HH:mm + percek → új befejező idő (24 órán belül wrap) */
 function addMinutesToTime(time: string, minutes: number): string {
   const [h, m] = time.split(':').map(Number);
   const total = h * 60 + m + minutes;
@@ -253,6 +342,13 @@ function addMinutesToTime(time: string, minutes: number): string {
   return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
 }
 
+/**
+ * Sablon alkalmazása az űrlapra (cím, vége, szín).
+ * @param form - Jelenlegi űrlap
+ * @param templateId - Sablon azonosító
+ * @param titlePrefix - Opcionális cím előtag (pl. eseménynév)
+ * @returns Módosított BookingFormData; változatlan, ha ismeretlen sablon
+ */
 export function applySessionTemplate(
   form: BookingFormData,
   templateId: SessionTemplateId,
@@ -278,6 +374,11 @@ export function applySessionTemplate(
   };
 }
 
+/**
+ * Session időtartomány megjelenítése (egy- vagy többnapos).
+ * @param session - Session idő mezőkkel
+ * @param locale - Nyelv (alapértelmezett: hu)
+ */
 export function formatSessionTimeRange(session: Session, locale: Locale = 'hu'): string {
   const start = formatTimeKey(session.start_time);
   const end = formatTimeKey(session.end_time);

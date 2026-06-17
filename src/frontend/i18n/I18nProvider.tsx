@@ -1,3 +1,9 @@
+/**
+ * React i18n kontextus — nyelvválasztás, fordítási függvény (t), BCP47 kód.
+ * Az egész alkalmazást körbeveszi (main.tsx); a useI18n hook minden komponensben elérhető.
+ * A translateError() a translateError.ts modulban van (fast refresh kompatibilitás).
+ */
+/* eslint-disable react-refresh/only-export-components -- useI18n hook a providerrel együtt */
 import {
   createContext,
   useCallback,
@@ -25,6 +31,7 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
+/** Beágyazott objektumból pontozott kulcsú string érték kiolvasása (pl. "nav.calendar"). */
 function getNested(obj: Record<string, unknown>, path: string): string | undefined {
   const parts = path.split('.');
   let cur: unknown = obj;
@@ -38,6 +45,7 @@ function getNested(obj: Record<string, unknown>, path: string): string | undefin
   return typeof cur === 'string' ? cur : undefined;
 }
 
+/** {{változó}} helyőrzők behelyettesítése a fordítási sablonban. */
 function interpolate(template: string, vars?: Vars): string {
   if (!vars) return template;
   return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) =>
@@ -45,6 +53,7 @@ function interpolate(template: string, vars?: Vars): string {
   );
 }
 
+/** Kezdeti nyelv: localStorage-ból, vagy alapértelmezett magyar (hu). */
 function loadInitialLocale(): Locale {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -60,8 +69,10 @@ function loadInitialLocale(): Locale {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
+  // Aktuális nyelv — inicializálás localStorage-ból
   const [locale, setLocaleState] = useState<Locale>(loadInitialLocale);
 
+  // Nyelvváltás: state, localStorage és document.documentElement.lang szinkronizálása
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
     try {
@@ -72,8 +83,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = LOCALE_BCP47[next];
   }, []);
 
+  // Aktuális locale szótár — locale változásakor újraszámolódik
   const dict = useMemo(() => getTranslations(locale), [locale]);
 
+  // Fordító függvény: kulcs → szöveg, opcionális interpolációval
   const t = useCallback(
     (key: string, vars?: Vars) => {
       const raw = getNested(dict as unknown as Record<string, unknown>, key) ?? key;
@@ -99,75 +112,4 @@ export function useI18n(): I18nContextValue {
   const ctx = useContext(I18nContext);
   if (!ctx) throw new Error('useI18n must be used within I18nProvider');
   return ctx;
-}
-
-/** Map known API / legacy error strings to translation keys. */
-export function translateError(message: string, t: I18nContextValue['t']): string {
-  if (message.startsWith('errors.')) return t(message);
-
-  const lower = message.toLowerCase();
-  if (
-    lower.includes('lejárt') ||
-    lower.includes('munkamenet') ||
-    lower.includes('expired') ||
-    lower.includes('abgelaufen') ||
-    lower.includes('invalid token')
-  ) {
-    return t('errors.sessionExpired');
-  }
-  if (
-    lower.includes('bejelentkezés szükséges') ||
-    lower.includes('unauthorized') ||
-    lower.includes('authentication')
-  ) {
-    return t('errors.unauthorized');
-  }
-  if (
-    lower.includes('jogosultság') ||
-    lower.includes('adminisztrátor') ||
-    lower.includes('forbidden') ||
-    lower.includes('berechtigung') ||
-    lower.includes('permission')
-  ) {
-    return t('errors.forbidden');
-  }
-  if (
-    lower.includes('foglalt') ||
-    lower.includes('belegt') ||
-    lower.includes('busy') ||
-    lower.includes('2-hour') ||
-    lower.includes('2 óra') ||
-    lower.includes('2-stunden')
-  ) {
-    return t('errors.roomBusy');
-  }
-  if (
-    lower.includes('csatlakoz') ||
-    lower.includes('server') ||
-    lower.includes('reach') ||
-    lower.includes('verbindung')
-  ) {
-    return t('errors.serverConnect');
-  }
-  if (
-    lower.includes('email') ||
-    lower.includes('jelszó') ||
-    lower.includes('password') ||
-    lower.includes('hibás') ||
-    lower.includes('ungültig') ||
-    lower.includes('invalid credentials')
-  ) {
-    return t('errors.invalidCredentials');
-  }
-  if (lower.includes('ment') || lower.includes('save') || lower.includes('speicher')) {
-    return t('errors.saveError');
-  }
-  if (lower.includes('törl') || lower.includes('delete') || lower.includes('lösch')) {
-    return t('errors.deleteError');
-  }
-  if (message.startsWith('HTTP ')) {
-    const status = message.replace(/\D/g, '');
-    return t('errors.http', { status });
-  }
-  return message;
 }

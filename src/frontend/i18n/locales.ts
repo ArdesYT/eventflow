@@ -1,3 +1,9 @@
+/**
+ * Támogatott nyelvek és kapcsolódó konstansok.
+ * A Locale típus, LOCALES lista, megjelenítési címkék és BCP47 kódok
+ * az I18nProvider és a LanguageSwitcher számára szolgálnak alapként.
+ * A STORAGE_KEY a localStorage kulcsa a kiválasztott nyelv megőrzéséhez.
+ */
 export type Locale = 'hu' | 'de' | 'en';
 
 export const LOCALES: Locale[] = ['hu', 'en', 'de'];

@@ -1,3 +1,8 @@
+/**
+ * Tömeges előadás-módosítás eszköztár — dátum eltolás és terem csere.
+ * Használat: App és AdminApp sessions nézet, bulk select módban.
+ * Props: selectedCount, busy, allowedRoomIds, rooms, onClear, onApply.
+ */
 import { useState } from 'react';
 import type { Room } from '../../backend/types';
 import { FALLBACK_ROOMS, roomLabel } from '../lib/rooms';
@@ -25,6 +30,7 @@ export default function BulkSessionToolbar({
   const [roomId, setRoomId] = useState<number | ''>('');
   const [error, setError] = useState<string | null>(null);
 
+  // Booker számára csak a hozzárendelt termek választhatók
   const roomOptions = allowedRoomIds?.length
     ? rooms.filter((r) => allowedRoomIds.includes(r.id))
     : rooms;

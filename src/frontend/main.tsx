@@ -1,3 +1,8 @@
+/**
+ * EventFlow frontend belépési pont.
+ * A React alkalmazást a #root DOM elembe mountolja StrictMode alatt.
+ * Az I18nProvider biztosítja a többnyelvűséget; a Root kezeli az auth és routing logikát.
+ */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import Root from './Root';

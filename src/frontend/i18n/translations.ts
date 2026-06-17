@@ -1,3 +1,9 @@
+/**
+ * Fordítási szótár — magyar, angol és német szövegek kulcs szerint.
+ * A getTranslations() ebből a fájlból tölti be a szótárat a kiválasztott Locale alapján.
+ * A kulcsok pontozott útvonalak (pl. common.loading, nav.calendar).
+ * Csak szövegeket tartalmaz; logika az I18nProvider-ben van.
+ */
 import type { Locale } from './locales';
 
 export type TranslationDict = typeof translations[keyof typeof translations];
@@ -29,6 +35,7 @@ const translations = {
       month: 'Hónap',
       searchPlaceholder: 'Előadások keresése...',
       newBooking: '+ Új foglalás',
+      menu: 'Menü',
     },
     login: {
       tagline: 'Az eseménye. Tökéletesen megszervezve.',
@@ -380,6 +387,7 @@ const translations = {
       month: 'Monat',
       searchPlaceholder: 'Vorträge suchen...',
       newBooking: '+ Neue Buchung',
+      menu: 'Menü',
     },
     login: {
       tagline: 'Ihr Event. Perfekt organisiert.',
@@ -732,6 +740,7 @@ const translations = {
       month: 'Month',
       searchPlaceholder: 'Search sessions...',
       newBooking: '+ New Booking',
+      menu: 'Menu',
     },
     login: {
       tagline: 'Your event. Perfectly organised.',

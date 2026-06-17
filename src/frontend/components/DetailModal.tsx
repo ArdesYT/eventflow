@@ -1,3 +1,8 @@
+/**
+ * Előadás részletek modal — booker/admin nézet (App, AdminApp).
+ * Szerkesztés, duplikálás, törlés, státuszváltás; megjeleníti a mentő felhasználókat is.
+ * Props: session, savedBy, savesLoaded, onClose, onDelete, onEdit, onDuplicate, onSetStatus.
+ */
 import type { Session, SessionSaveUser } from '../../backend/types';
 import {
   formatDuration,

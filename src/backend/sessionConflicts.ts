@@ -1,12 +1,32 @@
+/**
+ * =============================================================================
+ * sessionConflicts.ts — Ütközés-ellenőrzés ütemezéskor
+ * =============================================================================
+ *
+ * Üzleti szabályok:
+ *  1. Ugyanabban a teremben nem lehet átfedő időpont (roomOverlap)
+ *  2. Ugyanabban a teremben legalább 2 óra kell két előadás között (roomBuffer)
+ *  3. Egy előadó nem lehet két helyen egyszerre (speakerOverlap)
+ *
+ * A server.ts assertNoSessionConflicts és a frontend BookingModal is használja.
+ * Lemondott (cancelled) előadásokat figyelmen kívül hagyjuk.
+ * =============================================================================
+ */
+
 import type { Session } from './types';
 
+/** Dátum + idő stringből Date objektum (helyi értelmezés). */
 function toRange(date: string, time: string): Date {
   const t = String(time).match(/(\d{2}:\d{2})/)?.[1] ?? time;
   return new Date(`${date}T${t}:00`);
 }
 
+/** Két óra milliszekundumban — minimális szünet ugyanabban a teremben. */
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
+/**
+ * Két időintervallum átfed-e (többnapos előadásnál end_date is számít).
+ */
 export function sessionsOverlap(
   a: { date: string; end_date?: string; start_time: string; end_time: string },
   b: { date: string; end_date?: string; start_time: string; end_time: string },
@@ -18,6 +38,10 @@ export function sessionsOverlap(
   return aStart < bEnd && bStart < aEnd;
 }
 
+/**
+ * 2 órás buffer sértés: nem fedik át egymást, de nincs közöttük 2 óra szünet.
+ * Csak akkor true, ha sessionsOverlap false lenne, de a távolság < 2 óra.
+ */
 export function hasBufferConflict(
   a: { date: string; end_date?: string; start_time: string; end_time: string },
   b: { date: string; end_date?: string; start_time: string; end_time: string },
@@ -34,12 +58,18 @@ export function hasBufferConflict(
   return true;
 }
 
+/** Egy jelölt előadás ütközéseinek eredménye. */
 export interface SessionConflictResult {
-  roomOverlap: boolean;
-  roomBuffer: boolean;
-  speakerOverlap: boolean;
+  roomOverlap: boolean;    // közvetlen terem-átfedés
+  roomBuffer: boolean;     // 2 órás szabály sértése
+  speakerOverlap: boolean; // előadó dupla foglalás
 }
 
+/**
+ * Összes meglévő előadás ellen ellenőrzi a jelöltet.
+ * @param existing — már DB-ben lévő előadások
+ * @param candidate — új vagy szerkesztett (id opcionális: saját magát kihagyja)
+ */
 export function checkSessionConflicts(
   existing: Session[],
   candidate: {
@@ -94,6 +124,10 @@ export function checkSessionConflicts(
   return result;
 }
 
+/**
+ * Nyers SQL sor → frontend Session objektum.
+ * Kezeli a MariaDB Date típusát és a datetime string formátumot.
+ */
 export function sessionFromRow(row: Record<string, unknown>): Session {
   const start = row.start_time instanceof Date
     ? row.start_time

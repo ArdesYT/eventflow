@@ -1,3 +1,8 @@
+/**
+ * Lokalizált dátumválasztó — prezentációs komponens rejtett natív <input type="date">-tel.
+ * A gombon a locale szerinti formázott dátum látszik; kattintásra a böngésző picker nyílik.
+ * Props: value (YYYY-MM-DD), onChange, min, className, hasError, placeholder.
+ */
 import { useRef } from 'react';
 import { formatDateKey } from '../i18n/dateFormat';
 import { useI18n } from '../i18n/I18nProvider';
@@ -22,6 +27,7 @@ export default function LocalizedDateInput({
   const { locale } = useI18n();
   const nativeRef = useRef<HTMLInputElement>(null);
 
+  // Natív date input megnyitása — showPicker() vagy focus+click fallback
   function openPicker() {
     const el = nativeRef.current;
     if (!el) return;

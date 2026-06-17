@@ -1,3 +1,8 @@
+/**
+ * Havi naptár nézet — előadások napokra osztva, max. 3 esemény/cella.
+ * Használat: App (calendar month alnézet), PublicEventsPage (calendar viewMode).
+ * Props: curMonth/curYear, sessions, selectedDate, onSelectDay, onEventClick, onNavigate, onToday.
+ */
 import type { ReactNode } from 'react';
 import type { Session } from '../../backend/types';
 import { isMultiDaySession, sessionSpansDate } from '../lib/sessionFormat';

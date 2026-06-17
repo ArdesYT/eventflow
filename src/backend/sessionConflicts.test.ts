@@ -1,8 +1,28 @@
+/**
+ * =============================================================================
+ * sessionConflicts.test.ts — Ütközés-ellenőrzés egységtesztek
+ * =============================================================================
+ *
+ * A sessionConflicts.ts exportált függvényeit teszteli (Node.js beépített test runner).
+ *
+ * Lefedett szabályok:
+ *  - sessionsOverlap: időbeli átfedés ugyanabban a teremben
+ *  - hasBufferConflict: 2 órás minimális szünet két nem átfedő előadás között
+ *  - checkSessionConflicts: lemondott előadások kihagyása az ellenőrzésből
+ *
+ * Futtatás: npm test (vagy node --test src/backend/sessionConflicts.test.ts)
+ * =============================================================================
+ */
+
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { checkSessionConflicts, hasBufferConflict, sessionsOverlap } from './sessionConflicts';
 import type { Session } from './types';
 
+/**
+ * Teszt előadás gyártó — alapértelmezett mezőkkel, partial felülírható.
+ * Csak az ütközés-számításhoz szükséges mezőket tölti ki.
+ */
 function session(partial: Partial<Session> & Pick<Session, 'id'>): Session {
   return {
     title: 'Test',
@@ -19,6 +39,7 @@ function session(partial: Partial<Session> & Pick<Session, 'id'>): Session {
   };
 }
 
+/** sessionsOverlap — két időintervallum átfedésének detektálása. */
 describe('sessionsOverlap', () => {
   it('detects overlapping times in same room', () => {
     const a = session({ id: 1, start_time: '10:00', end_time: '11:00' });
@@ -33,6 +54,7 @@ describe('sessionsOverlap', () => {
   });
 });
 
+/** hasBufferConflict — 2 órás buffer szabály (átfedés nélkül, de túl kicsi rés). */
 describe('hasBufferConflict', () => {
   it('flags gap under 2 hours', () => {
     const a = session({ id: 1, start_time: '10:00', end_time: '11:00' });
@@ -41,6 +63,7 @@ describe('hasBufferConflict', () => {
   });
 });
 
+/** checkSessionConflicts — összesített ellenőrzés meglévő előadásokkal szemben. */
 describe('checkSessionConflicts', () => {
   it('skips cancelled sessions', () => {
     const existing = [session({ id: 1, status: 'cancelled' })];

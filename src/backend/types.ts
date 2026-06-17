@@ -1,17 +1,33 @@
+/**
+ * =============================================================================
+ * types.ts — Közös TypeScript típusok (backend + frontend)
+ * =============================================================================
+ *
+ * A frontend közvetlenül importálja ezt a fájlt — egy forrás az API szerződéshez.
+ * Ne tegyünk ide futásidejű kódot, csak típusokat és type aliasokat.
+ * =============================================================================
+ */
+
+/** Előadás kártya színe a naptárban / listában. */
 export type EventColor = 'blue' | 'amber' | 'green' | 'red';
 
+/** scheduled = aktív, cancelled = lemondva (megjelenik, de szürke / nem ütközik). */
 export type SessionStatus = 'scheduled' | 'cancelled';
 
+/** Booker fő nézet oldalai (naptár, lista, napirend, statisztika). */
 export type ViewType = 'calendar' | 'sessions' | 'agenda' | 'stats';
 
+/** Admin oldalsáv menüpontjai. */
 export type AdminViewType = 'overview' | 'users' | 'sessions' | 'rooms' | 'speakers' | 'audit' | 'event';
 
+/** Terem — rooms tábla. */
 export interface Room {
   id: number;
   name: string;
   capacity?: number;
 }
 
+/** Aktív esemény profilja — GET /api/event, admin szerkesztés. */
 export interface EventProfile {
   id: number;
   name: string;
@@ -23,6 +39,7 @@ export interface EventProfile {
   is_active: boolean;
 }
 
+/** PATCH /api/admin/event — csak a megadott mezők frissülnek. */
 export interface UpdateEventBody {
   name?: string;
   venue?: string | null;
@@ -31,8 +48,10 @@ export interface UpdateEventBody {
   description?: string | null;
 }
 
+/** Gyors sablonok a foglalási űrlapon (keynote, panel, workshop). */
 export type SessionTemplateId = 'keynote' | 'panel' | 'workshop';
 
+/** Audit napló művelet típusok — activity_log.action */
 export type ActivityAction =
   | 'session.create'
   | 'session.update'
@@ -45,6 +64,7 @@ export type ActivityAction =
   | 'user.delete'
   | 'user.rooms_update';
 
+/** Egy audit bejegyzés — admin ActivityLogView. */
 export interface ActivityLogEntry {
   id: number;
   user_id: number | null;
@@ -56,6 +76,7 @@ export interface ActivityLogEntry {
   created_at: string;
 }
 
+/** PATCH /api/sessions/bulk — tömeges dátum/terem módosítás. */
 export interface BulkUpdateSessionsBody {
   ids: number[];
   date_offset_days?: number;
@@ -114,7 +135,9 @@ export interface CreateSessionBody {
 }
 
 
-// ── Auth ──────────────────────────────────────────────
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+/** Globális felhasználói szerepkör — users.role oszlop. */
 export type UserRole = 'admin' | 'booker' | 'attendee';
 
 export interface User {
@@ -140,6 +163,7 @@ export interface AuthResponse {
   token: string;
 }
 
+/** Előadó — speakers tábla; session_count admin listában. */
 export interface Speaker {
   id: number;
   name: string;
@@ -169,4 +193,5 @@ export interface SessionSaveUser {
   email: string;
 }
 
+/** session_id → kik mentették a programjukba (booker/admin részleteknél). */
 export type SessionSavesMap = Record<number, SessionSaveUser[]>;

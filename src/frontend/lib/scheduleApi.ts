@@ -1,6 +1,15 @@
+/**
+ * Személyes program (my-schedule) és session mentések API.
+ *
+ * Mit csinál: résztvevői program CRUD, valamint admin/booker számára ki mentette a sessiont.
+ * Ki használja: App, SessionsView, AgendaView, AttendeeDetailModal.
+ * Fő exportok: {@link fetchMySchedule}, {@link addToMySchedule}, {@link removeFromMySchedule}, {@link fetchSessionSaves}.
+ */
+
 import type { Session, SessionSaveUser, SessionSavesMap } from '../../backend/types';
 import { authFetch } from './authFetch';
 
+/** API-ból érkező ismeretlen érték biztonságos számmá alakítása */
 function toNumber(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'bigint') return Number(value);
@@ -11,6 +20,7 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
+/** Egy session-mentő felhasználó sor normalizálása */
 function parseSessionSaveUser(raw: unknown): SessionSaveUser | null {
   if (!raw || typeof raw !== 'object') return null;
   const row = raw as Record<string, unknown>;
@@ -24,6 +34,7 @@ function parseSessionSaveUser(raw: unknown): SessionSaveUser | null {
   };
 }
 
+/** Nyers API válasz → sessionId → mentő felhasználók map */
 function parseSessionSavesMap(raw: Record<string, unknown>): SessionSavesMap {
   const map: SessionSavesMap = {};
   for (const [key, value] of Object.entries(raw)) {
@@ -36,6 +47,7 @@ function parseSessionSavesMap(raw: Record<string, unknown>): SessionSavesMap {
   return map;
 }
 
+/** Közös hibaépítő: 404 → i18n kulcs, egyébként backend üzenet */
 function scheduleRequestError(
   res: Response,
   data: { message?: string },
@@ -47,6 +59,11 @@ function scheduleRequestError(
   return new Error(data.message ?? fallback);
 }
 
+/**
+ * A bejelentkezett felhasználó mentett programját tölti le.
+ * @returns Session tömb (teljes session objektumok)
+ * @throws Error i18n kulccsal, ha a schedule API nem elérhető (404)
+ */
 export async function fetchMySchedule(): Promise<Session[]> {
   const res = await authFetch('/api/my-schedule');
   if (!res.ok) {
@@ -56,6 +73,11 @@ export async function fetchMySchedule(): Promise<Session[]> {
   return res.json();
 }
 
+/**
+ * Session hozzáadása a személyes programhoz.
+ * @param sessionId - Mentendő előadás azonosítója
+ * @throws Error sikertelen POST esetén
+ */
 export async function addToMySchedule(sessionId: number): Promise<void> {
   const res = await authFetch(`/api/my-schedule/${sessionId}`, { method: 'POST' });
   if (!res.ok) {
@@ -64,6 +86,11 @@ export async function addToMySchedule(sessionId: number): Promise<void> {
   }
 }
 
+/**
+ * Session eltávolítása a személyes programból.
+ * @param sessionId - Törlendő előadás azonosítója
+ * @throws Error sikertelen DELETE esetén
+ */
 export async function removeFromMySchedule(sessionId: number): Promise<void> {
   const res = await authFetch(`/api/my-schedule/${sessionId}`, { method: 'DELETE' });
   if (!res.ok) {
@@ -71,6 +98,12 @@ export async function removeFromMySchedule(sessionId: number): Promise<void> {
     throw scheduleRequestError(res, data, 'Failed to remove session.');
   }
 }
+
+/**
+ * Admin/booker: mely felhasználók mentették az egyes sessionöket.
+ * @returns Map: sessionId → SessionSaveUser[]
+ * @throws Error `errors.savesNotAvailable` 404-nél
+ */
 
 export async function fetchSessionSaves(): Promise<SessionSavesMap> {
   const res = await authFetch('/api/sessions/saves');

@@ -1,3 +1,9 @@
+/**
+ * Nyilvános/résztvevői programoldal — attendee és vendég (guest) nézet.
+ * Root rendereli attendee szerepkörnél; guestBrowse módban bejelentkezés nélkül.
+ * Fülek: összes program, saját program, előadók; nézetek: lista, napirend, naptár.
+ * Props: event, sessions, savedSessions, schedule callback-ek, user/guestMode, onLogout.
+ */
 import { useMemo, useState } from 'react';
 
 import type { EventProfile, Session, User } from '../../backend/types';
@@ -54,6 +60,7 @@ type ViewMode = 'list' | 'agenda' | 'calendar';
 
 
 
+/** Résztvevői oldal props — program, mentett előadások, schedule műveletek. */
 interface PublicEventsPageProps {
 
   event?: EventProfile | null;
@@ -216,20 +223,14 @@ export default function PublicEventsPage({
 
   const { t, locale } = useI18n();
 
+  // UI állapot: fül, nézetmód, szűrők, részletek modal, ütközés prompt
   const [tab, setTab] = useState<Tab>('all');
-
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-
   const [searchTerm, setSearchTerm] = useState('');
-
   const [speakerFilter, setSpeakerFilter] = useState('');
-
   const [roomFilter, setRoomFilter] = useState('');
-
   const [detailId, setDetailId] = useState<number | null>(null);
-
   const [todayOnly, setTodayOnly] = useState(false);
-
   const [conflictPrompt, setConflictPrompt] = useState<{
     sessionId: number;
     conflicts: Session[];
@@ -238,7 +239,7 @@ export default function PublicEventsPage({
 
 
   const today = new Date();
-
+  // Naptár nézet hónap/év állapota
   const [curMonth, setCurMonth] = useState(today.getMonth());
 
   const [curYear, setCurYear] = useState(today.getFullYear());
@@ -251,6 +252,7 @@ export default function PublicEventsPage({
 
 
 
+  // Mentett előadás ID-k gyors kereséshez
   const savedIds = useMemo(() => new Set(savedSessions.map((s) => s.id)), [savedSessions]);
 
 
@@ -275,6 +277,7 @@ export default function PublicEventsPage({
 
   const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
 
+  // Aktív fül alapján szűrt lista + ma szűrő
   const filteredSessions = useMemo(() => {
     let items = filterSessions(baseSessions, searchTerm, speakerFilter, roomFilter);
     if (todayOnly) {
@@ -353,6 +356,7 @@ export default function PublicEventsPage({
 
 
 
+  // Előadás mentése — ütközés esetén modal, force=true esetén mentés mégis
   async function trySave(sessionId: number, force = false) {
 
     if (guestMode) {
@@ -628,47 +632,35 @@ export default function PublicEventsPage({
         </div>
 
         <div className="public-nav-right">
-
-          <button type="button" className="btn-export public-export-btn" onClick={handleExportIcs}>
-
-            {t('export.ics')}
-
-          </button>
-
-          <LanguageSwitcher />
-
-          {guestMode ? (
-
-            <button type="button" className="btn-save public-login-btn" onClick={onLoginRequest}>
-
-              {t('public.login')}
-
+          <LanguageSwitcher variant="select" className="public-nav-lang" />
+          <div className="public-nav-toolbar">
+            <button type="button" className="btn-export public-export-btn" onClick={handleExportIcs}>
+              {t('export.ics')}
             </button>
 
-          ) : (
-
-            <>
-
-              <div className="public-user-pill">
-
-                <div className="public-user-avatar">{getInitials(user?.name ?? '')}</div>
-
-                <span>{user?.name}</span>
-
-                <span className="public-user-role">{t('public.attendee')}</span>
-
-              </div>
-
-              <button className="public-logout-btn" onClick={onLogout}>
-
-                {t('common.logout')}
-
+            {guestMode ? (
+              <button type="button" className="btn-save public-login-btn" onClick={onLoginRequest}>
+                {t('public.login')}
               </button>
-
-            </>
-
-          )}
-
+            ) : (
+              <>
+                <div className="public-user-pill">
+                  <div className="public-user-avatar">{getInitials(user?.name ?? '')}</div>
+                  <span className="public-user-name">{user?.name}</span>
+                  <span className="public-user-role">{t('public.attendee')}</span>
+                </div>
+                <button
+                  type="button"
+                  className="public-logout-btn"
+                  onClick={onLogout}
+                  title={t('common.logout')}
+                  aria-label={t('common.logout')}
+                >
+                  <span className="public-logout-label">{t('common.logout')}</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
       </header>

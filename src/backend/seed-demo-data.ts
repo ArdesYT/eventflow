@@ -1,13 +1,34 @@
 /**
- * Demo rooms, speakers, users and sessions for development.
+ * =============================================================================
+ * seed-demo-data.ts — CLI script demo adatok betöltéséhez
+ * =============================================================================
+ *
+ * Futtatás:
  *   npx ts-node src/backend/seed-demo-data.ts
+ *   vagy: npm run seed
+ *
+ * A tényleges logika a demoSeed.ts runDemoSeed() függvényében van.
+ * Ez a script csak:
+ *  - betölti a .env környezeti változókat
+ *  - létrehoz egy MariaDB connection pool-t
+ *  - meghívja runDemoSeed()-et
+ *  - kiírja az eredményt a konzolra
+ *  - lezárja a pool-t
+ *
+ * Demo bejelentkezések (jelszavak a demoSeed.ts USERS tömbjében):
+ *   admin@example.com / admin123
+ *   booker@example.com / booker123
+ *   attendee@example.com / attendee123
+ * =============================================================================
  */
+
 import * as mariadb from 'mariadb';
 import dotenv from 'dotenv';
 import { runDemoSeed } from './demoSeed';
 
 dotenv.config();
 
+/** MariaDB pool — ugyanazok a DB_* env változók, mint a server.ts-ben. */
 const pool = mariadb.createPool({
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT) || 3306,
@@ -16,6 +37,7 @@ const pool = mariadb.createPool({
   database: process.env.DB_NAME || 'eventflow',
 });
 
+/** Fő futtatási logika — hibák esetén process.exit(1). */
 async function run() {
   try {
     const result = await runDemoSeed(pool);

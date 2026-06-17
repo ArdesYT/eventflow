@@ -1,3 +1,10 @@
+/* eslint-disable react-hooks/set-state-in-effect -- űrlap szinkron props/locale szerkesztésnél szándékos */
+/**
+ * Új/szerkesztett előadás foglalási modal — App és AdminApp.
+ * Űrlap validáció, ütközés-előnézet, sablonok, előadó/terem választás.
+ * Props: initialDate/initialValues, speakers, sessions, rooms, editingSessionId,
+ *        allowedRoomIds, onSave, onClose, saving, saveError, allowSpeakerEdit, allowNewSpeaker.
+ */
 import { useState, useEffect, useMemo, useRef } from 'react';
 import type { BookingFormData, EventColor, Room, Session, SessionTemplateId, Speaker } from '../../backend/types';
 import { FALLBACK_ROOMS, roomLabel } from '../lib/rooms';
@@ -15,6 +22,7 @@ import { useI18n } from '../i18n/I18nProvider';
 
 const NEW_SPEAKER_ID = 0;
 
+/** Foglalási modal props — űrlap kezdeti értékek, előadók, mentés callback. */
 interface BookingModalProps {
   saving?: boolean;
   saveError?: string | null;
@@ -60,6 +68,7 @@ export default function BookingModal({
   const { t, bcp47 } = useI18n();
   const [customSpeakerName, setCustomSpeakerName] = useState('');
   const [speakerFilter, setSpeakerFilter] = useState('');
+  // Fő űrlap állapot — BookingFormData mezők
   const [form, setForm] = useState<BookingFormData>({
     title:        '',
     description:  '',
@@ -74,9 +83,12 @@ export default function BookingModal({
     color:        'blue',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof BookingFormData, string>>>({});
+  // Szerkesztés inicializálás duplikált effect futás ellen (React StrictMode)
   const initializedEditKeyRef = useRef<string | null>(null);
+  // Jelzi, ha a felhasználó manuálisan választott előadót (ne írja felül az auto-kitöltés)
   const speakerTouchedRef = useRef(false);
 
+  // Kezdő dátum szinkronizálása props-ból (pl. naptárból kiválasztott nap)
   useEffect(() => {
     if (initialDate) {
       setForm((f) => ({
@@ -87,6 +99,7 @@ export default function BookingModal({
     }
   }, [initialDate]);
 
+  // Szerkesztés/duplikálás: initialValues betöltése egyszer azonos kulcsra
   useEffect(() => {
     if (!initialValues) {
       initializedEditKeyRef.current = null;
@@ -137,6 +150,7 @@ export default function BookingModal({
     (form.speaker_id === NEW_SPEAKER_ID ||
       !speakerOptions.some((s) => s.id === form.speaker_id));
 
+  // Új foglalásnál: bejelentkezett user előadóként auto-kiválasztása, ha nem szerkesztünk
   useEffect(() => {
     if (initialValues || !currentUserName || !allowSpeakerEdit) return;
     if (speakerTouchedRef.current) return;
@@ -159,7 +173,7 @@ export default function BookingModal({
     }));
   }, [currentUserId, currentUserName, initialValues, allowSpeakerEdit, allowNewSpeaker, speakers]);
 
-  // Keep the visible `room_name` translated when locale (t) or selected room changes.
+  // Terem neve fordítása locale/t/room változásakor
   useEffect(() => {
     setForm((f) => {
       const room = rooms.find((r) => r.id === f.room_id) ?? rooms[0];
@@ -179,6 +193,7 @@ export default function BookingModal({
 
 
   function handleStartDateChange(value: string) {
+    // Befejező dátum nem lehet korábbi a kezdőnél
     setForm((f) => ({
       ...f,
       date: value,
@@ -208,12 +223,14 @@ export default function BookingModal({
 
   useEffect(() => {
     if (!allowedRoomIds?.length) return;
+    // Ha a kiválasztott terem nincs az engedélyezettek között, első elérhetőre vált
     if (!allowedRoomIds.includes(form.room_id) && availableRooms.length) {
       const room = availableRooms[0];
       setForm((f) => ({ ...f, room_id: room.id, room_name: roomLabel(room, t) }));
     }
   }, [allowedRoomIds, availableRooms, form.room_id, t]);
 
+  // Időtartam előnézet — érvényes időintervallum esetén napok + perc
   const durationPreview = useMemo(() => {
     if (validateBookingTimes(form)) return null;
     const days = bookingDayCount(form);
@@ -222,6 +239,7 @@ export default function BookingModal({
     return { days, minutes, label: formatDuration(minutes) };
   }, [form]);
 
+  // Ütközés-előnézet: terem átfedés, buffer, előadó átfedés
   const conflicts = useMemo(
     () =>
       findBookingConflicts(
@@ -237,10 +255,12 @@ export default function BookingModal({
     conflicts.roomBuffer.length > 0 ||
     conflicts.speakerOverlap.length > 0;
 
+  // Sablon gomb: előre definiált cím/idő/szín kitöltése
   function applyTemplate(templateId: SessionTemplateId) {
     setForm((f) => applySessionTemplate(f, templateId, t('booking.templatePrefix')));
   }
 
+  // Előadó kiválasztás listából — NEW_SPEAKER_ID = egyedi név megadása
   function handleSpeakerSelect(speakerId: number) {
     speakerTouchedRef.current = true;
     if (speakerId === NEW_SPEAKER_ID) {

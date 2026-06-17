@@ -1,12 +1,27 @@
+/**
+ * Session időpontok és dátumok normalizálása, formázása, csoportosítása.
+ *
+ * Mit csinál: DB/API datetime → YYYY-MM-DD + HH:mm; többnapos logika; nap fejlécek.
+ * Ki használja: App, SessionsView, AgendaView, CalendarView, BookingModal, icsExport.
+ * Fő exportok: {@link parseSessionDateTime}, {@link normalizeSession}, {@link groupSessionsForList}, stb.
+ */
+
 import type { Session } from '../../backend/types';
 import { formatDateKey, formatDateRange } from '../i18n/dateFormat';
 import { LOCALE_BCP47, type Locale } from '../i18n/locales';
 
+/** Csak dátum: YYYY-MM-DD */
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+/** MySQL datetime: dátum + óra:perc */
 const MYSQL_DT = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/;
+/** Csak idő: HH:mm */
 const TIME_ONLY = /^(\d{2}):(\d{2})/;
 
-/** Parse DB/API datetime into calendar date + HH:mm (local, no timezone surprises). */
+/**
+ * DB/API datetime szöveg → naptári dátum + HH:mm (helyi, timezone meglepetés nélkül).
+ * @param raw - start_time, end_time vagy date mező értéke
+ * @returns `{ date, time }` vagy null érvénytelen inputnál
+ */
 export function parseSessionDateTime(raw: string): { date: string; time: string } | null {
   if (!raw) return null;
   const value = raw.trim();
@@ -23,11 +38,13 @@ export function parseSessionDateTime(raw: string): { date: string; time: string 
     };
   }
 
+  // Csak idő (pl. "14:30") — dátum üres marad
   if (TIME_ONLY.test(value) && !value.includes('-')) {
     const t = TIME_ONLY.exec(value)!;
     return { date: '', time: `${t[1]}:${t[2]}` };
   }
 
+  // Utolsó esély: ISO / Date.parse
   const d = new Date(value);
   if (!Number.isNaN(d.getTime())) {
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -40,7 +57,11 @@ export function parseSessionDateTime(raw: string): { date: string; time: string 
   return null;
 }
 
-/** Normalize API/demo rows so the UI always gets YYYY-MM-DD + HH:mm. */
+/**
+ * API vagy demo nyers sor → egységes Session objektum a UI számára.
+ * @param raw - Rekord mezők (id, title, start_time, …)
+ * @returns Normalizált Session vagy null, ha nincs érvényes dátum
+ */
 export function normalizeSession(raw: Record<string, unknown>): Session | null {
   const start = parseSessionDateTime(String(raw.start_time ?? ''));
   const end = parseSessionDateTime(String(raw.end_time ?? ''));
@@ -76,10 +97,20 @@ export function normalizeSession(raw: Record<string, unknown>): Session | null {
   };
 }
 
+/**
+ * Session törölve (cancelled) státuszú-e.
+ * @param session - Bármilyen objektum status mezővel
+ */
 export function isSessionCancelled(session: { status?: string }): boolean {
   return session.status === 'cancelled';
 }
 
+/**
+ * Nap fejléc adatok dátum kulcsból (agenda, lista nézet).
+ * @param dateKey - YYYY-MM-DD
+ * @param locale - Nyelv (alapértelmezett: hu)
+ * @returns Nap szám, hét napja, hónap rövidítés, isValid flag
+ */
 export function formatDayHeader(dateKey: string, locale: Locale = 'hu') {
   const bcp47 = LOCALE_BCP47[locale];
   const match = DATE_ONLY.exec(dateKey);
@@ -100,10 +131,19 @@ export function formatDayHeader(dateKey: string, locale: Locale = 'hu') {
   };
 }
 
+/**
+ * Többnapos előadás-e (end_date > date).
+ * @param session - date és opcionális end_date mezőkkel
+ */
 export function isMultiDaySession(session: { date: string; end_date?: string }): boolean {
   return !!session.end_date && session.end_date > session.date;
 }
 
+/**
+ * A session lefedi-e az adott naptári napot (többnapos esetben is).
+ * @param session - Session dátum mezőkkel
+ * @param dateStr - Ellenőrzendő nap YYYY-MM-DD
+ */
 export function sessionSpansDate(
   session: { date: string; end_date?: string },
   dateStr: string,
@@ -112,7 +152,11 @@ export function sessionSpansDate(
   return dateStr >= session.date && dateStr <= end;
 }
 
-/** List/agenda grouping: multi-day sessions once, single-day by date. */
+/**
+ * Lista/agenda csoportosítás: többnapos egyszer, egynapos dátum szerint.
+ * @param items - Session tömb
+ * @returns multiDay lista + singleDayByDate (rendezett dátumok és csoportok)
+ */
 export function groupSessionsForList(items: Session[]): {
   multiDay: Session[];
   singleDayByDate: { sortedDates: string[]; grouped: Record<string, Session[]> };
@@ -137,6 +181,12 @@ export function groupSessionsForList(items: Session[]): {
   };
 }
 
+/**
+ * Inkluzív dátumtartomány minden napja YYYY-MM-DD formában.
+ * @param start - Kezdő dátum
+ * @param end - Záró dátum
+ * @returns Napok tömbje; érvénytelen tartománynál [start]
+ */
 export function enumerateDateRange(start: string, end: string): string[] {
   if (!DATE_ONLY.test(start) || !DATE_ONLY.test(end) || end < start) return [start];
   const dates: string[] = [];
@@ -152,6 +202,12 @@ export function enumerateDateRange(start: string, end: string): string[] {
   return dates;
 }
 
+/**
+ * Session dátum vagy dátumtartomány megjelenítése lokalizálva.
+ * @param session - date, end_date mezőkkel
+ * @param locale - Nyelv
+ * @param style - 'short' vagy 'long' formátum
+ */
 export function formatSessionDateRange(
   session: { date: string; end_date?: string },
   locale: Locale = 'hu',
@@ -162,6 +218,10 @@ export function formatSessionDateRange(
   return formatDateRange(session.date, end, locale, style);
 }
 
+/**
+ * A megadott dátum kulcs a mai nap-e (helyi idő szerint).
+ * @param dateKey - YYYY-MM-DD
+ */
 export function isTodayDateKey(dateKey: string): boolean {
   const match = DATE_ONLY.exec(dateKey);
   if (!match) return false;

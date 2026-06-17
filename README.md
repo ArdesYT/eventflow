@@ -6,8 +6,7 @@ Konferencia- és eseményprogram-kezelő webalkalmazás: előadások ütemezése
 **Stack:** React (Vite) · Express · MariaDB · JWT (Bearer token)  
 **Nyelvek:** magyar, német, angol
 
-Teljes dokumentáció: [documentation/EventFlow_Dokumentacio.docx](documentation/EventFlow_Dokumentacio.docx)  
-Frissítés a docx-hez: `python documentation/update_docx.py`
+Teljes dokumentáció: [documentation/EventFlow_Dokumentacio.docx](documentation/EventFlow_Dokumentacio.docx)
 
 ---
 
@@ -233,7 +232,7 @@ src/
     lib/
       authStorage.ts, authFetch.ts    JWT perzisztencia és API hívások
       scheduleApi.ts, scheduleStorage.ts   Mentett program
-documentation/      EventFlow_Dokumentacio.docx, update_docx.py
+documentation/      EventFlow_Dokumentacio.docx
 docker-compose.yml  Production stack (app + MariaDB)
 ```
 

@@ -1,3 +1,8 @@
+/**
+ * Booker főalkalmazás — Root rendereli booker szerepkör esetén.
+ * Nézetek: naptár, előadások, napirend, statisztika; foglalás szerkesztés, tömeges műveletek.
+ * Props: initialUser, rooms, sessions, sessionSaves, CRUD callback-ek, loading, error, onLogout.
+ */
 import { useState, useMemo, useEffect } from 'react';
 import type { Room, Session, SessionSavesMap, ViewType, BookingFormData, CreateSessionBody, Speaker, User } from '../backend/types';
 import { fetchSpeakers, speakersFromSessions } from './lib/speakersApi';
@@ -19,7 +24,9 @@ import BookingModal from './components/BookingModal';
 import DetailModal from './components/DetailModal';
 import BulkSessionToolbar from './components/BulkSessionToolbar';
 import LanguageSwitcher from './components/LanguageSwitcher';
-import { useI18n, translateError } from './i18n/I18nProvider';
+import MobileBottomNav from './components/MobileBottomNav';
+import { useI18n } from './i18n/I18nProvider';
+import { translateError } from './i18n/translateError';
 import './App.css';
 
 const NAV_ITEMS: { view: ViewType; icon: string; labelKey: string }[] = [
@@ -40,6 +47,7 @@ function getInitials(name: string): string {
   return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
+/** Booker alkalmazás props — Root-ból érkező adatok és CRUD callback-ek. */
 interface AppProps {
   initialUser: User;
   rooms: Room[];
@@ -72,28 +80,36 @@ export default function App({
   onLogout,
 }: AppProps) {
   const { t } = useI18n();
+  // Mentés állapot a BookingModal-hoz
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Aktív főnézet és naptár alnézet
   const [currentView, setCurrentView] = useState<ViewType>('calendar');
   const [calSubView, setCalSubView] = useState<'month' | 'agenda'>('month');
+  // Naptár hónap/év és kiválasztott nap
   const [curMonth, setCurMonth] = useState(() => new Date().getMonth());
   const [curYear, setCurYear] = useState(() => new Date().getFullYear());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // Keresés és szűrők
   const [searchTerm, setSearchTerm] = useState('');
   const [speakerFilter, setSpeakerFilter] = useState('');
   const [roomFilter, setRoomFilter] = useState('');
+  // Foglalási modal állapot (új/szerkesztés/duplikálás)
   const [bookingDate, setBookingDate] = useState<string | undefined>();
   const [showBooking, setShowBooking] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
   const [duplicateValues, setDuplicateValues] = useState<BookingFormData | undefined>();
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   const [detailId, setDetailId] = useState<number | null>(null);
+  // Tömeges kijelölés és módosítás
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const allowedRoomIds = initialUser.assigned_room_ids;
 
+  // Szűrt előadások — keresés + előadó/terem szűrő
   const filteredSessions = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     return sessions.filter((s) => {
@@ -108,6 +124,7 @@ export default function App({
     });
   }, [sessions, searchTerm, speakerFilter, roomFilter]);
 
+  // Aktuális hónapban látható előadások (keresés + hónap szűrés naptárhoz)
   const filteredSessionsInCurrentMonth = filteredSessions.filter((s) => {
     const currentMonth = String(curMonth + 1).padStart(2, '0');
     const prefix = `${curYear}-${currentMonth}`;
@@ -144,10 +161,12 @@ export default function App({
     setShowBooking(true);
   }
 
+  // Részletek modal megnyitásakor frissíti a mentő felhasználók listáját
   useEffect(() => {
     if (detailId !== null) onRefreshSessionSaves();
   }, [detailId, onRefreshSessionSaves]);
 
+  // Foglalási modal nyitásakor előadók betöltése API-ból (fallback: sessions-ből)
   useEffect(() => {
     if (!showBooking) {
       setSpeakers([]);
@@ -169,6 +188,7 @@ export default function App({
     };
   }, [showBooking, sessions]);
 
+  // Hónap lapozás — évhatár kezeléssel
   function navigateMonth(dir: -1 | 1) {
     setCurMonth((m) => {
       const next = m + dir;
@@ -190,6 +210,7 @@ export default function App({
     setCurYear(now.getFullYear());
   }
 
+  // Nap kiválasztása naptárból — új foglalás modal megnyitása az adott dátummal
   function selectDay(ds: string) {
     setSelectedDate(ds);
     openNewBooking(ds);
@@ -203,6 +224,7 @@ export default function App({
     setShowBooking(true);
   }
 
+  // Duplikálás: meglévő előadás adatai másolása, új rekordként mentés
   function handleDuplicateSession(id: number) {
     const session = sessions.find((s) => s.id === id);
     if (!session) return;
@@ -227,6 +249,7 @@ export default function App({
     });
   }
 
+  // Tömeges módosítás alkalmazása (dátum eltolás, opcionális teremcsere)
   async function handleBulkApply(opts: { dateOffsetDays: number; roomId?: number }) {
     if (!onBulkUpdateSessions || selectedIds.size === 0) return;
     setBulkBusy(true);
@@ -282,7 +305,15 @@ export default function App({
 
   return (
     <div className="app-wrapper">
-      <aside className="sidebar">
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          aria-label={t('common.close')}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <aside className={`sidebar${sidebarOpen ? ' sidebar--open' : ''}`}>
         <div className="sidebar-logo">
           <div className="sidebar-logo-title">EventFlow</div>
           <div className="sidebar-logo-sub">{t('nav.bookerDashboard')}</div>
@@ -292,7 +323,10 @@ export default function App({
             <div
               key={view}
               className={`nav-item${currentView === view ? ' active' : ''}`}
-              onClick={() => setCurrentView(view)}
+              onClick={() => {
+                setCurrentView(view);
+                setSidebarOpen(false);
+              }}
             >
               <span className="nav-icon">{icon}</span>
               <span>{t(labelKey)}</span>
@@ -307,6 +341,7 @@ export default function App({
           onSelectDate={(ds) => {
             setSelectedDate(ds);
             setCurrentView('calendar');
+            setSidebarOpen(false);
           }}
         />
         <div className="sidebar-lang">
@@ -317,6 +352,14 @@ export default function App({
       <div className="main-area">
         <div className="topbar">
           <div className="topbar-left">
+            <button
+              type="button"
+              className="mobile-menu-btn"
+              aria-label={t('nav.menu')}
+              onClick={() => setSidebarOpen((open) => !open)}
+            >
+              ☰
+            </button>
             <h1 className="page-title">{t(PAGE_TITLE_KEYS[currentView])}</h1>
             {currentView === 'calendar' && (
               <div className="view-toggle">
@@ -476,6 +519,16 @@ export default function App({
           )}
         </div>
       </div>
+
+      <MobileBottomNav
+        items={NAV_ITEMS.map(({ view, icon, labelKey }) => ({
+          id: view,
+          icon,
+          label: t(labelKey),
+          active: currentView === view,
+          onClick: () => setCurrentView(view),
+        }))}
+      />
 
       {showBooking && (
         <BookingModal
