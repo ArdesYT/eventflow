@@ -15,7 +15,7 @@ export type EventColor = 'blue' | 'amber' | 'green' | 'red';
 export type SessionStatus = 'scheduled' | 'cancelled';
 
 /** Booker fő nézet oldalai (naptár, lista, napirend, statisztika). */
-export type ViewType = 'calendar' | 'sessions' | 'agenda' | 'stats';
+export type ViewType = 'sessions' | 'stats';
 
 /** Admin oldalsáv menüpontjai. */
 export type AdminViewType = 'overview' | 'users' | 'sessions' | 'rooms' | 'speakers' | 'audit' | 'event';

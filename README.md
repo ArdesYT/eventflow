@@ -15,11 +15,19 @@ Teljes dokumentáció: [documentation/EventFlow_Dokumentacio.docx](documentation
 | Szerep | Belépés után | Fő feladat |
 |--------|--------------|------------|
 | **Admin** | Admin irányítópult | Felhasználók, esemény profil, audit napló, előadók, demo adatok |
-| **Szervező (booker)** | Naptár / program | Foglalás, szerkesztés, lemondás, tömeges módosítás |
+| **Szervező (booker)** | Programkezelés – naptárnézet | Foglalás, szerkesztés, lemondás, tömeges módosítás |
 | **Látogató (attendee)** | Nyilvános program | Böngészés, mentett program, ICS export, értesítések |
 | **Vendég** | Bejelentkezés nélkül | Program böngészése (mentés nélkül) |
 
 Demó fiókok: `admin@example.com` / `admin123` · `booker@example.com` / `booker123` · `attendee@example.com` / `attendee123`
+
+### A feladatok helye
+
+- **Admin és szervező – Programkezelés:** közös munkaterület, váltható lista-, naptár- és napirendnézettel. Új foglalás a naptár napjára kattintva indul: az űrlap kezdő és befejező dátuma a kiválasztott nap. Külön „Új foglalás” gomb nincs. Export az eszköztáron; szerkesztés, másolás, lemondás, visszaállítás és törlés kizárólag az előadás részleteinél. Tömeges módosítás a lista kijelölési módjában.
+- **Szervező – Áttekintés:** összesítések; az előadásra kattintás a Programkezelés részletezőjébe vezet.
+- **Admin – Előadók:** előadó létrehozása, szerkesztése, törlése és egyesítése. A foglalási űrlap és az előadás API is csak meglévő `speaker_id` értéket fogad el; a `speaker_name` nem hoz létre előadót. Új előadót először a `POST /api/speakers` végponton kell felvenni.
+- **Admin – Áttekintés:** üres adatbázis esetén itt tölthetők be a demo adatok. A felhasználók, teremhozzárendelések és eseményprofil saját menüpontjukban kezelhetők.
+- **Látogató:** mentés és eltávolítás az előadás részleteinél, minden megjelenítési nézetből ugyanazon a felületen. Lemondott előadás is eltávolítható. Export a program eszköztárán, értesítések a Mentett programom fülön.
 
 ---
 
@@ -117,7 +125,7 @@ A backend kiszolgálja a `dist/` frontendet is. A `dist/index.html` fájlt **ne*
 | `npm run start` | Production backend (+ statikus frontend) |
 | `npm run build` | TypeScript + Vite production build |
 | `npm run seed` | Demo felhasználók, termek, előadók, előadások |
-| `npm test` | Backend unit tesztek |
+| `npm test` | Backend és szerepkörönkénti felületi regressziós tesztek |
 | `npm run lint` | ESLint |
 
 ---

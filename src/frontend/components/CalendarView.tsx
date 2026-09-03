@@ -1,6 +1,6 @@
 /**
  * Havi naptár nézet — előadások napokra osztva, max. 3 esemény/cella.
- * Használat: App (calendar month alnézet), PublicEventsPage (calendar viewMode).
+ * Használat: SessionWorkspace, PublicEventsPage (calendar viewMode).
  * Props: curMonth/curYear, sessions, selectedDate, onSelectDay, onEventClick, onNavigate, onToday.
  */
 import type { ReactNode } from 'react';
@@ -66,6 +66,14 @@ export default function CalendarView({
         key={ds}
         className={`cal-cell${isToday ? ' today' : ''}${isSel ? ' selected' : ''}`}
         onClick={() => onSelectDay(ds)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            onSelectDay(ds);
+          }
+        }}
       >
         <div className="day-num">{d}</div>
         {dayEvents.slice(0, 3).map((ev) => (
@@ -75,6 +83,15 @@ export default function CalendarView({
             onClick={(e) => {
               e.stopPropagation();
               onEventClick(ev.id);
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                event.stopPropagation();
+                onEventClick(ev.id);
+              }
             }}
           >
             {ev.title}

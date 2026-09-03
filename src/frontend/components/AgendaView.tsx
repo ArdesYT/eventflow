@@ -1,7 +1,7 @@
 /**
  * Napirend nézet — előadások dátum szerinti csoportosítva.
- * Használat: App (calendar agenda alnézet, agenda nézet), AdminApp, StatsView, PublicEventsPage.
- * Props: sessions, sessionSaves (mentések száma), onEventClick, onDelete (opcionális), readOnly.
+ * Használat: SessionWorkspace, StatsView, PublicEventsPage. A sorok a közös részletezőt nyitják meg.
+ * Props: sessions, sessionSaves (mentések száma), onEventClick.
  */
 import type { Session, SessionSavesMap } from '../../backend/types';
 import { formatSessionTimeRange } from '../lib/sessionBooking';
@@ -13,8 +13,6 @@ interface AgendaViewProps {
   sessions: Session[];
   sessionSaves?: SessionSavesMap;
   onEventClick: (id: number) => void;
-  onDelete?: (id: number) => void;
-  readOnly?: boolean;
 }
 
 const ACCENT: Record<string, string> = {
@@ -32,8 +30,6 @@ export default function AgendaView({
   sessions,
   sessionSaves,
   onEventClick,
-  onDelete,
-  readOnly = false,
 }: AgendaViewProps) {
   const { t, locale } = useI18n();
   const today = new Date();
@@ -52,7 +48,7 @@ export default function AgendaView({
     );
   }
 
-  // Egyedi esemény sor renderelése — törlés gomb csak nem readOnly módban
+  // A napirend megjelenítési nézet; műveletek az előadás részleteinél érhetők el.
   function renderEvent(ev: Session) {
     const saveCount = sessionSaves?.[ev.id]?.length ?? 0;
     const cancelled = isSessionCancelled(ev);
@@ -61,6 +57,14 @@ export default function AgendaView({
         key={ev.id}
         className={'agenda-event' + (cancelled ? ' cancelled' : '')}
         onClick={() => onEventClick(ev.id)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onEventClick(ev.id);
+          }
+        }}
       >
         <div
           className="agenda-event-accent"
@@ -84,18 +88,6 @@ export default function AgendaView({
         </div>
         <div className="agenda-event-side">
           <span className="room-tag">{ev.room_name}</span>
-          {!readOnly && onDelete && (
-            <button
-              type="button"
-              className="delete-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(ev.id);
-              }}
-            >
-              {t('common.remove')}
-            </button>
-          )}
         </div>
       </div>
     );

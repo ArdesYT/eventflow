@@ -52,6 +52,7 @@ import {
 } from './dbSchema';
 import { createRateLimiter } from './rateLimit';
 import { checkSessionConflicts, sessionFromRow } from './sessionConflicts';
+import { resolveSessionSpeakerId } from './sessionSpeaker';
 import {
     createAuthMiddleware,
     requireAdmin,
@@ -280,58 +281,6 @@ app.get('/api/event', async (_req: Request, res: Response) => {
 function formatDatetime(d: Date): string {
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-
-async function resolveSpeakerId(
-    conn: PoolConnection,
-    speakerId: number | undefined,
-    speakerName: string | undefined,
-): Promise<number> {
-    const id = Number(speakerId);
-    if (Number.isFinite(id) && id > 0) {
-        const rows = await conn.query('SELECT id FROM speakers WHERE id = ?', [id]);
-        if (rows.length) return Number(rows[0].id);
-    }
-
-    const name = speakerName?.trim();
-    if (name) {
-        const existing = await conn.query('SELECT id FROM speakers WHERE name = ? LIMIT 1', [name]);
-        if (existing.length) return Number(existing[0].id);
-        const r = await conn.query('INSERT INTO speakers (name) VALUES (?)', [name]);
-        const newId = Number(r.insertId);
-        if (!Number.isFinite(newId) || newId <= 0) {
-            throw new Error(`Speaker insert failed for name: ${name}`);
-        }
-        return newId;
-    }
-
-    return 1;
-}
-
-async function resolveExistingSpeakerId(
-    conn: PoolConnection,
-    speakerId: number | undefined,
-): Promise<number | null> {
-    const id = Number(speakerId);
-    if (!Number.isFinite(id) || id <= 0) return null;
-    const rows = await conn.query('SELECT id FROM speakers WHERE id = ?', [id]);
-    return rows.length ? Number(rows[0].id) : null;
-}
-
-async function resolveSpeakerIdForRole(
-    conn: PoolConnection,
-    role: UserRole,
-    speakerId: number | undefined,
-    speakerName: string | undefined,
-): Promise<number> {
-    if (role === 'admin') {
-        return resolveSpeakerId(conn, speakerId, speakerName);
-    }
-    const existing = await resolveExistingSpeakerId(conn, speakerId);
-    if (!existing) {
-        throw new Error('INVALID_SPEAKER');
-    }
-    return existing;
 }
 
 function sliceDatePart(value: unknown): string {
@@ -824,12 +773,7 @@ app.post('/api/sessions', authenticate, requireBookerOrAdmin, async (req: Authen
     try {
         conn = await pool.getConnection();
         await assertBookerRoomAccess(conn, req.authUser!, Number(room_id));
-        const finalSpeakerId = await resolveSpeakerIdForRole(
-            conn,
-            req.authUser!.role,
-            Number(speaker_id),
-            (req.body as { speaker_name?: string }).speaker_name,
-        );
+        const finalSpeakerId = await resolveSessionSpeakerId(conn, Number(speaker_id));
         await assertNoSessionConflicts(conn, {
             room_id: Number(room_id),
             speaker_id: finalSpeakerId,
@@ -881,12 +825,7 @@ app.patch('/api/sessions/:id', authenticate, requireBookerOrAdmin, async (req: A
     try {
         conn = await pool.getConnection();
         await assertBookerRoomAccess(conn, req.authUser!, Number(room_id));
-        const finalSpeakerId = await resolveSpeakerIdForRole(
-            conn,
-            req.authUser!.role,
-            Number(speaker_id),
-            (req.body as { speaker_name?: string }).speaker_name,
-        );
+        const finalSpeakerId = await resolveSessionSpeakerId(conn, Number(speaker_id));
         await assertNoSessionConflicts(conn, {
             id: Number(id),
             room_id: Number(room_id),

@@ -117,100 +117,6 @@ body {
   flex-shrink: 0;
 }
 
-/* ─── Mini Calendar ───────────────────────── */
-.mini-calendar {
-  padding: 16px 14px;
-  border-top: 1px solid var(--gray-100);
-}
-
-.mini-cal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.mini-cal-title {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--gray-700);
-}
-
-.mini-cal-nav {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 11px;
-  color: var(--gray-400);
-  padding: 3px 5px;
-  border-radius: 4px;
-  line-height: 1;
-}
-
-.mini-cal-nav:hover {
-  background: var(--gray-100);
-  color: var(--gray-600);
-}
-
-.mini-cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 1px;
-  text-align: center;
-}
-
-.mini-day-label {
-  font-size: 9px;
-  color: var(--gray-400);
-  padding: 2px 0 4px;
-  font-weight: 500;
-  text-transform: uppercase;
-}
-
-.mini-day {
-  font-size: 11px;
-  color: var(--gray-500);
-  padding: 3px 0;
-  cursor: pointer;
-  border-radius: 50%;
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  transition: background 0.1s;
-}
-
-.mini-day:hover {
-  background: var(--gray-100);
-  color: var(--gray-800);
-}
-
-.mini-day.today {
-  background: var(--primary);
-  color: #fff;
-}
-
-.mini-day.has-event::after {
-  content: '';
-  position: absolute;
-  bottom: 1px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 3px;
-  height: 3px;
-  background: var(--accent);
-  border-radius: 50%;
-}
-
-.mini-day.today.has-event::after {
-  background: rgba(255,255,255,0.8);
-}
-
-.mini-day.other-month {
-  opacity: 0.3;
-}
-
 /* ─── Main area ───────────────────────────── */
 .main-area {
   flex: 1;
@@ -1551,11 +1457,6 @@ body {
   outline: 2px solid var(--primary-light);
   outline-offset: 2px;
   border-radius: 4px;
-}
-
-.sidebar-lang {
-  padding: 12px 14px 16px;
-  border-top: 1px solid var(--gray-100);
 }
 
 /* ─── Admin dashboard ───────────────────────────────────── */
@@ -3723,10 +3624,6 @@ body {
     justify-content: flex-end;
   }
 
-  .topbar-right > .lang-switcher:not(.lang-switcher--compact) {
-    display: none;
-  }
-
   .search-box {
     flex: 1 1 100%;
     order: -1;
@@ -4023,4 +3920,39 @@ body {
   font-size: 13px;
   line-height: 1.5;
   margin-bottom: 20px;
+}
+
+/* A program műveleteinek és szűrőinek közös helye minden kezelői szerepkörnél. */
+button.nav-item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+}
+button.nav-item:hover { background: var(--gray-50); }
+button.nav-item.active { background: var(--primary-light); }
+.session-workspace-toolbar, .session-workspace-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.session-workspace-toolbar { justify-content: space-between; margin-bottom: 20px; }
+.session-workspace-filters { margin-bottom: 20px; }
+.session-workspace-filters > .form-input { max-width: 460px; margin-bottom: 12px; }
+.booking-catalog-hint { color: #64748b; font-size: 12px; margin: 8px 0 0; }
+.public-saved-badge {
+  color: #057a55;
+  background: #def7ec;
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .session-workspace-actions { width: 100%; }
+  .session-workspace-actions > button { flex: 1; }
+  .session-workspace-toolbar .view-toggle { width: 100%; }
+  .session-workspace-toolbar .view-btn { flex: 1; }
 }

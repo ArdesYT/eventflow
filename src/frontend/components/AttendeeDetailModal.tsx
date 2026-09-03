@@ -122,12 +122,12 @@ export default function AttendeeDetailModal({
             <button type="button" className="btn-save" onClick={onLoginRequest}>
               {t('public.loginToSave')}
             </button>
-          ) : cancelled ? (
-            <span className="attendee-cancelled-note">{t('session.cancelledHint')}</span>
           ) : isSaved ? (
             <button type="button" className="btn-danger" disabled={busy} onClick={onRemove}>
               {busy ? t('booking.saving') : t('public.removeSaved')}
             </button>
+          ) : cancelled ? (
+            <span className="attendee-cancelled-note">{t('session.cancelledHint')}</span>
           ) : (
             <button type="button" className="btn-save" disabled={busy} onClick={onSave}>
               {busy ? t('booking.saving') : t('public.saveSession')}

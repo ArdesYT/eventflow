@@ -1,6 +1,6 @@
 /**
  * Előadás kártyarács — kereshető lista nézet.
- * Használat: App (sessions nézet, calendar keresés fallback), AdminApp.
+ * Használat: SessionWorkspace; a kapott lista már szűrt.
  * Props: sessions, sessionSaves, searchTerm, onEventClick, selectable/selectedIds/onToggleSelect (tömeges művelethez).
  */
 import type { Session, SessionSavesMap } from '../../backend/types';
@@ -38,12 +38,7 @@ export default function SessionsView({
   onToggleSelect,
 }: SessionsViewProps) {
   const { t, locale } = useI18n();
-  const filtered = sessions.filter(
-    (s) =>
-      s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.speaker_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.room_name.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filtered = sessions;
 
   if (filtered.length === 0) {
     return (
@@ -77,6 +72,14 @@ export default function SessionsView({
               (selectable && selectedIds?.has(s.id) ? ' selected' : '')
             }
             onClick={() => onEventClick(s.id)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                onEventClick(s.id);
+              }
+            }}
           >
             <div className="session-card-header">
               {selectable && onToggleSelect && (

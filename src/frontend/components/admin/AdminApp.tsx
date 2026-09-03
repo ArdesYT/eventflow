@@ -17,13 +17,6 @@ import type {
 } from '../../../backend/types';
 import EventProfileEditor from './EventProfileEditor';
 import {
-  bookingFormToApiBody,
-  duplicateBookingFormData,
-  hasRoomConflict,
-  toBookingFormData,
-} from '../../lib/sessionBooking';
-import { downloadIcsFile } from '../../lib/icsExport';
-import {
   createSpeaker,
   deleteSpeaker,
   fetchSpeakers,
@@ -34,13 +27,9 @@ import {
 import AdminOverview from './AdminOverview';
 import UsersView from './UsersView';
 import SpeakersView from './SpeakersView';
-import SessionsView from '../SessionsView';
-import AgendaView from '../AgendaView';
-import BookingModal from '../BookingModal';
-import DetailModal from '../DetailModal';
+import SessionWorkspace from '../SessionWorkspace';
 import RoomsUsage from './RoomsUsage';
 import ActivityLogView from './ActivityLogView';
-import BulkSessionToolbar from '../BulkSessionToolbar';
 import LanguageSwitcher from '../LanguageSwitcher';
 import MobileBottomNav from '../MobileBottomNav';
 import { fetchActivityLog } from '../../lib/adminApi';
@@ -135,113 +124,42 @@ export default function AdminApp({
   const { t } = useI18n();
   // Aktív admin nézet és keresés
   const [currentView, setCurrentView] = useState<AdminViewType>('overview');
-  const [searchTerm, setSearchTerm] = useState('');
-  // Előadás részletek és szerkesztés/duplikálás
-  const [detailId, setDetailId] = useState<number | null>(null);
-  const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
-  const [duplicateValues, setDuplicateValues] = useState<BookingFormData | undefined>();
   const [userActionError, setUserActionError] = useState<string | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
-  const [editSaving, setEditSaving] = useState(false);
   // Előadók listája (szerkesztés/speakers nézet)
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   const [speakersLoading, setSpeakersLoading] = useState(false);
   const [speakerSearch, setSpeakerSearch] = useState('');
-  // Tömeges előadás-módosítás
-  const [bulkSelectMode, setBulkSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   // Audit napló (audit nézet)
   const [auditLog, setAuditLog] = useState<ActivityLogEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
 
-  const filteredSessions = sessions.filter((s) => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) return true;
-    return (
-      s.title.toLowerCase().includes(query) ||
-      s.speaker_name.toLowerCase().includes(query) ||
-      s.room_name.toLowerCase().includes(query)
-    );
-  });
+  function navigate(view: AdminViewType) {
+    if (view === currentView) return;
+    if (view === 'speakers' && backendMode) setSpeakersLoading(true);
+    if (view === 'audit' && backendMode) setAuditLoading(true);
+    setCurrentView(view);
+  }
 
-  const detailSession = sessions.find((s) => s.id === detailId) ?? null;
-  const editingSession = sessions.find((s) => s.id === editingSessionId) ?? null;
-
-  // Részletek modal: mentő felhasználók frissítése
+  // A katalógust nézetváltáskor töltjük; CRUD után helyben frissítjük.
   useEffect(() => {
-    if (detailId !== null) onRefreshSessionSaves();
-  }, [detailId, onRefreshSessionSaves]);
-
-  // Előadók betöltése szerkesztés, duplikálás vagy speakers nézet esetén
-  useEffect(() => {
-    const needsSpeakers =
-      editingSessionId !== null || duplicateValues !== undefined || currentView === 'speakers';
-    if (!needsSpeakers) {
-      setSpeakers([]);
-      return;
-    }
-
+    if (currentView !== 'speakers' || !backendMode) return;
     let cancelled = false;
+    fetchSpeakers()
+      .then((list) => { if (!cancelled) setSpeakers(list); })
+      .catch(() => { if (!cancelled) setSpeakers([]); })
+      .finally(() => { if (!cancelled) setSpeakersLoading(false); });
+    return () => { cancelled = true; };
+  }, [currentView, backendMode]);
 
-    if (backendMode) {
-      setSpeakersLoading(true);
-      fetchSpeakers()
-        .then((list) => {
-          if (!cancelled) setSpeakers(list);
-        })
-        .catch(() => {
-          if (!cancelled) setSpeakers(speakersFromSessions(sessions));
-        })
-        .finally(() => {
-          if (!cancelled) setSpeakersLoading(false);
-        });
-    } else {
-      setSpeakers(speakersFromSessions(sessions));
-      setSpeakersLoading(false);
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [editingSessionId, duplicateValues, currentView, backendMode, sessions]);
-
-  // Audit napló betöltése audit nézet megnyitásakor
   useEffect(() => {
     if (currentView !== 'audit' || !backendMode) return;
-    setAuditLoading(true);
+    let cancelled = false;
     fetchActivityLog()
-      .then(setAuditLog)
-      .catch(() => setAuditLog([]))
-      .finally(() => setAuditLoading(false));
-  }, [currentView, backendMode, sessions]);
-
-  function toggleSelectSession(id: number) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  async function handleBulkApply(opts: { dateOffsetDays: number; roomId?: number }) {
-    if (!onBulkUpdateSessions || selectedIds.size === 0) return;
-    setBulkBusy(true);
-    try {
-      await onBulkUpdateSessions({
-        ids: [...selectedIds],
-        dateOffsetDays: opts.dateOffsetDays,
-        roomId: opts.roomId,
-      });
-      setSelectedIds(new Set());
-      setBulkSelectMode(false);
-      onRefreshSessions();
-    } finally {
-      setBulkBusy(false);
-    }
-  }
+      .then((entries) => { if (!cancelled) setAuditLog(entries); })
+      .catch(() => { if (!cancelled) setAuditLog([]); })
+      .finally(() => { if (!cancelled) setAuditLoading(false); });
+    return () => { cancelled = true; };
+  }, [currentView, backendMode]);
 
   async function handleCreateSpeaker(name: string, bio: string) {
     const speaker = await createSpeaker({ name, bio: bio || undefined });
@@ -257,6 +175,7 @@ export default function AdminApp({
     setSpeakers((prev) =>
       prev.map((s) => (s.id === id ? speaker : s)).sort((a, b) => a.name.localeCompare(b.name)),
     );
+    onRefreshSessions();
   }
 
   async function handleDeleteSpeaker(id: number) {
@@ -268,7 +187,7 @@ export default function AdminApp({
   async function handleMergeSpeakers(keepId: number, mergeIds: number[]) {
     const speaker = await mergeSpeakers(keepId, mergeIds);
     setSpeakers((prev) =>
-      [...prev.filter((s) => s.id === keepId || !mergeIds.includes(s.id)), speaker].sort(
+      [...prev.filter((s) => s.id !== keepId && !mergeIds.includes(s.id)), speaker].sort(
         (a, b) => a.name.localeCompare(b.name),
       ),
     );
@@ -296,158 +215,54 @@ export default function AdminApp({
     }
   }
 
-  async function handleDeleteSession(id: number) {
-    try {
-      await onDeleteSession(id);
-      setDetailId(null);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'errors.deleteError';
-      alert(translateError(msg, t));
-    }
-  }
-
-  function handleEditSession(id: number) {
-    setDetailId(null);
-    setEditError(null);
-    setDuplicateValues(undefined);
-    setEditingSessionId(id);
-  }
-
-  function handleDuplicateSession(id: number) {
-    const session = sessions.find((s) => s.id === id);
-    if (!session) return;
-    setDetailId(null);
-    setEditError(null);
-    setEditingSessionId(null);
-    setDuplicateValues(duplicateBookingFormData(session, t('detail.duplicateSuffix')));
-  }
-
-  function closeBookingModal() {
-    setEditingSessionId(null);
-    setDuplicateValues(undefined);
-    setEditError(null);
-  }
-
-  function handleExportIcs() {
-    downloadIcsFile(sessions, 'eventflow-program.ics', t('export.calendarName'));
-  }
-
-  const displayEditError = editError
-    ? editError.startsWith('errors.')
-      ? t(editError)
-      : translateError(editError, t)
-    : null;
-
-  async function handleSaveSession(data: BookingFormData) {
-    if (editingSessionId === null && !duplicateValues) return;
-    setEditError(null);
-    setEditSaving(true);
-
-    try {
-      if (hasRoomConflict(sessions, data, editingSessionId ?? undefined)) {
-        throw new Error('errors.roomBusy');
-      }
-      if (editingSessionId !== null) {
-        await onUpdateSession(editingSessionId, data);
-      } else {
-        await onCreateSession(bookingFormToApiBody(data));
-      }
-      closeBookingModal();
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'errors.saveError';
-      setEditError(msg);
-    } finally {
-      setEditSaving(false);
-    }
-  }
-
   return (
     <div className="app-wrapper admin-app">
-      {sidebarOpen && (
-        <button
-          type="button"
-          className="sidebar-backdrop"
-          aria-label={t('common.close')}
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-      <aside className={`sidebar admin-sidebar${sidebarOpen ? ' sidebar--open' : ''}`}>
+      <aside className="sidebar admin-sidebar">
         <div className="sidebar-logo">
           <div className="sidebar-logo-title">EventFlow</div>
           <div className="sidebar-logo-sub">{t('admin.dashboardTitle')}</div>
         </div>
         <nav className="sidebar-nav">
           {NAV_ITEMS.map(({ view, icon, labelKey }) => (
-            <div
+            <button
+              type="button"
               key={view}
               className={`nav-item${currentView === view ? ' active' : ''}`}
-              onClick={() => {
-                setCurrentView(view);
-                setSidebarOpen(false);
-              }}
+              onClick={() => navigate(view)}
             >
               <span className="nav-icon">{icon}</span>
               <span>{t(labelKey)}</span>
-            </div>
+            </button>
           ))}
         </nav>
         <div className="admin-sidebar-footer">
           <div className="admin-mode-badge">
             {backendMode ? t('admin.modeLive') : t('admin.modeDemo')}
           </div>
-          <LanguageSwitcher variant="compact" />
         </div>
       </aside>
 
       <div className="main-area">
         <div className="topbar">
           <div className="topbar-left">
-            <button
-              type="button"
-              className="mobile-menu-btn"
-              aria-label={t('nav.menu')}
-              onClick={() => setSidebarOpen((open) => !open)}
-            >
-              ☰
-            </button>
             <h1 className="page-title">{t(PAGE_TITLE_KEYS[currentView])}</h1>
             <span className="hint-badge admin admin-topbar-badge">
               {t('login.admin')}
             </span>
           </div>
           <div className="topbar-right">
-            <LanguageSwitcher />
-            {(currentView === 'sessions' || currentView === 'speakers') && (
+            <LanguageSwitcher variant="select" />
+            {currentView === 'speakers' && (
               <div className="search-box">
                 <span className="search-icon">🔍</span>
-                <input
-                  className="search-input"
-                  placeholder={
-                    currentView === 'speakers'
-                      ? t('admin.speakers.searchPlaceholder')
-                      : t('nav.searchPlaceholder')
-                  }
-                  value={currentView === 'speakers' ? speakerSearch : searchTerm}
-                  onChange={(e) =>
-                    currentView === 'speakers'
-                      ? setSpeakerSearch(e.target.value)
-                      : setSearchTerm(e.target.value)
-                  }
-                />
+                <input className="search-input" placeholder={t('admin.speakers.searchPlaceholder')}
+                  value={speakerSearch} onChange={(event) => setSpeakerSearch(event.target.value)} />
               </div>
             )}
             <div className="topbar-user-pill">
               <div className="topbar-user-avatar">{getInitials(initialUser.name)}</div>
               <span className="topbar-user-name">{initialUser.name}</span>
             </div>
-            <button
-              type="button"
-              className="btn-export"
-              onClick={handleExportIcs}
-              title={t('export.ics')}
-            >
-              {t('export.ics')}
-            </button>
             <button
               className="topbar-logout-btn"
               onClick={onLogout}
@@ -463,7 +278,7 @@ export default function AdminApp({
             <div className="loader">{t('common.loading')}</div>
           )}
           {error && <div className="error-banner">{error}</div>}
-          {!loading && backendMode && sessions.length === 0 && onLoadDemo && (
+          {!loading && currentView === 'overview' && backendMode && sessions.length === 0 && onLoadDemo && (
             <div className="admin-demo-seed-banner">
               <span>{t('public.emptySub')}</span>
               <button
@@ -501,7 +316,7 @@ export default function AdminApp({
 
           {currentView === 'speakers' && (
             <SpeakersView
-              speakers={speakers}
+              speakers={backendMode ? speakers : speakersFromSessions(sessions)}
               loading={speakersLoading && speakers.length === 0}
               backendMode={backendMode}
               searchTerm={speakerSearch}
@@ -532,51 +347,11 @@ export default function AdminApp({
           )}
 
           {currentView === 'sessions' && !loading && (
-            <>
-              <div className="sessions-toolbar-row">
-                <div className="section-title">{t('admin.sessions.allTitle')}</div>
-                {onBulkUpdateSessions && backendMode && (
-                  <button
-                    type="button"
-                    className={'btn-export' + (bulkSelectMode ? ' active' : '')}
-                    onClick={() => {
-                      setBulkSelectMode((v) => !v);
-                      setSelectedIds(new Set());
-                    }}
-                  >
-                    {bulkSelectMode ? t('bulk.cancelSelect') : t('bulk.selectMode')}
-                  </button>
-                )}
-              </div>
-              {bulkSelectMode && selectedIds.size > 0 && (
-                <BulkSessionToolbar
-                  selectedCount={selectedIds.size}
-                  busy={bulkBusy}
-                  onClear={() => setSelectedIds(new Set())}
-                  onApply={handleBulkApply}
-                />
-              )}
-              <SessionsView
-                sessions={filteredSessions}
-                sessionSaves={sessionSaves ?? undefined}
-                searchTerm={searchTerm}
-                selectable={bulkSelectMode}
-                selectedIds={selectedIds}
-                onToggleSelect={toggleSelectSession}
-                onEventClick={(id) =>
-                  bulkSelectMode ? toggleSelectSession(id) : setDetailId(id)
-                }
-              />
-              <div className="section-title" style={{ marginTop: 28 }}>
-                {t('admin.sessions.agendaTitle')}
-              </div>
-              <AgendaView
-                sessions={filteredSessions}
-                sessionSaves={sessionSaves ?? undefined}
-                onEventClick={(id) => setDetailId(id)}
-                onDelete={handleDeleteSession}
-              />
-            </>
+            <SessionWorkspace user={initialUser} rooms={rooms} sessions={sessions}
+              sessionSaves={sessionSaves} backendMode={backendMode}
+              onRefreshSessionSaves={onRefreshSessionSaves} onCreate={onCreateSession}
+              onUpdate={onUpdateSession} onDelete={onDeleteSession} onSetStatus={onSetSessionStatus}
+              onBulkUpdate={backendMode ? onBulkUpdateSessions : undefined} />
           )}
         </div>
       </div>
@@ -588,47 +363,10 @@ export default function AdminApp({
           icon,
           label: t(labelKey),
           active: currentView === view,
-          onClick: () => setCurrentView(view),
+          onClick: () => navigate(view),
         }))}
       />
 
-      {detailSession && (
-        <DetailModal
-          session={detailSession}
-          savedBy={sessionSaves?.[detailSession.id]}
-          savesLoaded={sessionSaves !== null}
-          onClose={() => setDetailId(null)}
-          onDelete={handleDeleteSession}
-          onEdit={handleEditSession}
-          onDuplicate={handleDuplicateSession}
-          onSetStatus={async (id, status) => {
-            try {
-              await onSetSessionStatus(id, status);
-              setDetailId(null);
-            } catch (e: unknown) {
-              const msg = e instanceof Error ? e.message : 'errors.saveError';
-              alert(translateError(msg, t));
-            }
-          }}
-        />
-      )}
-
-      {(editingSession || duplicateValues) && (
-        <BookingModal
-          initialValues={
-            editingSession ? toBookingFormData(editingSession) : duplicateValues
-          }
-          allowSpeakerEdit
-          speakers={speakers}
-          sessions={sessions}
-          rooms={rooms}
-          editingSessionId={editingSessionId}
-          onSave={handleSaveSession}
-          onClose={closeBookingModal}
-          saving={editSaving}
-          saveError={displayEditError}
-        />
-      )}
     </div>
   );
 }

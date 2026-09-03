@@ -449,8 +449,8 @@ export default function Root() {
         end_time: end?.time ?? '',
         room_id: b.room_id ?? 1,
         speaker_id: b.speaker_id ?? 1,
-        room_name: 'Room',
-        speaker_name: 'Speaker',
+        room_name: rooms.find((room) => room.id === b.room_id)?.name ?? '',
+        speaker_name: sessions.find((session) => session.speaker_id === b.speaker_id)?.speaker_name ?? '',
         color: b.color ?? 'blue',
       };
       setSessions((prev) => [...prev, newSession]);
@@ -683,6 +683,7 @@ export default function Root() {
     return (
       <App
         initialUser={user}
+        backendMode={backendMode === true}
         rooms={rooms}
         sessions={sessions}
         sessionSaves={sessionSaves}
@@ -709,8 +710,6 @@ export default function Root() {
       scheduleError={displayScheduleError}
       scheduleBusyId={scheduleBusyId}
       user={user}
-      onLoadDemo={user.role === 'admin' && backendMode ? handleLoadDemo : undefined}
-      loadingDemo={loadingDemo}
       onSaveSession={handleSaveSession}
       onRemoveSession={handleRemoveSession}
       onToggleNotifications={handleToggleNotifications}

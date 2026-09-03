@@ -26,6 +26,7 @@ const translations = {
       more: 'további',
     },
     nav: {
+      program: 'Programkezelés',
       calendar: 'Naptár',
       sessions: 'Előadások',
       agenda: 'Program',
@@ -80,7 +81,7 @@ const translations = {
       savedSession: 'Mentve',
       removeSaved: 'Eltávolítás',
       savedEmptyTitle: 'Még nincs mentett előadás',
-      savedEmptySub: 'Kattintson a „Mentés” gombra az előadáskártyákon.',
+      savedEmptySub: 'Nyissa meg az előadás részleteit, majd kattintson a „Mentés” gombra.',
       savedCount: '{{count}} mentett előadás',
       savedCount_plural: '{{count}} mentett előadás',
       searchPlaceholder: 'Keresés cím, előadó vagy terem szerint…',
@@ -130,7 +131,7 @@ const translations = {
     },
     agenda: {
       emptyTitle: 'Még nincs ütemezett előadás.',
-      emptySub: 'Kattintson az „Új foglalás” gombra egy hozzáadásához.',
+      emptySub: 'Az ütemezett előadások itt jelennek meg.',
     },
     sessions: {
       noneFound: 'Nem található előadás{{query}}.',
@@ -180,6 +181,7 @@ const translations = {
       speakerNoResults: 'Nincs találat.',
       speakerSelf: 'én',
       speakerRequired: 'Válasszon előadót a listából.',
+      speakerCatalogHint: 'Új előadót az admin Előadók menüpontjában lehet felvenni.',
       categoryColor: 'Kategória színe',
       description: 'Leírás',
       descriptionPlaceholder: 'Opcionális megjegyzések...',
@@ -270,7 +272,7 @@ const translations = {
       nav: {
         overview: 'Áttekintés',
         users: 'Felhasználók',
-        sessions: 'Összes előadás',
+        sessions: 'Programkezelés',
         rooms: 'Termek kihasználtsága',
         speakers: 'Előadók',
         audit: 'Audit napló',
@@ -378,6 +380,7 @@ const translations = {
       more: 'weitere',
     },
     nav: {
+      program: 'Programmverwaltung',
       calendar: 'Kalender',
       sessions: 'Vorträge',
       agenda: 'Agenda',
@@ -433,7 +436,7 @@ const translations = {
       savedSession: 'Gespeichert',
       removeSaved: 'Entfernen',
       savedEmptyTitle: 'Noch keine gespeicherten Vorträge',
-      savedEmptySub: 'Klicken Sie auf „Speichern“ bei den Vortragskarten.',
+      savedEmptySub: 'Öffnen Sie die Vortragsdetails und klicken Sie auf „Speichern“.',
       savedCount: '{{count}} gespeicherter Vortrag',
       savedCount_plural: '{{count}} gespeicherte Vorträge',
       searchPlaceholder: 'Suche nach Titel, Referent oder Raum…',
@@ -483,7 +486,7 @@ const translations = {
     },
     agenda: {
       emptyTitle: 'Noch keine Vorträge geplant.',
-      emptySub: 'Klicken Sie auf „Neue Buchung“, um einen hinzuzufügen.',
+      emptySub: 'Geplante Vorträge werden hier angezeigt.',
     },
     sessions: {
       noneFound: 'Keine Vorträge gefunden{{query}}.',
@@ -533,6 +536,7 @@ const translations = {
       speakerNoResults: 'Keine Ergebnisse.',
       speakerSelf: 'ich',
       speakerRequired: 'Bitte einen Referenten aus der Liste wählen.',
+      speakerCatalogHint: 'Neue Referenten werden im Adminbereich unter Referenten angelegt.',
       categoryColor: 'Kategoriefarbe',
       description: 'Beschreibung',
       descriptionPlaceholder: 'Optionale Notizen...',
@@ -623,7 +627,7 @@ const translations = {
       nav: {
         overview: 'Übersicht',
         users: 'Benutzer',
-        sessions: 'Alle Vorträge',
+        sessions: 'Programmverwaltung',
         rooms: 'Raumnutzung',
         speakers: 'Referenten',
         audit: 'Audit-Protokoll',
@@ -731,6 +735,7 @@ const translations = {
       more: 'more',
     },
     nav: {
+      program: 'Program management',
       calendar: 'Calendar',
       sessions: 'Sessions',
       agenda: 'Agenda',
@@ -785,7 +790,7 @@ const translations = {
       savedSession: 'Saved',
       removeSaved: 'Remove',
       savedEmptyTitle: 'No saved sessions yet',
-      savedEmptySub: 'Click “Save” on session cards to add them here.',
+      savedEmptySub: 'Open the session details and click “Save” to add it here.',
       savedCount: '{{count}} saved session',
       savedCount_plural: '{{count}} saved sessions',
       searchPlaceholder: 'Search by title, speaker or room…',
@@ -834,7 +839,7 @@ const translations = {
     },
     agenda: {
       emptyTitle: 'No sessions scheduled yet.',
-      emptySub: 'Click "+ New Booking" to add one.',
+      emptySub: 'Scheduled sessions will appear here.',
     },
     sessions: {
       noneFound: 'No sessions found{{query}}.',
@@ -884,6 +889,7 @@ const translations = {
       speakerNoResults: 'No results.',
       speakerSelf: 'me',
       speakerRequired: 'Please select a speaker from the list.',
+      speakerCatalogHint: 'Admins can add new speakers in the Speakers section.',
       categoryColor: 'Category Colour',
       description: 'Description',
       descriptionPlaceholder: 'Optional notes...',
@@ -974,7 +980,7 @@ const translations = {
       nav: {
         overview: 'Overview',
         users: 'Users',
-        sessions: 'All sessions',
+        sessions: 'Program management',
         rooms: 'Room usage',
         speakers: 'Speakers',
         audit: 'Audit log',

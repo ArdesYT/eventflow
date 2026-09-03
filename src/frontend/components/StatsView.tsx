@@ -1,7 +1,7 @@
 /**
  * Statisztika és áttekintés nézet — booker dashboard (App stats nézet).
  * Összesítő kártyák, terem szerinti eloszlás, közelgő előadások AgendaView-val.
- * Props: sessions, sessionSaves, onEventClick, onDelete.
+ * Props: sessions, sessionSaves, onEventClick (átirányítás a programkezelőbe).
  */
 import type { Session, SessionSavesMap } from '../../backend/types';
 import AgendaView from './AgendaView';
@@ -11,14 +11,13 @@ interface StatsViewProps {
   sessions: Session[];
   sessionSaves?: SessionSavesMap;
   onEventClick: (id: number) => void;
-  onDelete: (id: number) => void;
 }
 
 function toDateStr(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
-export default function StatsView({ sessions, sessionSaves, onEventClick, onDelete }: StatsViewProps) {
+export default function StatsView({ sessions, sessionSaves, onEventClick }: StatsViewProps) {
   const { t } = useI18n();
   const today = new Date();
   const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
@@ -91,7 +90,6 @@ export default function StatsView({ sessions, sessionSaves, onEventClick, onDele
         sessions={upcoming}
         sessionSaves={sessionSaves}
         onEventClick={onEventClick}
-        onDelete={onDelete}
       />
     </>
   );

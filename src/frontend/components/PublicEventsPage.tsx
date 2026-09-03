@@ -89,10 +89,6 @@ interface PublicEventsPageProps {
 
   onLoginRequest?: () => void;
 
-  onLoadDemo?: () => Promise<void>;
-
-  loadingDemo?: boolean;
-
   onToggleNotifications?: (enable: boolean) => Promise<boolean>;
 
   notificationsOn?: boolean;
@@ -210,10 +206,6 @@ export default function PublicEventsPage({
   onLogout,
 
   onLoginRequest,
-
-  onLoadDemo,
-
-  loadingDemo = false,
 
   onToggleNotifications,
 
@@ -393,11 +385,9 @@ export default function PublicEventsPage({
 
 
 
-  function renderSessionCard(ev: Session, showRemoveOnly: boolean) {
+  function renderSessionCard(ev: Session) {
 
     const isSaved = savedIds.has(ev.id);
-
-    const busy = scheduleBusyId === ev.id;
 
     const live = isSessionLive(ev);
 
@@ -499,67 +489,7 @@ export default function PublicEventsPage({
 
             </div>
 
-            {showRemoveOnly ? (
-
-              <button
-
-                type="button"
-
-                className="public-save-btn remove"
-
-                disabled={busy}
-
-                onClick={(e) => {
-
-                  e.stopPropagation();
-
-                  onRemoveSession(ev.id);
-
-                }}
-
-              >
-
-                {busy ? t('booking.saving') : t('public.removeSaved')}
-
-              </button>
-
-            ) : (
-
-              <button
-
-                type="button"
-
-                className={'public-save-btn' + (isSaved ? ' saved' : '')}
-
-                disabled={busy || isSaved || cancelled}
-
-                onClick={(e) => {
-
-                  e.stopPropagation();
-
-                  if (!isSaved && !cancelled) trySave(ev.id);
-
-                }}
-
-              >
-
-                {busy
-
-                  ? t('booking.saving')
-
-                  : guestMode
-
-                    ? t('public.loginToSave')
-
-                    : isSaved
-
-                      ? t('public.savedSession')
-
-                      : t('public.saveSession')}
-
-              </button>
-
-            )}
+            {isSaved && <span className="public-saved-badge">{t('public.savedSession')}</span>}
 
           </div>
 
@@ -634,9 +564,6 @@ export default function PublicEventsPage({
         <div className="public-nav-right">
           <LanguageSwitcher variant="select" className="public-nav-lang" />
           <div className="public-nav-toolbar">
-            <button type="button" className="btn-export public-export-btn" onClick={handleExportIcs}>
-              {t('export.ics')}
-            </button>
 
             {guestMode ? (
               <button type="button" className="btn-save public-login-btn" onClick={onLoginRequest}>
@@ -673,11 +600,6 @@ export default function PublicEventsPage({
 
           <span>{t('public.guestBanner')}</span>
 
-          <button type="button" className="public-guest-login-link" onClick={onLoginRequest}>
-
-            {t('public.login')}
-
-          </button>
 
         </div>
 
@@ -799,6 +721,7 @@ export default function PublicEventsPage({
                   onSpeakerChange={setSpeakerFilter}
                   onRoomChange={setRoomFilter}
                 />
+                <button type="button" className="btn-export public-export-btn" onClick={handleExportIcs}>{t('export.ics')}</button>
                 <div className="public-view-toggle" role="group" aria-label={t('public.viewList')}>
                   <button
                     type="button"
@@ -850,16 +773,6 @@ export default function PublicEventsPage({
 
             <p>{t('public.emptySub')}</p>
 
-            {onLoadDemo && (
-              <button
-                type="button"
-                className="btn-save public-load-demo-btn"
-                disabled={loadingDemo}
-                onClick={() => onLoadDemo()}
-              >
-                {loadingDemo ? t('common.loading') : t('public.loadDemo')}
-              </button>
-            )}
 
           </div>
 
@@ -1015,7 +928,7 @@ export default function PublicEventsPage({
               </div>
             </header>
             <div className="public-session-list">
-              {multiDaySessions.map((ev) => renderSessionCard(ev, tab === 'saved'))}
+              {multiDaySessions.map((ev) => renderSessionCard(ev))}
             </div>
           </section>
         )}
@@ -1064,7 +977,7 @@ export default function PublicEventsPage({
 
                 <div className="public-session-list">
 
-                  {grouped[ds].map((ev) => renderSessionCard(ev, tab === 'saved'))}
+                  {grouped[ds].map((ev) => renderSessionCard(ev))}
 
                 </div>
 
@@ -1085,8 +998,6 @@ export default function PublicEventsPage({
               sessions={filteredSessions}
 
               onEventClick={setDetailId}
-
-              readOnly
 
             />
 

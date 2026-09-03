@@ -1,9 +1,9 @@
 /* eslint-disable react-hooks/set-state-in-effect -- űrlap szinkron props/locale szerkesztésnél szándékos */
 /**
- * Új/szerkesztett előadás foglalási modal — App és AdminApp.
+ * Új/szerkesztett előadás foglalási modal — SessionWorkspace.
  * Űrlap validáció, ütközés-előnézet, sablonok, előadó/terem választás.
  * Props: initialDate/initialValues, speakers, sessions, rooms, editingSessionId,
- *        allowedRoomIds, onSave, onClose, saving, saveError, allowSpeakerEdit, allowNewSpeaker.
+ *        allowedRoomIds, onSave, onClose, saving, saveError.
  */
 import { useState, useEffect, useMemo, useRef } from 'react';
 import type { BookingFormData, EventColor, Room, Session, SessionTemplateId, Speaker } from '../../backend/types';
@@ -20,18 +20,13 @@ import {
 import LocalizedDateInput from './LocalizedDateInput';
 import { useI18n } from '../i18n/I18nProvider';
 
-const NEW_SPEAKER_ID = 0;
-
 /** Foglalási modal props — űrlap kezdeti értékek, előadók, mentés callback. */
 interface BookingModalProps {
   saving?: boolean;
   saveError?: string | null;
   initialDate?: string;
   initialValues?: BookingFormData;
-  currentUserId?: number;
   currentUserName?: string;
-  allowSpeakerEdit?: boolean;
-  allowNewSpeaker?: boolean;
   speakers?: Speaker[];
   sessions?: Session[];
   rooms?: Room[];
@@ -51,10 +46,7 @@ function todayStr(): string {
 export default function BookingModal({
   initialDate,
   initialValues,
-  currentUserId,
   currentUserName,
-  allowSpeakerEdit = false,
-  allowNewSpeaker = true,
   speakers = [],
   sessions = [],
   rooms = FALLBACK_ROOMS,
@@ -66,7 +58,6 @@ export default function BookingModal({
   saveError = null,
 }: BookingModalProps) {
   const { t, bcp47 } = useI18n();
-  const [customSpeakerName, setCustomSpeakerName] = useState('');
   const [speakerFilter, setSpeakerFilter] = useState('');
   // Fő űrlap állapot — BookingFormData mezők
   const [form, setForm] = useState<BookingFormData>({
@@ -77,9 +68,9 @@ export default function BookingModal({
     start_time:   '09:00',
     end_time:     '10:00',
     room_id:      rooms[0]?.id ?? 1,
-    speaker_id:   currentUserId ?? 1,
+    speaker_id:   0,
     room_name:    rooms[0] ? roomLabel(rooms[0], t) : '',
-    speaker_name: currentUserName ?? 'Speaker',
+    speaker_name: '',
     color:        'blue',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof BookingFormData, string>>>({});
@@ -119,59 +110,25 @@ export default function BookingModal({
 
     initializedEditKeyRef.current = editKey;
     setForm(initialValues);
-    setCustomSpeakerName(
-      initialValues.speaker_id === NEW_SPEAKER_ID ? initialValues.speaker_name : '',
-    );
   }, [initialValues, speakers]);
 
-  const speakerOptions = useMemo(() => {
-    const list = [...speakers];
-    if (
-      form.speaker_id &&
-      form.speaker_id !== NEW_SPEAKER_ID &&
-      !list.some((s) => s.id === form.speaker_id)
-    ) {
-      list.unshift({ id: form.speaker_id, name: form.speaker_name });
-    }
-    return list;
-  }, [speakers, form.speaker_id, form.speaker_name]);
+  const speakerOptions = speakers;
 
   const filteredSpeakerOptions = useMemo(() => {
     const q = speakerFilter.trim().toLowerCase();
     if (!q) return speakerOptions;
-    return speakerOptions.filter((s) => s.name.toLowerCase().includes(q));
-  }, [speakerOptions, speakerFilter]);
+    return speakerOptions.filter((s) => s.id === form.speaker_id || s.name.toLowerCase().includes(q));
+  }, [speakerOptions, speakerFilter, form.speaker_id]);
 
-  const showSpeakerFilter = allowSpeakerEdit && speakerOptions.length > 4;
+  const showSpeakerFilter = speakerOptions.length > 4;
 
-  const isCustomSpeaker =
-    allowSpeakerEdit &&
-    allowNewSpeaker &&
-    (form.speaker_id === NEW_SPEAKER_ID ||
-      !speakerOptions.some((s) => s.id === form.speaker_id));
-
-  // Új foglalásnál: bejelentkezett user előadóként auto-kiválasztása, ha nem szerkesztünk
+  // Új foglalásnál kizárólag a katalógusban szereplő előadót választunk.
   useEffect(() => {
-    if (initialValues || !currentUserName || !allowSpeakerEdit) return;
-    if (speakerTouchedRef.current) return;
-
-    const byName = speakers.find(
-      (s) => s.name.toLowerCase() === currentUserName.toLowerCase(),
-    );
-    const byId =
-      allowNewSpeaker && currentUserId
-        ? speakers.find((s) => s.id === currentUserId)
-        : undefined;
-    const self = byName ?? byId;
-
-    if (!self) return;
-
-    setForm((f) => ({
-      ...f,
-      speaker_id: self.id,
-      speaker_name: self.name,
-    }));
-  }, [currentUserId, currentUserName, initialValues, allowSpeakerEdit, allowNewSpeaker, speakers]);
+    if (initialValues || speakerTouchedRef.current) return;
+    const speaker = speakers.find((item) => item.name.toLowerCase() === currentUserName?.toLowerCase()) ?? speakers[0];
+    if (!speaker) return;
+    setForm((previous) => ({ ...previous, speaker_id: speaker.id, speaker_name: speaker.name }));
+  }, [currentUserName, initialValues, speakers]);
 
   // Terem neve fordítása locale/t/room változásakor
   useEffect(() => {
@@ -260,62 +217,21 @@ export default function BookingModal({
     setForm((f) => applySessionTemplate(f, templateId, t('booking.templatePrefix')));
   }
 
-  // Előadó kiválasztás listából — NEW_SPEAKER_ID = egyedi név megadása
   function handleSpeakerSelect(speakerId: number) {
     speakerTouchedRef.current = true;
-    if (speakerId === NEW_SPEAKER_ID) {
-      setCustomSpeakerName('');
-      setForm((f) => ({
-        ...f,
-        speaker_id: NEW_SPEAKER_ID,
-        speaker_name: '',
-      }));
-      return;
-    }
-    const speaker = speakerOptions.find((s) => s.id === speakerId);
-    if (speaker) {
-      setForm((f) => ({
-        ...f,
-        speaker_id: speaker.id,
-        speaker_name: speaker.name,
-      }));
-      setCustomSpeakerName('');
-    }
-  }
-
-  function handleCustomSpeakerName(value: string) {
-    speakerTouchedRef.current = true;
-    setCustomSpeakerName(value);
-    setForm((f) => ({
-      ...f,
-      speaker_id: NEW_SPEAKER_ID,
-      speaker_name: value,
-    }));
+    const speaker = speakers.find((item) => item.id === speakerId);
+    setForm((previous) => ({ ...previous, speaker_id: speaker?.id ?? 0, speaker_name: speaker?.name ?? '' }));
+    setErrors((previous) => ({ ...previous, speaker_name: undefined }));
   }
 
   function handleSave() {
-    if (!validate()) return;
-    const payload = isCustomSpeaker
-      ? {
-          ...form,
-          speaker_id: NEW_SPEAKER_ID,
-          speaker_name: (customSpeakerName || form.speaker_name).trim(),
-        }
-      : form;
-    if (
-      allowSpeakerEdit &&
-      !allowNewSpeaker &&
-      (payload.speaker_id === NEW_SPEAKER_ID ||
-        !speakerOptions.some((s) => s.id === payload.speaker_id))
-    ) {
-      setErrors((e) => ({ ...e, speaker_name: t('booking.speakerRequired') }));
+    if (saving || !validate()) return;
+    const speaker = speakers.find((item) => item.id === form.speaker_id);
+    if (!speaker) {
+      setErrors((previous) => ({ ...previous, speaker_name: t('booking.speakerRequired') }));
       return;
     }
-    if (allowSpeakerEdit && !payload.speaker_name.trim()) {
-      setErrors((e) => ({ ...e, speaker_name: t('common.required') }));
-      return;
-    }
-    onSave(payload);
+    onSave({ ...form, speaker_id: speaker.id, speaker_name: speaker.name });
   }
 
   return (
@@ -473,48 +389,17 @@ export default function BookingModal({
 
         <div className="form-group">
           <label className="form-label">{t('booking.speaker')}</label>
-          {allowSpeakerEdit ? (
-            <>
-              {showSpeakerFilter && (
-                <input
-                  className="form-input"
-                  style={{ marginBottom: 8 }}
-                  placeholder={t('booking.speakerSearch')}
-                  value={speakerFilter}
-                  onChange={(e) => setSpeakerFilter(e.target.value)}
-                />
-              )}
-              <select
-                className="form-select"
-                value={isCustomSpeaker ? NEW_SPEAKER_ID : form.speaker_id}
-                onChange={(e) => handleSpeakerSelect(Number(e.target.value))}
-              >
-                {filteredSpeakerOptions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                    {currentUserName &&
-                    s.name.toLowerCase() === currentUserName.toLowerCase()
-                      ? ` (${t('booking.speakerSelf')})`
-                      : ''}
-                  </option>
-                ))}
-                {allowNewSpeaker && (
-                  <option value={NEW_SPEAKER_ID}>{t('booking.newSpeaker')}</option>
-                )}
-              </select>
-              {isCustomSpeaker && (
-                <input
-                  className={`form-input${errors.speaker_name ? ' error' : ''}`}
-                  style={{ marginTop: 8 }}
-                  placeholder={t('booking.newSpeakerPlaceholder')}
-                  value={customSpeakerName}
-                  onChange={(e) => handleCustomSpeakerName(e.target.value)}
-                />
-              )}
-            </>
-          ) : (
-            <input className="form-input" value={form.speaker_name} readOnly />
+          {showSpeakerFilter && (
+            <input className="form-input" style={{ marginBottom: 8 }} placeholder={t('booking.speakerSearch')}
+              value={speakerFilter} onChange={(event) => setSpeakerFilter(event.target.value)} />
           )}
+          <select className={`form-select${errors.speaker_name ? ' error' : ''}`}
+            aria-label={t('booking.speaker')} value={form.speaker_id} onChange={(event) => handleSpeakerSelect(Number(event.target.value))}>
+            <option value={0}>{t('booking.speakerRequired')}</option>
+            {filteredSpeakerOptions.map((speaker) => <option key={speaker.id} value={speaker.id}>{speaker.name}</option>)}
+          </select>
+          <p className="booking-catalog-hint">{t('booking.speakerCatalogHint')}</p>
+          {errors.speaker_name && <p className="login-error" role="alert">{errors.speaker_name}</p>}
         </div>
 
         <div className="form-group">
