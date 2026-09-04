@@ -1514,7 +1514,7 @@ body {
   border-radius: var(--radius-sm);
   background: #fff;
   padding: 0 12px;
-  min-height: 38px;
+  min-height: 32px;
 }
 
 .lang-switcher-label {

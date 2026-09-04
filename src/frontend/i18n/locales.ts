@@ -8,7 +8,7 @@ export type Locale = 'hu' | 'de' | 'en';
 
 export const LOCALES: Locale[] = ['hu', 'en', 'de'];
 
-export const LOCALE_LABELS: Record<Locale, string> = {
+export const LOCALE_LABELS: Record<Locale, String> = {
   hu: 'Magyar',
   de: 'Deutsch',
   en: 'English',
