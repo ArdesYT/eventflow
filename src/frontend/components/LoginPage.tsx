@@ -67,7 +67,7 @@ export default function LoginPage({ offlineMode, onBrowseGuest, onLogin, onRegis
     <div className="login-page">
       <div className="login-left">
         <div className="login-brand">
-          <div className="login-brand-logo">EF</div>
+          <div className='login-brand-logo'><img src="..\..\src\assets\Logo.png"></img></div>
           <div>
             <div className="login-brand-name">EventFlow</div>
             <div className="login-brand-tagline">{t('login.tagline')}</div>
