@@ -19,7 +19,7 @@ export default function LanguageSwitcher({
   const { locale, setLocale, t } = useI18n();
   const selectId = useId();
 
-  if (variant === 'select') {
+  /*if (variant === 'select') {
     return (
       <div className={`lang-switcher lang-switcher--select${className ? ` ${className}` : ''}`}>
         <label className="lang-switcher-label" htmlFor={selectId}>
@@ -40,9 +40,9 @@ export default function LanguageSwitcher({
         </select>
       </div>
     );
-  }
+  }*/
 
-  return (
+ return (
     <div
       className={`lang-switcher lang-switcher--${variant}${className ? ` ${className}` : ''}`}
       role="group"
