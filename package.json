@@ -47,7 +47,6 @@
     "vite": "^8.0.1"
   },
   "description": "EventFlow — konferencia- és eseményprogram-kezelő (React + Express + MariaDB)",
-  "main": "eslint.config.js",
   "keywords": [],
   "author": "",
   "license": "ISC"

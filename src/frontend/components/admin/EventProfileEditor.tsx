@@ -81,7 +81,7 @@ export default function EventProfileEditor({ event, onSave }: EventProfileEditor
           <LocalizedDateInput value={endDate} min={startDate} onChange={setEndDate} />
         </div>
       </div>
-      <div className="form-group">
+      <div className="form-group event-profile-description">
         <label className="form-label">{t('admin.event.description')}</label>
         <textarea
           className="form-textarea"

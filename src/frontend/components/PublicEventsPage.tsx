@@ -562,7 +562,7 @@ export default function PublicEventsPage({
         </div>
 
         <div className="public-nav-right">
-          <LanguageSwitcher variant="select" className="public-nav-lang" />
+          <LanguageSwitcher className="public-nav-lang" />
           <div className="public-nav-toolbar">
 
             {guestMode ? (

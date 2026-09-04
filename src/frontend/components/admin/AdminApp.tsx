@@ -251,7 +251,7 @@ export default function AdminApp({
             </span>
           </div>
           <div className="topbar-right">
-            <LanguageSwitcher variant="select" />
+            <LanguageSwitcher />
             {currentView === 'speakers' && (
               <div className="search-box">
                 <span className="search-icon">🔍</span>
@@ -308,10 +308,7 @@ export default function AdminApp({
           )}
 
           {!loading && currentView === 'rooms' && (
-            <>
-              <div className="section-title">{t('admin.nav.rooms')}</div>
-              <RoomsUsage sessions={sessions} rooms={rooms} />
-            </>
+            <RoomsUsage sessions={sessions} rooms={rooms} />
           )}
 
           {currentView === 'speakers' && (

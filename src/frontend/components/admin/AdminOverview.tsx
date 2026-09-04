@@ -34,7 +34,7 @@ export default function AdminOverview({ users, sessions, event }: AdminOverviewP
     .slice(0, 5);
 
   return (
-    <>
+    <div className="admin-overview">
       <div className="admin-event-summary">
         <h2 className="admin-event-summary-title">{event.name}</h2>
         {event.venue && <p className="admin-event-summary-venue">{event.venue}</p>}
@@ -70,39 +70,43 @@ export default function AdminOverview({ users, sessions, event }: AdminOverviewP
         </div>
       </div>
 
-      <div className="section-title">{t('admin.stats.rolesTitle')}</div>
-      <div className="admin-role-grid">
-        <div className="admin-role-card">
-          <span className="hint-badge admin">{t('login.admin')}</span>
-          <span className="admin-role-count">{admins}</span>
-        </div>
-        <div className="admin-role-card">
-          <span className="hint-badge booker">{t('login.booker')}</span>
-          <span className="admin-role-count">{bookers}</span>
-        </div>
-        <div className="admin-role-card">
-          <span className="hint-badge attendee">{t('login.attendee')}</span>
-          <span className="admin-role-count">{attendees}</span>
-        </div>
-      </div>
+      <div className="admin-overview-lower">
+        <section className="dashboard-content-panel">
+          <div className="section-title">{t('admin.stats.rolesTitle')}</div>
+          <div className="admin-role-grid">
+            <div className="admin-role-card">
+              <span className="hint-badge admin">{t('login.admin')}</span>
+              <span className="admin-role-count">{admins}</span>
+            </div>
+            <div className="admin-role-card">
+              <span className="hint-badge booker">{t('login.booker')}</span>
+              <span className="admin-role-count">{bookers}</span>
+            </div>
+            <div className="admin-role-card">
+              <span className="hint-badge attendee">{t('login.attendee')}</span>
+              <span className="admin-role-count">{attendees}</span>
+            </div>
+          </div>
+        </section>
 
-      <div className="section-title" style={{ marginTop: 28 }}>
-        {t('admin.stats.upcomingTitle')}
+        <section className="dashboard-content-panel">
+          <div className="section-title">{t('admin.stats.upcomingTitle')}</div>
+          {upcoming.length === 0 ? (
+            <p className="admin-upcoming-empty">{t('admin.stats.upcomingEmpty')}</p>
+          ) : (
+            <ul className="admin-upcoming-list">
+              {upcoming.map((s) => (
+                <li key={s.id} className="admin-upcoming-item">
+                  <span className="admin-upcoming-date">{formatSessionDateRange(s, locale)}</span>
+                  <span className="admin-upcoming-time">{formatTimeKey(s.start_time)}</span>
+                  <span className="admin-upcoming-title">{s.title}</span>
+                  <span className="admin-upcoming-meta">{s.speaker_name}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
-      {upcoming.length === 0 ? (
-        <p className="admin-upcoming-empty">{t('admin.stats.upcomingEmpty')}</p>
-      ) : (
-        <ul className="admin-upcoming-list">
-          {upcoming.map((s) => (
-            <li key={s.id} className="admin-upcoming-item">
-              <span className="admin-upcoming-date">{formatSessionDateRange(s, locale)}</span>
-              <span className="admin-upcoming-time">{formatTimeKey(s.start_time)}</span>
-              <span className="admin-upcoming-title">{s.title}</span>
-              <span className="admin-upcoming-meta">{s.speaker_name}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
+    </div>
   );
 }

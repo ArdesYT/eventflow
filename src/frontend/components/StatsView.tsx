@@ -39,7 +39,7 @@ export default function StatsView({ sessions, sessionSaves, onEventClick }: Stat
     .slice(0, 5);
 
   return (
-    <>
+    <div className="stats-dashboard">
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-label">{t('stats.totalSessions')}</div>
@@ -63,34 +63,40 @@ export default function StatsView({ sessions, sessionSaves, onEventClick }: Stat
         </div>
       </div>
 
-      <div className="section-title">{t('stats.byRoom')}</div>
-      <div className="room-bar-container">
-        {sortedRooms.map(([room, count]) => (
-          <div key={room} className="bar-row">
-            <div className="bar-row-header">
-              <span className="bar-room-name">{room}</span>
-              <span className="bar-count">
-                {count === 1
-                  ? t('stats.sessionCount', { count })
-                  : t('stats.sessionCount_plural', { count })}
-              </span>
-            </div>
-            <div className="bar-track">
-              <div
-                className="bar-fill"
-                style={{ width: `${Math.round((count / maxCount) * 100)}%` }}
-              />
-            </div>
+      <div className="stats-dashboard-detail">
+        <section className="dashboard-content-panel">
+          <div className="section-title">{t('stats.byRoom')}</div>
+          <div className="room-bar-container">
+            {sortedRooms.map(([room, count]) => (
+              <div key={room} className="bar-row">
+                <div className="bar-row-header">
+                  <span className="bar-room-name">{room}</span>
+                  <span className="bar-count">
+                    {count === 1
+                      ? t('stats.sessionCount', { count })
+                      : t('stats.sessionCount_plural', { count })}
+                  </span>
+                </div>
+                <div className="bar-track">
+                  <div
+                    className="bar-fill"
+                    style={{ width: `${Math.round((count / maxCount) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </section>
 
-      <div className="section-title">{t('stats.upcoming')}</div>
-      <AgendaView
-        sessions={upcoming}
-        sessionSaves={sessionSaves}
-        onEventClick={onEventClick}
-      />
-    </>
+        <section className="dashboard-content-panel">
+          <div className="section-title">{t('stats.upcoming')}</div>
+          <AgendaView
+            sessions={upcoming}
+            sessionSaves={sessionSaves}
+            onEventClick={onEventClick}
+          />
+        </section>
+      </div>
+    </div>
   );
 }

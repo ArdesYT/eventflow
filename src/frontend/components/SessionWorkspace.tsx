@@ -154,30 +154,32 @@ export default function SessionWorkspace({
 
   return (
     <section className="session-workspace" aria-label={t('nav.program')}>
-      <div className="session-workspace-toolbar">
-        <div className="view-toggle" role="group" aria-label={t('nav.program')}>
-          {(['list', 'calendar', 'agenda'] as const).map((view) => (
-            <button key={view} type="button" className={`view-btn${viewMode === view ? ' active' : ''}`}
-              aria-pressed={viewMode === view} onClick={() => changeView(view)}>
-              {t(view === 'list' ? 'public.viewList' : view === 'calendar' ? 'public.viewCalendar' : 'public.viewAgenda')}
+      <div className="session-workspace-controls">
+        <div className="session-workspace-toolbar">
+          <div className="view-toggle" role="group" aria-label={t('nav.program')}>
+            {(['list', 'calendar', 'agenda'] as const).map((view) => (
+              <button key={view} type="button" className={`view-btn${viewMode === view ? ' active' : ''}`}
+                aria-pressed={viewMode === view} onClick={() => changeView(view)}>
+                {t(view === 'list' ? 'public.viewList' : view === 'calendar' ? 'public.viewCalendar' : 'public.viewAgenda')}
+              </button>
+            ))}
+          </div>
+          <div className="session-workspace-actions">
+            <button type="button" className="btn-export" onClick={() => downloadIcsFile(filteredSessions, 'eventflow-program.ics', t('export.calendarName'))}>
+              {t('export.ics')}
             </button>
-          ))}
+          </div>
         </div>
-        <div className="session-workspace-actions">
-          <button type="button" className="btn-export" onClick={() => downloadIcsFile(filteredSessions, 'eventflow-program.ics', t('export.calendarName'))}>
-            {t('export.ics')}
-          </button>
+        <div className="session-workspace-filters">
+          <input type="search" className="form-input" placeholder={t('nav.searchPlaceholder')}
+            aria-label={t('nav.searchPlaceholder')} value={searchTerm} onChange={(event) => {
+              setSearchTerm(event.target.value);
+              setSelectedIds(new Set());
+            }} />
+          <SessionFilters sessions={sessions} speakerFilter={speakerFilter} roomFilter={roomFilter}
+            onSpeakerChange={(value) => { setSpeakerFilter(value); setSelectedIds(new Set()); }}
+            onRoomChange={(value) => { setRoomFilter(value); setSelectedIds(new Set()); }} />
         </div>
-      </div>
-      <div className="session-workspace-filters">
-        <input type="search" className="form-input" placeholder={t('nav.searchPlaceholder')}
-          aria-label={t('nav.searchPlaceholder')} value={searchTerm} onChange={(event) => {
-            setSearchTerm(event.target.value);
-            setSelectedIds(new Set());
-          }} />
-        <SessionFilters sessions={sessions} speakerFilter={speakerFilter} roomFilter={roomFilter}
-          onSpeakerChange={(value) => { setSpeakerFilter(value); setSelectedIds(new Set()); }}
-          onRoomChange={(value) => { setRoomFilter(value); setSelectedIds(new Set()); }} />
       </div>
       {actionError && <div className="error-banner" role="alert">{translateError(actionError, t)}</div>}
       {viewMode === 'list' && (

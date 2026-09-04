@@ -92,93 +92,97 @@ export default function RoomsUsage({
 
   return (
     <div className="rooms-usage-panel">
-      <div className="section-title">{t('admin.rooms.monthlyTitle')}</div>
-      <div className="cal-nav" style={{ marginBottom: 12 }}>
-        <button type="button" className="cal-nav-btn" onClick={prevMonth} aria-label="Previous month">◀</button>
-        <div className="cal-month-title" style={{ textAlign: 'center' }}>
-          {(() => {
-            const [y, m] = monthKey.split('-').map(Number);
-            const d = new Date(y, m - 1, 1);
-            return d.toLocaleDateString(bcp47, { year: 'numeric', month: 'long' });
-          })()}
-        </div>
-        <button type="button" className="cal-nav-btn" onClick={nextMonth} aria-label="Next month">▶</button>
-      </div>
-
-      <div className="rooms-usage-bars">
-        {counts.map((c) => (
-          <div key={c.room.id} className="rooms-usage-row">
-            <div className="rooms-usage-label">{roomLabel(c.room, t)}</div>
-            <div className="rooms-usage-track">
-              <div
-                className="rooms-usage-fill"
-                style={{ width: `${(c.count / max) * 100}%` }}
-              />
-            </div>
-            <div className="rooms-usage-count">{c.count}</div>
+      <section className="dashboard-content-panel rooms-monthly-panel">
+        <div className="section-title">{t('admin.rooms.monthlyTitle')}</div>
+        <div className="cal-nav" style={{ marginBottom: 12 }}>
+          <button type="button" className="cal-nav-btn" onClick={prevMonth} aria-label="Previous month">◀</button>
+          <div className="cal-month-title" style={{ textAlign: 'center' }}>
+            {(() => {
+              const [y, m] = monthKey.split('-').map(Number);
+              const d = new Date(y, m - 1, 1);
+              return d.toLocaleDateString(bcp47, { year: 'numeric', month: 'long' });
+            })()}
           </div>
-        ))}
-      </div>
+          <button type="button" className="cal-nav-btn" onClick={nextMonth} aria-label="Next month">▶</button>
+        </div>
 
-      <div className="section-title" style={{ marginTop: 28 }}>
-        {t('admin.rooms.dailyTitle')}
-      </div>
-      <div className="rooms-day-picker">
-        <input
-          type="date"
-          className="form-input"
-          value={dayKey}
-          onChange={(e) => setDayKey(e.target.value)}
-        />
-      </div>
-
-      <div className="rooms-timeline">
-        <div className="rooms-timeline-hours">
-          {Array.from({ length: DAY_END - DAY_START + 1 }, (_, i) => DAY_START + i).map((h) => (
-            <span key={h} className="rooms-timeline-hour">
-              {String(h).padStart(2, '0')}:00
-            </span>
+        <div className="rooms-usage-bars">
+          {counts.map((c) => (
+            <div key={c.room.id} className="rooms-usage-row">
+              <div className="rooms-usage-label">{roomLabel(c.room, t)}</div>
+              <div className="rooms-usage-track">
+                <div
+                  className="rooms-usage-fill"
+                  style={{ width: `${(c.count / max) * 100}%` }}
+                />
+              </div>
+              <div className="rooms-usage-count">{c.count}</div>
+            </div>
           ))}
         </div>
-        {rooms.map((room) => {
-          const roomSessions = daySessions.filter((s) => s.room_id === room.id);
-          return (
-            <div key={room.id} className="rooms-timeline-row">
-              <div className="rooms-timeline-room">{roomLabel(room, t)}</div>
-              <div className="rooms-timeline-track">
-                {roomSessions.map((s) => {
-                  const startMin = parseMinutes(s.start_time);
-                  const endMin = parseMinutes(s.end_time);
-                  const pos = clampDayPosition(startMin);
-                  const endPos = clampDayPosition(endMin - 1);
-                  if (!pos) return null;
-                  const width =
-                    endPos != null
-                      ? Math.max(endPos.left + endPos.width - pos.left, 2)
-                      : pos.width;
-                  return (
-                    <div
-                      key={s.id}
-                      className="rooms-timeline-block"
-                      style={{
-                        left: `${pos.left}%`,
-                        width: `${width}%`,
-                        background: ACCENT[s.color] ?? '#1a56db',
-                      }}
-                      title={`${s.title} (${formatTimeKey(s.start_time)} – ${formatTimeKey(s.end_time)})`}
-                    >
-                      <span className="rooms-timeline-block-label">{s.title}</span>
-                    </div>
-                  );
-                })}
+      </section>
+
+      <section className="dashboard-content-panel rooms-daily-panel">
+        <div className="rooms-daily-heading">
+          <div className="section-title">{t('admin.rooms.dailyTitle')}</div>
+          <div className="rooms-day-picker">
+            <input
+              type="date"
+              className="form-input"
+              value={dayKey}
+              onChange={(e) => setDayKey(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="rooms-timeline">
+          <div className="rooms-timeline-hours">
+            {Array.from({ length: DAY_END - DAY_START + 1 }, (_, i) => DAY_START + i).map((h) => (
+              <span key={h} className="rooms-timeline-hour">
+                {String(h).padStart(2, '0')}:00
+              </span>
+            ))}
+          </div>
+          {rooms.map((room) => {
+            const roomSessions = daySessions.filter((s) => s.room_id === room.id);
+            return (
+              <div key={room.id} className="rooms-timeline-row">
+                <div className="rooms-timeline-room">{roomLabel(room, t)}</div>
+                <div className="rooms-timeline-track">
+                  {roomSessions.map((s) => {
+                    const startMin = parseMinutes(s.start_time);
+                    const endMin = parseMinutes(s.end_time);
+                    const pos = clampDayPosition(startMin);
+                    const endPos = clampDayPosition(endMin - 1);
+                    if (!pos) return null;
+                    const width =
+                      endPos != null
+                        ? Math.max(endPos.left + endPos.width - pos.left, 2)
+                        : pos.width;
+                    return (
+                      <div
+                        key={s.id}
+                        className="rooms-timeline-block"
+                        style={{
+                          left: `${pos.left}%`,
+                          width: `${width}%`,
+                          background: ACCENT[s.color] ?? '#1a56db',
+                        }}
+                        title={`${s.title} (${formatTimeKey(s.start_time)} – ${formatTimeKey(s.end_time)})`}
+                      >
+                        <span className="rooms-timeline-block-label">{s.title}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-      {daySessions.length === 0 && (
-        <p className="admin-upcoming-empty">{t('admin.rooms.dailyEmpty')}</p>
-      )}
+            );
+          })}
+        </div>
+        {daySessions.length === 0 && (
+          <p className="admin-upcoming-empty">{t('admin.rooms.dailyEmpty')}</p>
+        )}
+      </section>
     </div>
   );
 }

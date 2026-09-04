@@ -236,7 +236,7 @@ export default function BookingModal({
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+      <div className="modal booking-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="modal-title">
             {initialValues ? t('booking.editTitle') : t('booking.title')}
