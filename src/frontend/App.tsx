@@ -54,7 +54,28 @@ export default function App({ initialUser, loading, error, onSetSessionStatus, o
             <h1 className="page-title">{t(currentView === 'sessions' ? 'nav.program' : 'nav.overview')}</h1>
           </div>
           <div className="topbar-right">
+<<<<<<< Updated upstream
             <LanguageSwitcher variant="select" />
+=======
+            <LanguageSwitcher />
+            <div className="search-box">
+              <span className="search-icon">🔍</span>
+              <input
+                className="search-input"
+                placeholder={t('nav.searchPlaceholder')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              className="btn-export"
+              onClick={handleExportIcs}
+              title={t('export.ics')}
+            >
+              {t('export.ics')}
+            </button>
+>>>>>>> Stashed changes
             <div className="topbar-user-pill">
               <div className="topbar-user-avatar">{initialUser.name.split(' ').filter(Boolean).map((word) => word[0]).join('').slice(0, 2).toUpperCase()}</div>
               <span className="topbar-user-name">{initialUser.name}</span>
