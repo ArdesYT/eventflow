@@ -9,7 +9,7 @@
  */
 
 /** Előadás kártya színe a naptárban / listában. */
-export type EventColor = 'blue' | 'amber' | 'green' | 'red';
+export type EventColor = 'blue' | 'yellow' | 'green' | 'red';
 
 /** scheduled = aktív, cancelled = lemondva (megjelenik, de szürke / nem ütközik). */
 export type SessionStatus = 'scheduled' | 'cancelled';
