@@ -2598,7 +2598,7 @@ button.nav-item {
 .public-page {
   min-height: 100vh;
   font-family: var(--font-ui);
-  background: #f3f6fb;
+  background: #e7eaed;
 }
 
 .public-nav {
