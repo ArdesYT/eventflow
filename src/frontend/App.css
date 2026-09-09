@@ -1945,7 +1945,7 @@ button.nav-item {
   overflow-y: auto;
   background: radial-gradient(circle at 85% 8%, rgba(99, 102, 241, 0.1), transparent 30%),
     radial-gradient(circle at 8% 92%, rgba(14, 165, 233, 0.08), transparent 28%),
-    #ffffff;
+    #e7eaed;
   padding: clamp(24px, 5vw, 56px);
 }
 
@@ -2360,7 +2360,7 @@ button.nav-item {
   border-color: #e0e6ef;
   grid-template-columns: minmax(108px, auto) 58px minmax(150px, 1fr);
   padding: 14px 16px;
-  background: #f9faff;
+  background: #ffffff;
 }
 
 .admin-upcoming-date { color: var(--gray-500); font-variant-numeric: tabular-nums; }
