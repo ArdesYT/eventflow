@@ -3,7 +3,6 @@
  * Használat: App/AdminApp topbar, LoginPage, PublicEventsPage.
  * Props: className (opcionális), variant ('pill' | 'compact' | 'select').
  */
-import { useId } from 'react';
 import { LOCALES, LOCALE_LABELS, type Locale } from '../i18n/locales';
 import { useI18n } from '../i18n/I18nProvider';
 
@@ -17,7 +16,6 @@ export default function LanguageSwitcher({
   variant = 'pill',
 }: LanguageSwitcherProps) {
   const { locale, setLocale, t } = useI18n();
-  const selectId = useId();
 
   /*if (variant === 'select') {
     return (
