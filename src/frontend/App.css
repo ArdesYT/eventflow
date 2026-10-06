@@ -1803,6 +1803,10 @@ button.nav-item {
 .login-left {
   width: 33%;
   min-width: 340px;
+<<<<<<< Updated upstream
+=======
+  background: #1a2b57;
+>>>>>>> Stashed changes
   display: flex;
   flex-direction: column;
   position: relative;
