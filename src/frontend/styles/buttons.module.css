@@ -1,0 +1,81 @@
+/* Szándékosan közös alapstílusok; a komponensek composes segítségével veszik át őket. */
+.btn-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.btn-cancel {
+  padding: 8px 16px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  cursor: pointer;
+  background: #fff;
+  color: var(--gray-600);
+  font-family: var(--font-ui);
+  transition: background 0.1s;
+}
+
+.btn-cancel:hover {
+  background: var(--gray-50);
+}
+
+.btn-save {
+  padding: 8px 18px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.btn-save:hover {
+  background: var(--primary-dark);
+}
+
+.btn-danger {
+  padding: 8px 16px;
+  border: 1px solid var(--danger-light);
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  cursor: pointer;
+  background: var(--danger-light);
+  color: var(--danger);
+  font-family: var(--font-ui);
+  font-weight: 500;
+}
+
+.btn-danger:hover {
+  background: #fbd5d5;
+}
+
+.btn-export {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--gray-700);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-export:hover {
+  background: var(--gray-50);
+  border-color: var(--gray-300);
+}
+
+@media (max-width: 768px) {
+
+  .btn-export {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+}

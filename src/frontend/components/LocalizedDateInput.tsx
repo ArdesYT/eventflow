@@ -6,6 +6,7 @@
 import { useRef } from 'react';
 import { formatDateKey } from '../i18n/dateFormat';
 import { useI18n } from '../i18n/I18nProvider';
+import styles from './LocalizedDateInput.module.css';
 
 interface LocalizedDateInputProps {
   value: string;
@@ -40,10 +41,10 @@ export default function LocalizedDateInput({
   }
 
   return (
-    <div className={`localized-date-field${hasError ? ' error' : ''}`}>
+    <div className={`${styles['localized-date-field']}${hasError ? ` ${styles.error}` : ''}`}>
       <button
         type="button"
-        className={`localized-date-display form-input${className ? ` ${className}` : ''}`}
+        className={`${styles['localized-date-display']} ${styles['form-input']}${className ? ` ${className}` : ''}`}
         onClick={openPicker}
       >
         {value ? formatDateKey(value, locale) : (placeholder ?? '—')}
@@ -51,7 +52,7 @@ export default function LocalizedDateInput({
       <input
         ref={nativeRef}
         type="date"
-        className="localized-date-native"
+        className={styles['localized-date-native']}
         value={value}
         min={min}
         lang={bcp47}

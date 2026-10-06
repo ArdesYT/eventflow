@@ -1,0 +1,190 @@
+.app-wrapper {
+  composes: app-wrapper from '../../styles/shell.module.css';
+}
+
+.sidebar {
+  composes: sidebar from '../../styles/shell.module.css';
+}
+
+.sidebar-logo {
+  composes: sidebar-logo from '../../styles/shell.module.css';
+}
+
+.sidebar-logo-title {
+  composes: sidebar-logo-title from '../../styles/shell.module.css';
+}
+
+.sidebar-logo-sub {
+  composes: sidebar-logo-sub from '../../styles/shell.module.css';
+}
+
+.sidebar-nav {
+  composes: sidebar-nav from '../../styles/shell.module.css';
+}
+
+.nav-item {
+  composes: nav-item from '../../styles/shell.module.css';
+}
+
+.active {
+  composes: active from '../../styles/shell.module.css';
+}
+
+.nav-icon {
+  composes: nav-icon from '../../styles/shell.module.css';
+}
+
+.main-area {
+  composes: main-area from '../../styles/shell.module.css';
+}
+
+.topbar {
+  composes: topbar from '../../styles/shell.module.css';
+}
+
+.topbar-left {
+  composes: topbar-left from '../../styles/shell.module.css';
+}
+
+.page-title {
+  composes: page-title from '../../styles/shell.module.css';
+}
+
+.topbar-right {
+  composes: topbar-right from '../../styles/shell.module.css';
+}
+
+.content-area {
+  composes: content-area from '../../styles/shell.module.css';
+}
+
+.topbar-user-pill {
+  composes: topbar-user-pill from '../../styles/shell.module.css';
+}
+
+.topbar-user-avatar {
+  composes: topbar-user-avatar from '../../styles/shell.module.css';
+}
+
+.topbar-user-name {
+  composes: topbar-user-name from '../../styles/shell.module.css';
+}
+
+.topbar-logout-btn {
+  composes: topbar-logout-btn from '../../styles/shell.module.css';
+}
+
+.btn-save {
+  composes: btn-save from '../../styles/buttons.module.css';
+}
+
+.section-title {
+  composes: section-title from '../../styles/text.module.css';
+}
+
+.loader {
+  composes: loader from '../../styles/feedback.module.css';
+}
+
+.error-banner {
+  composes: error-banner from '../../styles/feedback.module.css';
+}
+
+.hint-badge {
+  composes: hint-badge from '../../styles/badges.module.css';
+}
+
+.admin {
+  composes: admin from '../../styles/badges.module.css';
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  background: var(--gray-50);
+}
+
+.search-icon {
+  font-size: 13px;
+  color: var(--gray-400);
+  flex-shrink: 0;
+}
+
+.search-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  font-family: var(--font-ui);
+  color: var(--gray-800);
+  width: 150px;
+}
+
+.search-input::placeholder {
+  color: var(--gray-400);
+}
+
+.admin-sidebar {
+  border-right-color: #e9e5ff;
+}
+
+.admin-sidebar-footer {
+  padding: 12px 14px 16px;
+  border-top: 1px solid var(--gray-100);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-mode-badge {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #5b21b6;
+  background: #ede9fe;
+  padding: 5px 8px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.admin-topbar-badge {
+  margin-left: 4px;
+}
+
+.admin-demo-seed-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  color: var(--gray-700);
+}
+
+@media (max-width: 768px) {
+
+  .search-box {
+    flex: 1 1 100%;
+    order: -1;
+    max-width: none;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+
+  .admin-topbar-badge {
+    display: none;
+  }
+}
+
+.admin-app {}

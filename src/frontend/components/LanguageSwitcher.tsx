@@ -5,6 +5,7 @@
  */
 import { LOCALES, LOCALE_LABELS } from '../i18n/locales';
 import { useI18n } from '../i18n/I18nProvider';
+import styles from './LanguageSwitcher.module.css';
 
 interface LanguageSwitcherProps {
   className?: string;
@@ -19,7 +20,7 @@ export default function LanguageSwitcher({
 
   return (
     <div
-      className={`lang-switcher lang-switcher--${variant}${className ? ` ${className}` : ''}`}
+      className={`${styles['lang-switcher']} ${styles[`lang-switcher--${variant}`] ?? ''}${className ? ` ${className}` : ''}`}
       role="group"
       aria-label={t('common.language')}
     >
@@ -27,7 +28,7 @@ export default function LanguageSwitcher({
         <button
           key={code}
           type="button"
-          className={`lang-switcher-btn${locale === code ? ' active' : ''}`}
+          className={`${styles['lang-switcher-btn']}${locale === code ? ` ${styles.active}` : ''}`}
           onClick={() => setLocale(code)}
           aria-pressed={locale === code}
         >

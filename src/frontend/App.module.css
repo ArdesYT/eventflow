@@ -1,0 +1,83 @@
+.app-wrapper {
+  composes: app-wrapper from './styles/shell.module.css';
+}
+
+.sidebar {
+  composes: sidebar from './styles/shell.module.css';
+}
+
+.sidebar-logo {
+  composes: sidebar-logo from './styles/shell.module.css';
+}
+
+.sidebar-logo-title {
+  composes: sidebar-logo-title from './styles/shell.module.css';
+}
+
+.sidebar-logo-sub {
+  composes: sidebar-logo-sub from './styles/shell.module.css';
+}
+
+.sidebar-nav {
+  composes: sidebar-nav from './styles/shell.module.css';
+}
+
+.nav-item {
+  composes: nav-item from './styles/shell.module.css';
+}
+
+.active {
+  composes: active from './styles/shell.module.css';
+}
+
+.nav-icon {
+  composes: nav-icon from './styles/shell.module.css';
+}
+
+.main-area {
+  composes: main-area from './styles/shell.module.css';
+}
+
+.topbar {
+  composes: topbar from './styles/shell.module.css';
+}
+
+.topbar-left {
+  composes: topbar-left from './styles/shell.module.css';
+}
+
+.page-title {
+  composes: page-title from './styles/shell.module.css';
+}
+
+.topbar-right {
+  composes: topbar-right from './styles/shell.module.css';
+}
+
+.content-area {
+  composes: content-area from './styles/shell.module.css';
+}
+
+.topbar-user-pill {
+  composes: topbar-user-pill from './styles/shell.module.css';
+}
+
+.topbar-user-avatar {
+  composes: topbar-user-avatar from './styles/shell.module.css';
+}
+
+.topbar-user-name {
+  composes: topbar-user-name from './styles/shell.module.css';
+}
+
+.topbar-logout-btn {
+  composes: topbar-logout-btn from './styles/shell.module.css';
+}
+
+.loader {
+  composes: loader from './styles/feedback.module.css';
+}
+
+.error-banner {
+  composes: error-banner from './styles/feedback.module.css';
+}

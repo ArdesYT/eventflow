@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import type { EventProfile } from '../../backend/types';
 import { useI18n } from '../i18n/I18nProvider';
+import styles from './EventCountdown.module.css';
 
 function eventTime(dateKey: string | null, time: string): number | null {
   if (!dateKey) return null;
@@ -35,7 +36,7 @@ export default function EventCountdown({ event }: EventCountdownProps) {
 
   if (end !== null && now > end) {
     return (
-      <div className="public-hero-countdown public-hero-countdown--ended">
+      <div className={`${styles['public-hero-countdown']} ${styles['public-hero-countdown--ended']}`}>
         {t('public.countdownEnded')}
       </div>
     );
@@ -43,8 +44,8 @@ export default function EventCountdown({ event }: EventCountdownProps) {
 
   if (now >= start) {
     return (
-      <div className="public-hero-countdown public-hero-countdown--live">
-        <span className="public-countdown-live-dot" aria-hidden="true" />
+      <div className={`${styles['public-hero-countdown']} ${styles['public-hero-countdown--live']}`}>
+        <span className={styles['public-countdown-live-dot']} aria-hidden="true" />
         {t('public.countdownLive')}
       </div>
     );
@@ -64,13 +65,13 @@ export default function EventCountdown({ event }: EventCountdownProps) {
   ];
 
   return (
-    <div className="public-hero-countdown" aria-live="polite">
-      <div className="public-countdown-label">{t('public.countdownLabel')}</div>
-      <div className="public-countdown-grid">
+    <div className={styles['public-hero-countdown']} aria-live="polite">
+      <div className={styles['public-countdown-label']}>{t('public.countdownLabel')}</div>
+      <div className={styles['public-countdown-grid']}>
         {units.map(({ value, label }) => (
-          <div key={label} className="public-countdown-unit">
-            <span className="public-countdown-num">{String(value).padStart(2, '0')}</span>
-            <span className="public-countdown-unit-label">{label}</span>
+          <div key={label} className={styles['public-countdown-unit']}>
+            <span className={styles['public-countdown-num']}>{String(value).padStart(2, '0')}</span>
+            <span className={styles['public-countdown-unit-label']}>{label}</span>
           </div>
         ))}
       </div>

@@ -8,7 +8,7 @@ import LanguageSwitcher from './components/LanguageSwitcher';
 import MobileBottomNav from './components/MobileBottomNav';
 import { getInitials } from './lib/display';
 import { useI18n } from './i18n/I18nProvider';
-import './App.css';
+import styles from './App.module.css';
 
 const NAV_ITEMS: { view: ViewType; icon: string; labelKey: string }[] = [
   { view: 'sessions', icon: '📅', labelKey: 'nav.program' },
@@ -35,37 +35,37 @@ export default function App({ initialUser, loading, error, onSetSessionStatus, o
   }
 
   return (
-    <div className="app-wrapper">
-      <aside className="sidebar">
-        <div className="sidebar-logo">
-          <div className="sidebar-logo-title">EventFlow</div>
-          <div className="sidebar-logo-sub">{t('nav.organiserDashboard')}</div>
+    <div className={styles['app-wrapper']}>
+      <aside className={styles.sidebar}>
+        <div className={styles['sidebar-logo']}>
+          <div className={styles['sidebar-logo-title']}>EventFlow</div>
+          <div className={styles['sidebar-logo-sub']}>{t('nav.organiserDashboard')}</div>
         </div>
-        <nav className="sidebar-nav">
+        <nav className={styles['sidebar-nav']}>
           {NAV_ITEMS.map(({ view, icon, labelKey }) => (
-            <button key={view} type="button" className={`nav-item${currentView === view ? ' active' : ''}`} onClick={() => navigate(view)}>
-              <span className="nav-icon">{icon}</span><span>{t(labelKey)}</span>
+            <button key={view} type="button" className={`${styles['nav-item']}${currentView === view ? ` ${styles.active}` : ''}`} onClick={() => navigate(view)}>
+              <span className={styles['nav-icon']}>{icon}</span><span>{t(labelKey)}</span>
             </button>
           ))}
         </nav>
       </aside>
-      <div className="main-area">
-        <div className="topbar">
-          <div className="topbar-left">
-            <h1 className="page-title">{t(currentView === 'sessions' ? 'nav.program' : 'nav.overview')}</h1>
+      <div className={styles['main-area']}>
+        <div className={styles.topbar}>
+          <div className={styles['topbar-left']}>
+            <h1 className={styles['page-title']}>{t(currentView === 'sessions' ? 'nav.program' : 'nav.overview')}</h1>
           </div>
-          <div className="topbar-right">
+          <div className={styles['topbar-right']}>
             <LanguageSwitcher />
-            <div className="topbar-user-pill">
-              <div className="topbar-user-avatar">{getInitials(initialUser.name)}</div>
-              <span className="topbar-user-name">{initialUser.name}</span>
+            <div className={styles['topbar-user-pill']}>
+              <div className={styles['topbar-user-avatar']}>{getInitials(initialUser.name)}</div>
+              <span className={styles['topbar-user-name']}>{initialUser.name}</span>
             </div>
-            <button className="topbar-logout-btn" onClick={onLogout} title={t('common.signOut')} aria-label={t('common.signOut')}>⎋</button>
+            <button className={styles['topbar-logout-btn']} onClick={onLogout} title={t('common.signOut')} aria-label={t('common.signOut')}>⎋</button>
           </div>
         </div>
-        <div className="content-area">
-          {loading && <div className="loader">{t('common.loading')}</div>}
-          {error && <div className="error-banner">{error}</div>}
+        <div className={styles['content-area']}>
+          {loading && <div className={styles.loader}>{t('common.loading')}</div>}
+          {error && <div className={styles['error-banner']}>{error}</div>}
           {!loading && !error && (currentView === 'sessions' ? (
             <SessionWorkspace {...workspace} user={initialUser} initialViewMode="calendar" initialDetailId={initialDetailId}
               onSetStatus={onSetSessionStatus} onBulkUpdate={onBulkUpdateSessions} />

@@ -13,6 +13,7 @@ import CalendarView from './CalendarView';
 import BookingModal from './BookingModal';
 import DetailModal from './DetailModal';
 import BulkSessionToolbar from './BulkSessionToolbar';
+import styles from './SessionWorkspace.module.css';
 
 type ViewMode = 'list' | 'calendar' | 'agenda';
 type Booking = { kind: 'new'; date: string } | { kind: 'edit'; id: number; values: BookingFormData } | { kind: 'duplicate'; values: BookingFormData };
@@ -153,24 +154,24 @@ export default function SessionWorkspace({
   }
 
   return (
-    <section className="session-workspace" aria-label={t('nav.program')}>
-      <div className="session-workspace-toolbar">
-        <div className="view-toggle" role="group" aria-label={t('nav.program')}>
+    <section className={styles['session-workspace']} aria-label={t('nav.program')}>
+      <div className={styles['session-workspace-toolbar']}>
+        <div className={styles['view-toggle']} role="group" aria-label={t('nav.program')}>
           {(['list', 'calendar', 'agenda'] as const).map((view) => (
-            <button key={view} type="button" className={`view-btn${viewMode === view ? ' active' : ''}`}
+            <button key={view} type="button" className={`${styles['view-btn']}${viewMode === view ? ` ${styles.active}` : ''}`}
               aria-pressed={viewMode === view} onClick={() => changeView(view)}>
               {t(view === 'list' ? 'public.viewList' : view === 'calendar' ? 'public.viewCalendar' : 'public.viewAgenda')}
             </button>
           ))}
         </div>
-        <div className="session-workspace-actions">
-          <button type="button" className="btn-export" onClick={() => downloadIcsFile(filteredSessions, 'eventflow-program.ics', t('export.calendarName'))}>
+        <div className={styles['session-workspace-actions']}>
+          <button type="button" className={styles['btn-export']} onClick={() => downloadIcsFile(filteredSessions, 'eventflow-program.ics', t('export.calendarName'))}>
             {t('export.ics')}
           </button>
         </div>
       </div>
-      <div className="session-workspace-filters">
-        <input type="search" className="form-input" placeholder={t('nav.searchPlaceholder')}
+      <div className={styles['session-workspace-filters']}>
+        <input type="search" className={styles['form-input']} placeholder={t('nav.searchPlaceholder')}
           aria-label={t('nav.searchPlaceholder')} value={searchTerm} onChange={(event) => {
             setSearchTerm(event.target.value);
             setSelectedIds(new Set());
@@ -179,12 +180,12 @@ export default function SessionWorkspace({
           onSpeakerChange={(value) => { setSpeakerFilter(value); setSelectedIds(new Set()); }}
           onRoomChange={(value) => { setRoomFilter(value); setSelectedIds(new Set()); }} />
       </div>
-      {actionError && <div className="error-banner" role="alert">{translateError(actionError, t)}</div>}
+      {actionError && <div className={styles['error-banner']} role="alert">{translateError(actionError, t)}</div>}
       {viewMode === 'list' && (
         <>
           {onBulkUpdate && (
-            <div className="sessions-toolbar-row">
-              <button type="button" className={`btn-export${bulkSelectMode ? ' active' : ''}`} onClick={() => {
+            <div className={styles['sessions-toolbar-row']}>
+              <button type="button" className={`${styles['btn-export']}${bulkSelectMode ? ` ${styles.active}` : ''}`} onClick={() => {
                 setBulkSelectMode(!bulkSelectMode);
                 setSelectedIds(new Set());
               }}>

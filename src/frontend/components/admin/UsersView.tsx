@@ -7,6 +7,7 @@ import { useState } from 'react';
 import type { User, UserRole } from '../../../backend/types';
 import { ROOMS } from '../../lib/rooms';
 import { useI18n } from '../../i18n/I18nProvider';
+import styles from './UsersView.module.css';
 
 interface UsersViewProps {
   users: User[];
@@ -31,8 +32,8 @@ export default function UsersView({
 
   if (users.length === 0) {
     return (
-      <div className="empty-state">
-        <div className="empty-state-icon">👥</div>
+      <div className={styles['empty-state']}>
+        <div className={styles['empty-state-icon']}>👥</div>
         <div>{t('admin.users.empty')}</div>
       </div>
     );
@@ -54,10 +55,10 @@ export default function UsersView({
   }
 
   return (
-    <div className="admin-users-panel">
-      <p className="admin-users-hint">{t('admin.users.hint')}</p>
-      <div className="admin-users-table-wrap">
-        <table className="admin-users-table">
+    <div className={styles['admin-users-panel']}>
+      <p className={styles['admin-users-hint']}>{t('admin.users.hint')}</p>
+      <div className={styles['admin-users-table-wrap']}>
+        <table className={styles['admin-users-table']}>
           <thead>
             <tr>
               <th>{t('admin.users.name')}</th>
@@ -75,15 +76,15 @@ export default function UsersView({
               return (
                 <tr key={u.id}>
                   <td>
-                    <div className="admin-user-name">{u.name}</div>
+                    <div className={styles['admin-user-name']}>{u.name}</div>
                     {isSelf && (
-                      <span className="admin-you-badge">{t('admin.users.you')}</span>
+                      <span className={styles['admin-you-badge']}>{t('admin.users.you')}</span>
                     )}
                   </td>
                   <td>{u.email}</td>
                   <td>
                     <select
-                      className="form-select admin-role-select"
+                      className={`${styles['form-select']} ${styles['admin-role-select']}`}
                       value={u.role}
                       disabled={isSelf}
                       onChange={(e) =>
@@ -99,10 +100,10 @@ export default function UsersView({
                   </td>
                   <td>
                     {isBooker && onRoomsChange ? (
-                      <div className="admin-user-rooms">
+                      <div className={styles['admin-user-rooms']}>
                         <button
                           type="button"
-                          className="admin-rooms-toggle"
+                          className={styles['admin-rooms-toggle']}
                           onClick={() =>
                             setExpandedRoomsId(expandedRoomsId === u.id ? null : u.id)
                           }
@@ -112,9 +113,9 @@ export default function UsersView({
                             : t('admin.users.allRooms')}
                         </button>
                         {expandedRoomsId === u.id && (
-                          <div className="admin-user-rooms-list">
+                          <div className={styles['admin-user-rooms-list']}>
                             {ROOMS.map((r) => (
-                              <label key={r.id} className="admin-room-check">
+                              <label key={r.id} className={styles['admin-room-check']}>
                                 <input
                                   type="checkbox"
                                   checked={roomIds.includes(r.id)}
@@ -128,13 +129,13 @@ export default function UsersView({
                         )}
                       </div>
                     ) : (
-                      <span className="admin-users-na">—</span>
+                      <span className={styles['admin-users-na']}>—</span>
                     )}
                   </td>
-                  <td className="admin-users-actions">
+                  <td className={styles['admin-users-actions']}>
                     <button
                       type="button"
-                      className="btn-danger admin-delete-btn"
+                      className={`${styles['btn-danger']} ${styles['admin-delete-btn']}`}
                       disabled={isSelf}
                       onClick={() => onDelete(u.id)}
                     >

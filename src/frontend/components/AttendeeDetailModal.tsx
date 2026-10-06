@@ -7,6 +7,7 @@ import type { Session } from '../../backend/types';
 import { isSessionCancelled } from '../lib/sessionFormat';
 import { SessionDetailHeader, SessionDetails } from './SessionDetails';
 import { useI18n } from '../i18n/I18nProvider';
+import styles from './AttendeeDetailModal.module.css';
 
 interface AttendeeDetailModalProps {
   session: Session;
@@ -33,30 +34,30 @@ export default function AttendeeDetailModal({
   const cancelled = isSessionCancelled(session);
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal attendee-detail-modal" onClick={(e) => e.stopPropagation()}>
+    <div className={styles['modal-backdrop']} onClick={onClose}>
+      <div className={`${styles.modal} ${styles['attendee-detail-modal']}`} onClick={(e) => e.stopPropagation()}>
         <SessionDetailHeader session={session} onClose={onClose} />
         <div>
           <SessionDetails session={session} />
         </div>
 
-        <div className="btn-row">
+        <div className={styles['btn-row']}>
           {guestMode ? (
-            <button type="button" className="btn-save" onClick={onLoginRequest}>
+            <button type="button" className={styles['btn-save']} onClick={onLoginRequest}>
               {t('public.loginToSave')}
             </button>
           ) : isSaved ? (
-            <button type="button" className="btn-danger" disabled={busy} onClick={onRemove}>
+            <button type="button" className={styles['btn-danger']} disabled={busy} onClick={onRemove}>
               {busy ? t('booking.saving') : t('public.removeSaved')}
             </button>
           ) : cancelled ? (
-            <span className="attendee-cancelled-note">{t('session.cancelledHint')}</span>
+            <span className={styles['attendee-cancelled-note']}>{t('session.cancelledHint')}</span>
           ) : (
-            <button type="button" className="btn-save" disabled={busy} onClick={onSave}>
+            <button type="button" className={styles['btn-save']} disabled={busy} onClick={onSave}>
               {busy ? t('booking.saving') : t('public.saveSession')}
             </button>
           )}
-          <button type="button" className="btn-cancel" onClick={onClose}>
+          <button type="button" className={styles['btn-cancel']} onClick={onClose}>
             {t('common.close')}
           </button>
         </div>

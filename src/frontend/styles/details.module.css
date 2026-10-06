@@ -1,0 +1,25 @@
+/* Szándékosan közös alapstílusok; a komponensek composes segítségével veszik át őket. */
+.detail-row {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gray-50);
+  font-size: 13.5px;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  color: var(--gray-400);
+  width: 80px;
+  flex-shrink: 0;
+  font-size: 12px;
+  padding-top: 1px;
+}
+
+.detail-value {
+  color: var(--gray-800);
+  font-weight: 500;
+}

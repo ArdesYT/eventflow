@@ -5,6 +5,7 @@
  */
 import type { Session } from '../../backend/types';
 import { useI18n } from '../i18n/I18nProvider';
+import styles from './ScheduleConflictModal.module.css';
 
 interface ScheduleConflictModalProps {
   session: Session;
@@ -24,28 +25,28 @@ export default function ScheduleConflictModal({
   const { t } = useI18n();
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal schedule-conflict-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2 className="modal-title">{t('public.scheduleConflictTitle')}</h2>
-          <button type="button" className="modal-close" onClick={onClose}>
+    <div className={styles['modal-backdrop']} onClick={onClose}>
+      <div className={`${styles.modal} ${styles['schedule-conflict-modal']}`} onClick={(e) => e.stopPropagation()}>
+        <div className={styles['modal-header']}>
+          <h2 className={styles['modal-title']}>{t('public.scheduleConflictTitle')}</h2>
+          <button type="button" className={styles['modal-close']} onClick={onClose}>
             ×
           </button>
         </div>
-        <p className="schedule-conflict-intro">
+        <p className={styles['schedule-conflict-intro']}>
           {t('public.scheduleConflictIntro', { title: session.title })}
         </p>
-        <ul className="schedule-conflict-list">
+        <ul className={styles['schedule-conflict-list']}>
           {conflicts.map((c) => (
             <li key={c.id}>{c.title}</li>
           ))}
         </ul>
-        <p className="schedule-conflict-question">{t('public.scheduleConflictConfirm')}</p>
-        <div className="btn-row">
-          <button type="button" className="btn-save" disabled={busy} onClick={onConfirm}>
+        <p className={styles['schedule-conflict-question']}>{t('public.scheduleConflictConfirm')}</p>
+        <div className={styles['btn-row']}>
+          <button type="button" className={styles['btn-save']} disabled={busy} onClick={onConfirm}>
             {busy ? t('booking.saving') : t('public.scheduleConflictSaveAnyway')}
           </button>
-          <button type="button" className="btn-cancel" onClick={onClose}>
+          <button type="button" className={styles['btn-cancel']} onClick={onClose}>
             {t('common.cancel')}
           </button>
         </div>

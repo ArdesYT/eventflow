@@ -8,6 +8,7 @@ import type { Session, SessionSavesMap } from '../../backend/types';
 import AgendaView from './AgendaView';
 import StatCards from './StatCards';
 import { useI18n } from '../i18n/I18nProvider';
+import styles from './StatsView.module.css';
 
 interface StatsViewProps {
   sessions: Session[];
@@ -42,21 +43,21 @@ export default function StatsView({ sessions, sessionSaves, onEventClick }: Stat
         { labelKey: 'stats.eventDays', value: uniqueDays, subKey: 'stats.eventDaysSub' },
       ]} />
 
-      <div className="section-title">{t('stats.byRoom')}</div>
-      <div className="room-bar-container">
+      <div className={styles['section-title']}>{t('stats.byRoom')}</div>
+      <div className={styles['room-bar-container']}>
         {sortedRooms.map(([room, count]) => (
-          <div key={room} className="bar-row">
-            <div className="bar-row-header">
-              <span className="bar-room-name">{room}</span>
-              <span className="bar-count">
+          <div key={room} className={styles['bar-row']}>
+            <div className={styles['bar-row-header']}>
+              <span className={styles['bar-room-name']}>{room}</span>
+              <span className={styles['bar-count']}>
                 {count === 1
                   ? t('stats.sessionCount', { count })
                   : t('stats.sessionCount_plural', { count })}
               </span>
             </div>
-            <div className="bar-track">
+            <div className={styles['bar-track']}>
               <div
-                className="bar-fill"
+                className={styles['bar-fill']}
                 style={{ width: `${Math.round((count / maxCount) * 100)}%` }}
               />
             </div>
@@ -64,7 +65,7 @@ export default function StatsView({ sessions, sessionSaves, onEventClick }: Stat
         ))}
       </div>
 
-      <div className="section-title">{t('stats.upcoming')}</div>
+      <div className={styles['section-title']}>{t('stats.upcoming')}</div>
       <AgendaView
         sessions={upcoming}
         sessionSaves={sessionSaves}

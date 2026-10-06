@@ -7,6 +7,7 @@ import { useState } from 'react';
 import type { Room } from '../../backend/types';
 import { FALLBACK_ROOMS, roomLabel } from '../lib/rooms';
 import { useI18n } from '../i18n/I18nProvider';
+import styles from './BulkSessionToolbar.module.css';
 
 interface BulkSessionToolbarProps {
   selectedCount: number;
@@ -53,23 +54,23 @@ export default function BulkSessionToolbar({
   }
 
   return (
-    <div className="bulk-session-toolbar">
-      <span className="bulk-session-count">
+    <div className={styles['bulk-session-toolbar']}>
+      <span className={styles['bulk-session-count']}>
         {t('bulk.selected', { count: selectedCount })}
       </span>
-      <label className="bulk-field">
+      <label className={styles['bulk-field']}>
         <span>{t('bulk.dateOffset')}</span>
         <input
           type="number"
-          className="form-input bulk-offset-input"
+          className={`${styles['form-input']} ${styles['bulk-offset-input']}`}
           value={dateOffset}
           onChange={(e) => setDateOffset(Number(e.target.value))}
         />
       </label>
-      <label className="bulk-field">
+      <label className={styles['bulk-field']}>
         <span>{t('bulk.newRoom')}</span>
         <select
-          className="form-select"
+          className={styles['form-select']}
           value={roomId}
           onChange={(e) =>
             setRoomId(e.target.value === '' ? '' : Number(e.target.value))
@@ -85,17 +86,17 @@ export default function BulkSessionToolbar({
       </label>
       <button
         type="button"
-        className="btn-save"
+        className={styles['btn-save']}
         disabled={busy || !hasChanges}
         onClick={handleApply}
       >
         {busy ? t('booking.saving') : t('bulk.apply')}
       </button>
-      <button type="button" className="btn-cancel" onClick={onClear}>
+      <button type="button" className={styles['btn-cancel']} onClick={onClear}>
         {t('common.cancel')}
       </button>
       {error && (
-        <span className="bulk-error">
+        <span className={styles['bulk-error']}>
           {error.startsWith('errors.') ? t(error) : error}
         </span>
       )}

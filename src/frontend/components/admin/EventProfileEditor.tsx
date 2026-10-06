@@ -6,6 +6,7 @@ import { useState, type FormEvent } from 'react';
 import type { EventProfile } from '../../../backend/types';
 import LocalizedDateInput from '../LocalizedDateInput';
 import { useI18n } from '../../i18n/I18nProvider';
+import styles from './EventProfileEditor.module.css';
 
 interface EventProfileEditorProps {
   event: EventProfile;
@@ -46,51 +47,51 @@ export default function EventProfileEditor({ event, onSave }: EventProfileEditor
   }
 
   return (
-    <form className="event-profile-editor" onSubmit={handleSubmit}>
-      <p className="admin-users-hint">{t('admin.event.hint')}</p>
+    <form className={styles['event-profile-editor']} onSubmit={handleSubmit}>
+      <p className={styles['admin-users-hint']}>{t('admin.event.hint')}</p>
       {error && (
-        <div className="error-banner" style={{ marginBottom: 12 }}>
+        <div className={styles['error-banner']} style={{ marginBottom: 12 }}>
           {error.startsWith('errors.') ? t(error) : error}
         </div>
       )}
-      {saved && <div className="success-banner">{t('admin.event.saved')}</div>}
-      <div className="form-group">
-        <label className="form-label">{t('admin.event.name')}</label>
+      {saved && <div className={styles['success-banner']}>{t('admin.event.saved')}</div>}
+      <div className={styles['form-group']}>
+        <label className={styles['form-label']}>{t('admin.event.name')}</label>
         <input
-          className="form-input"
+          className={styles['form-input']}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
       </div>
-      <div className="form-group">
-        <label className="form-label">{t('admin.event.venue')}</label>
+      <div className={styles['form-group']}>
+        <label className={styles['form-label']}>{t('admin.event.venue')}</label>
         <input
-          className="form-input"
+          className={styles['form-input']}
           value={venue}
           onChange={(e) => setVenue(e.target.value)}
         />
       </div>
-      <div className="form-row">
-        <div className="form-group">
-          <label className="form-label">{t('booking.startDate')}</label>
+      <div className={styles['form-row']}>
+        <div className={styles['form-group']}>
+          <label className={styles['form-label']}>{t('booking.startDate')}</label>
           <LocalizedDateInput value={startDate} onChange={setStartDate} />
         </div>
-        <div className="form-group">
-          <label className="form-label">{t('booking.endDate')}</label>
+        <div className={styles['form-group']}>
+          <label className={styles['form-label']}>{t('booking.endDate')}</label>
           <LocalizedDateInput value={endDate} min={startDate} onChange={setEndDate} />
         </div>
       </div>
-      <div className="form-group">
-        <label className="form-label">{t('admin.event.description')}</label>
+      <div className={styles['form-group']}>
+        <label className={styles['form-label']}>{t('admin.event.description')}</label>
         <textarea
-          className="form-textarea"
+          className={styles['form-textarea']}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
         />
       </div>
-      <button type="submit" className="btn-save" disabled={saving}>
+      <button type="submit" className={styles['btn-save']} disabled={saving}>
         {saving ? t('booking.saving') : t('common.save')}
       </button>
     </form>

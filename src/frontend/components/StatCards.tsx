@@ -1,4 +1,5 @@
 import { useI18n } from '../i18n/I18nProvider';
+import styles from './StatCards.module.css';
 
 interface StatCard {
   labelKey: string;
@@ -9,12 +10,12 @@ interface StatCard {
 export default function StatCards({ cards }: { cards: StatCard[] }) {
   const { t } = useI18n();
   return (
-    <div className="stats-grid">
+    <div className={styles['stats-grid']}>
       {cards.map(({ labelKey, value, subKey }) => (
-        <div key={labelKey} className="stat-card">
-          <div className="stat-label">{t(labelKey)}</div>
-          <div className="stat-value">{value}</div>
-          <div className="stat-sub">{t(subKey)}</div>
+        <div key={labelKey} className={styles['stat-card']}>
+          <div className={styles['stat-label']}>{t(labelKey)}</div>
+          <div className={styles['stat-value']}>{value}</div>
+          <div className={styles['stat-sub']}>{t(subKey)}</div>
         </div>
       ))}
     </div>

@@ -1,0 +1,122 @@
+.form-input {
+  composes: form-input from '../../styles/forms.module.css';
+}
+
+.cal-nav {
+  composes: cal-nav from '../../styles/calendar-nav.module.css';
+}
+
+.cal-month-title {
+  composes: cal-month-title from '../../styles/calendar-nav.module.css';
+}
+
+.cal-nav-btn {
+  composes: cal-nav-btn from '../../styles/calendar-nav.module.css';
+}
+
+.section-title {
+  composes: section-title from '../../styles/text.module.css';
+}
+
+.admin-upcoming-empty {
+  composes: admin-upcoming-empty from '../../styles/text.module.css';
+}
+
+.rooms-usage-bars {
+  display: grid;
+  gap: 12px;
+}
+
+.rooms-usage-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rooms-usage-label {
+  width: 140px;
+  font-size: 13px;
+}
+
+.rooms-usage-track {
+  flex: 1;
+  height: 12px;
+  background: #eee;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.rooms-usage-fill {
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 6px;
+}
+
+.rooms-usage-count {
+  width: 48px;
+  text-align: right;
+  font-size: 13px;
+}
+
+.rooms-day-picker {
+  margin-bottom: 12px;
+}
+
+.rooms-timeline {
+  margin-top: 8px;
+}
+
+.rooms-timeline-hours {
+  display: flex;
+  justify-content: space-between;
+  margin-left: 120px;
+  margin-bottom: 6px;
+  font-size: 10px;
+  color: var(--gray-400);
+}
+
+.rooms-timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.rooms-timeline-room {
+  width: 112px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.rooms-timeline-track {
+  position: relative;
+  flex: 1;
+  height: 28px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-100);
+  border-radius: 4px;
+}
+
+.rooms-timeline-block {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border-radius: 3px;
+  overflow: hidden;
+  min-width: 4px;
+}
+
+.rooms-timeline-block-label {
+  display: block;
+  padding: 0 4px;
+  font-size: 9px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 24px;
+}
+
+.rooms-usage-panel {}
+
+.rooms-timeline-hour {}

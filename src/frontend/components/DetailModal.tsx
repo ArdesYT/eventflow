@@ -8,6 +8,7 @@ import { getInitials } from '../lib/display';
 import { isSessionCancelled } from '../lib/sessionFormat';
 import { SessionDetailHeader, SessionDetails } from './SessionDetails';
 import { useI18n } from '../i18n/I18nProvider';
+import styles from './DetailModal.module.css';
 
 interface DetailModalProps {
   session: Session;
@@ -35,27 +36,27 @@ export default function DetailModal({
   const cancelled = isSessionCancelled(session);
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className={styles['modal-backdrop']} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <SessionDetailHeader session={session} onClose={onClose} />
         <div>
           <SessionDetails session={session} />
           {showSaves && (
-            <div className="detail-row detail-row-saves">
-              <span className="detail-label">{t('detail.savedBy')}</span>
-              <div className="detail-value detail-saves-value">
+            <div className={`${styles['detail-row']} ${styles['detail-row-saves']}`}>
+              <span className={styles['detail-label']}>{t('detail.savedBy')}</span>
+              <div className={`${styles['detail-value']} ${styles['detail-saves-value']}`}>
                 {!savesLoaded ? (
-                  <span className="detail-saves-empty">{t('detail.savesUnavailable')}</span>
+                  <span className={styles['detail-saves-empty']}>{t('detail.savesUnavailable')}</span>
                 ) : !savedBy?.length ? (
-                  <span className="detail-saves-empty">{t('detail.noSaves')}</span>
+                  <span className={styles['detail-saves-empty']}>{t('detail.noSaves')}</span>
                 ) : (
-                  <ul className="saved-by-list">
+                  <ul className={styles['saved-by-list']}>
                     {savedBy.map((u) => (
-                      <li key={u.id} className="saved-by-item">
-                        <div className="saved-by-avatar">{getInitials(u.name)}</div>
-                        <div className="saved-by-info">
-                          <span className="saved-by-name">{u.name}</span>
-                          <span className="saved-by-email">{u.email}</span>
+                      <li key={u.id} className={styles['saved-by-item']}>
+                        <div className={styles['saved-by-avatar']}>{getInitials(u.name)}</div>
+                        <div className={styles['saved-by-info']}>
+                          <span className={styles['saved-by-name']}>{u.name}</span>
+                          <span className={styles['saved-by-email']}>{u.email}</span>
                         </div>
                       </li>
                     ))}
@@ -65,11 +66,11 @@ export default function DetailModal({
             </div>
           )}
         </div>
-        <div className="btn-row">
+        <div className={styles['btn-row']}>
           {onDuplicate && (
             <button
               type="button"
-              className="btn-cancel detail-duplicate-btn"
+              className={`${styles['btn-cancel']} ${styles['detail-duplicate-btn']}`}
               onClick={() => {
                 onDuplicate(session.id);
                 onClose();
@@ -81,7 +82,7 @@ export default function DetailModal({
           {onEdit && !cancelled && (
             <button
               type="button"
-              className="btn-save"
+              className={styles['btn-save']}
               onClick={() => {
                 onEdit(session.id);
                 onClose();
@@ -93,7 +94,7 @@ export default function DetailModal({
           {onSetStatus && (
             <button
               type="button"
-              className={cancelled ? 'btn-save' : 'btn-cancel session-cancel-btn'}
+              className={cancelled ? styles['btn-save'] : `${styles['btn-cancel']} ${styles['session-cancel-btn']}`}
               onClick={() => {
                 onSetStatus(session.id, cancelled ? 'scheduled' : 'cancelled');
                 onClose();
@@ -104,7 +105,7 @@ export default function DetailModal({
           )}
           <button
             type="button"
-            className="btn-danger"
+            className={styles['btn-danger']}
             onClick={() => {
               onDelete(session.id);
               onClose();
@@ -112,7 +113,7 @@ export default function DetailModal({
           >
             {t('common.delete')}
           </button>
-          <button type="button" className="btn-save" onClick={onClose}>
+          <button type="button" className={styles['btn-save']} onClick={onClose}>
             {t('common.close')}
           </button>
         </div>

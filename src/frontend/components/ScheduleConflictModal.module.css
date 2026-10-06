@@ -1,0 +1,56 @@
+.modal-backdrop {
+  composes: modal-backdrop from '../styles/modal.module.css';
+}
+
+.modal {
+  composes: modal from '../styles/modal.module.css';
+}
+
+.modal-header {
+  composes: modal-header from '../styles/modal.module.css';
+}
+
+.modal-title {
+  composes: modal-title from '../styles/modal.module.css';
+}
+
+.modal-close {
+  composes: modal-close from '../styles/modal.module.css';
+}
+
+.btn-row {
+  composes: btn-row from '../styles/buttons.module.css';
+}
+
+.btn-cancel {
+  composes: btn-cancel from '../styles/buttons.module.css';
+}
+
+.btn-save {
+  composes: btn-save from '../styles/buttons.module.css';
+}
+
+.schedule-conflict-modal .schedule-conflict-intro {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--gray-600);
+  line-height: 1.5;
+}
+
+.schedule-conflict-list {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  font-size: 14px;
+  color: var(--gray-800);
+}
+
+.schedule-conflict-list li + li {
+  margin-top: 4px;
+}
+
+.schedule-conflict-question {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-800);
+}

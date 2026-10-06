@@ -1,0 +1,126 @@
+.section-title {
+  composes: section-title from '../../styles/text.module.css';
+}
+
+.admin-upcoming-empty {
+  composes: admin-upcoming-empty from '../../styles/text.module.css';
+}
+
+.hint-badge {
+  composes: hint-badge from '../../styles/badges.module.css';
+}
+
+.admin {
+  composes: admin from '../../styles/badges.module.css';
+}
+
+.booker {
+  composes: booker from '../../styles/badges.module.css';
+}
+
+.attendee {
+  composes: attendee from '../../styles/badges.module.css';
+}
+
+.admin-role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.admin-role-card {
+  background: #fff;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-role-count {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--gray-900);
+}
+
+.admin-upcoming-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-upcoming-item {
+  display: grid;
+  grid-template-columns: 100px 56px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid var(--gray-100);
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.admin-upcoming-date {
+  color: var(--gray-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-upcoming-time {
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.admin-upcoming-title {
+  font-weight: 500;
+  color: var(--gray-800);
+}
+
+.admin-upcoming-meta {
+  color: var(--gray-500);
+  font-size: 12px;
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .admin-upcoming-item {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .admin-upcoming-title {
+    grid-column: 1 / -1;
+  }
+
+  .admin-upcoming-meta {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+}
+
+.admin-event-summary {
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-md);
+}
+
+.admin-event-summary-title {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.admin-event-summary-venue,
+.admin-event-summary-dates {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gray-600);
+}

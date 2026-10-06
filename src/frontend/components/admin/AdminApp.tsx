@@ -37,7 +37,7 @@ import MobileBottomNav from '../MobileBottomNav';
 import { fetchActivityLog } from '../../lib/adminApi';
 import { useI18n } from '../../i18n/I18nProvider';
 import { translateError } from '../../i18n/translateError';
-import '../../App.css';
+import styles from './AdminApp.module.css';
 
 const NAV_ITEMS: { view: AdminViewType; icon: string; labelKey: string }[] = [
   { view: 'overview', icon: '📊', labelKey: 'admin.nav.overview' },
@@ -191,55 +191,55 @@ export default function AdminApp({
   }
 
   return (
-    <div className="app-wrapper admin-app">
-      <aside className="sidebar admin-sidebar">
-        <div className="sidebar-logo">
-          <div className="sidebar-logo-title">EventFlow</div>
-          <div className="sidebar-logo-sub">{t('admin.dashboardTitle')}</div>
+    <div className={`${styles['app-wrapper']} ${styles['admin-app']}`}>
+      <aside className={`${styles.sidebar} ${styles['admin-sidebar']}`}>
+        <div className={styles['sidebar-logo']}>
+          <div className={styles['sidebar-logo-title']}>EventFlow</div>
+          <div className={styles['sidebar-logo-sub']}>{t('admin.dashboardTitle')}</div>
         </div>
-        <nav className="sidebar-nav">
+        <nav className={styles['sidebar-nav']}>
           {NAV_ITEMS.map(({ view, icon, labelKey }) => (
             <button
               type="button"
               key={view}
-              className={`nav-item${currentView === view ? ' active' : ''}`}
+              className={`${styles['nav-item']}${currentView === view ? ` ${styles.active}` : ''}`}
               onClick={() => navigate(view)}
             >
-              <span className="nav-icon">{icon}</span>
+              <span className={styles['nav-icon']}>{icon}</span>
               <span>{t(labelKey)}</span>
             </button>
           ))}
         </nav>
-        <div className="admin-sidebar-footer">
-          <div className="admin-mode-badge">
+        <div className={styles['admin-sidebar-footer']}>
+          <div className={styles['admin-mode-badge']}>
             {backendMode ? t('admin.modeLive') : t('admin.modeDemo')}
           </div>
         </div>
       </aside>
 
-      <div className="main-area">
-        <div className="topbar">
-          <div className="topbar-left">
-            <h1 className="page-title">{t(`admin.nav.${currentView}`)}</h1>
-            <span className="hint-badge admin admin-topbar-badge">
+      <div className={styles['main-area']}>
+        <div className={styles.topbar}>
+          <div className={styles['topbar-left']}>
+            <h1 className={styles['page-title']}>{t(`admin.nav.${currentView}`)}</h1>
+            <span className={`${styles['hint-badge']} ${styles.admin} ${styles['admin-topbar-badge']}`}>
               {t('login.admin')}
             </span>
           </div>
-          <div className="topbar-right">
+          <div className={styles['topbar-right']}>
             <LanguageSwitcher variant="select" />
             {currentView === 'speakers' && (
-              <div className="search-box">
-                <span className="search-icon">🔍</span>
-                <input className="search-input" placeholder={t('admin.speakers.searchPlaceholder')}
+              <div className={styles['search-box']}>
+                <span className={styles['search-icon']}>🔍</span>
+                <input className={styles['search-input']} placeholder={t('admin.speakers.searchPlaceholder')}
                   value={speakerSearch} onChange={(event) => setSpeakerSearch(event.target.value)} />
               </div>
             )}
-            <div className="topbar-user-pill">
-              <div className="topbar-user-avatar">{getInitials(initialUser.name)}</div>
-              <span className="topbar-user-name">{initialUser.name}</span>
+            <div className={styles['topbar-user-pill']}>
+              <div className={styles['topbar-user-avatar']}>{getInitials(initialUser.name)}</div>
+              <span className={styles['topbar-user-name']}>{initialUser.name}</span>
             </div>
             <button
-              className="topbar-logout-btn"
+              className={styles['topbar-logout-btn']}
               onClick={onLogout}
               title={t('common.signOut')}
             >
@@ -248,17 +248,17 @@ export default function AdminApp({
           </div>
         </div>
 
-        <div className="content-area">
+        <div className={styles['content-area']}>
           {loading && currentView !== 'users' && (
-            <div className="loader">{t('common.loading')}</div>
+            <div className={styles.loader}>{t('common.loading')}</div>
           )}
-          {error && <div className="error-banner">{error}</div>}
+          {error && <div className={styles['error-banner']}>{error}</div>}
           {!loading && currentView === 'overview' && backendMode && sessions.length === 0 && onLoadDemo && (
-            <div className="admin-demo-seed-banner">
+            <div className={styles['admin-demo-seed-banner']}>
               <span>{t('public.emptySub')}</span>
               <button
                 type="button"
-                className="btn-save"
+                className={styles['btn-save']}
                 disabled={loadingDemo}
                 onClick={() => onLoadDemo()}
               >
@@ -267,7 +267,7 @@ export default function AdminApp({
             </div>
           )}
           {userActionError && (
-            <div className="error-banner">
+            <div className={styles['error-banner']}>
               {userActionError.startsWith('errors.')
                 ? t(userActionError)
                 : translateError(userActionError, t)}
@@ -284,7 +284,7 @@ export default function AdminApp({
 
           {!loading && currentView === 'rooms' && (
             <>
-              <div className="section-title">{t('admin.nav.rooms')}</div>
+              <div className={styles['section-title']}>{t('admin.nav.rooms')}</div>
               <RoomsUsage sessions={sessions} rooms={rooms} />
             </>
           )}
@@ -304,7 +304,7 @@ export default function AdminApp({
 
           {currentView === 'users' && (
             <>
-              {usersLoading && <div className="loader">{t('common.loading')}</div>}
+              {usersLoading && <div className={styles.loader}>{t('common.loading')}</div>}
               {!usersLoading && (
                 <UsersView
                   users={users}
@@ -333,6 +333,7 @@ export default function AdminApp({
 
       <MobileBottomNav
         scrollable
+        iconOnly
         items={NAV_ITEMS.map(({ view, icon, labelKey }) => ({
           id: view,
           icon,

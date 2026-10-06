@@ -1,0 +1,44 @@
+/* Szándékosan közös alapstílusok; a komponensek composes segítségével veszik át őket. */
+.admin-users-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.admin-users-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--gray-400);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.admin-users-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--gray-50);
+  vertical-align: middle;
+}
+
+.admin-user-name {
+  font-weight: 500;
+  color: var(--gray-800);
+}
+
+.admin-users-actions {
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+
+  .admin-users-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

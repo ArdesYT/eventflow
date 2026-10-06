@@ -229,6 +229,23 @@ documentation/      EventFlow_Dokumentacio.docx
 
 ---
 
+## CSS szerkesztése
+
+Minden felület és komponens a mellette lévő `*.module.css` fájlt használja. Például a bejelentkezést a `components/LoginPage.module.css`, a foglalási ablakot a `components/BookingModal.module.css`, a szervezői elrendezést az `App.module.css` kezeli. Az itt írt osztályok csak az adott komponensre hatnak.
+
+A `styles/` mappa szándékosan közös alapstílusokat tartalmaz. Ezeket a helyi modulok `composes` segítségével veszik át. Ha például csak a foglalási ablak szélességét változtatnád, a `BookingModal.module.css` meglévő `.modal` szabályába írd:
+
+```css
+.modal {
+  composes: modal from '../styles/modal.module.css';
+  width: 520px;
+}
+```
+
+A `global.css` az alaphelyzetbe állítást, a betűtípusokat és a téma változóit tartalmazza. A közös alapstílusok és a téma módosítása továbbra is több komponenst érint. A mobilos szabályokat az adott modul `@media` blokkjában szerkeszd.
+
+---
+
 ## Licenc
 
 ISC

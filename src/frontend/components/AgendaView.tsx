@@ -9,6 +9,7 @@ import { formatSessionTimeRange } from '../lib/sessionBooking';
 import { groupSessionsForList, isSessionCancelled, localDateKey } from '../lib/sessionFormat';
 import { useI18n } from '../i18n/I18nProvider';
 import { formatWeekdayLong } from '../i18n/dateFormat';
+import styles from './AgendaView.module.css';
 
 interface AgendaViewProps {
   sessions: Session[];
@@ -29,8 +30,8 @@ export default function AgendaView({
 
   if (sortedDates.length === 0 && multiDay.length === 0) {
     return (
-      <div className="empty-state">
-        <div className="empty-state-icon">📅</div>
+      <div className={styles['empty-state']}>
+        <div className={styles['empty-state-icon']}>📅</div>
         <div>{t('agenda.emptyTitle')}</div>
         <div>{t('agenda.emptySub')}</div>
       </div>
@@ -44,7 +45,7 @@ export default function AgendaView({
     return (
       <div
         key={ev.id}
-        className={'agenda-event' + (cancelled ? ' cancelled' : '')}
+        className={`${styles['agenda-event']}${cancelled ? ` ${styles.cancelled}` : ''}`}
         onClick={() => onEventClick(ev.id)}
         role="button"
         tabIndex={0}
@@ -56,27 +57,27 @@ export default function AgendaView({
         }}
       >
         <div
-          className="agenda-event-accent"
+          className={styles['agenda-event-accent']}
           style={{ background: SESSION_ACCENTS[ev.color] ?? '#1a56db' }}
         />
-        <div className="agenda-event-body">
-          <div className="agenda-event-title">
+        <div className={styles['agenda-event-body']}>
+          <div className={styles['agenda-event-title']}>
             {ev.title}
             {cancelled && (
-              <span className="session-cancelled-badge">{t('session.cancelled')}</span>
+              <span className={styles['session-cancelled-badge']}>{t('session.cancelled')}</span>
             )}
           </div>
-          <div className="agenda-event-meta">
+          <div className={styles['agenda-event-meta']}>
             <span>{formatSessionTimeRange(ev, locale)}</span>
             <span>{ev.room_name}</span>
             <span>🎤 {ev.speaker_name}</span>
             {saveCount > 0 && (
-              <span className="agenda-save-badge">⭐ {saveCount}</span>
+              <span className={styles['agenda-save-badge']}>⭐ {saveCount}</span>
             )}
           </div>
         </div>
-        <div className="agenda-event-side">
-          <span className="room-tag">{ev.room_name}</span>
+        <div className={styles['agenda-event-side']}>
+          <span className={styles['room-tag']}>{ev.room_name}</span>
         </div>
       </div>
     );
@@ -85,10 +86,10 @@ export default function AgendaView({
   return (
     <>
       {multiDay.length > 0 && (
-        <div className="agenda-day agenda-multiday-section">
-          <div className="agenda-date-header agenda-multiday-header">
-            <div className="agenda-date-circle">📅</div>
-            <span className="agenda-date-text">{t('public.multiDaySection')}</span>
+        <div className={`${styles['agenda-day']} ${styles['agenda-multiday-section']}`}>
+          <div className={`${styles['agenda-date-header']} ${styles['agenda-multiday-header']}`}>
+            <div className={styles['agenda-date-circle']}>📅</div>
+            <span className={styles['agenda-date-text']}>{t('public.multiDaySection')}</span>
           </div>
           {multiDay.map(renderEvent)}
         </div>
@@ -98,10 +99,10 @@ export default function AgendaView({
         const isToday = ds === todayStr;
         const label = formatWeekdayLong(y, m - 1, d, locale);
         return (
-          <div key={ds} className="agenda-day">
-            <div className="agenda-date-header">
-              <div className={`agenda-date-circle${isToday ? ' today' : ''}`}>{d}</div>
-              <span className="agenda-date-text">{label}</span>
+          <div key={ds} className={styles['agenda-day']}>
+            <div className={styles['agenda-date-header']}>
+              <div className={`${styles['agenda-date-circle']}${isToday ? ` ${styles.today}` : ''}`}>{d}</div>
+              <span className={styles['agenda-date-text']}>{label}</span>
             </div>
             {grouped[ds].map(renderEvent)}
           </div>

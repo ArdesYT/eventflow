@@ -8,6 +8,7 @@ import { createServer } from 'vite';
 globalThis.document = { documentElement: { lang: 'hu' } };
 const server = await createServer({
   configFile: false,
+  css: { modules: { generateScopedName: '[local]__[hash:base64:5]' } },
   server: { middlewareMode: true },
   appType: 'custom',
   logLevel: 'error',
@@ -22,6 +23,15 @@ async function render(path, props) {
 function buttonLabels(html) {
   return [...html.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)]
     .map((match) => match[1].replace(/<[^>]*>/g, '').trim());
+}
+async function styles(path) {
+  return (await server.ssrLoadModule(`/src/frontend/${path}.module.css`)).default;
+}
+function hasClass(html, className) {
+  assert.ok(className, 'The CSS Module must define the requested class');
+  const tokens = className.split(/\s+/);
+  return [...html.matchAll(/\bclass="([^"]*)"/g)]
+    .some((match) => tokens.every((token) => match[1].split(/\s+/).includes(token)));
 }
 const noop = async () => {};
 const session = {
@@ -44,7 +54,7 @@ for (const role of ['booker', 'admin']) {
     assert.equal(buttons.filter((text) => text === '+ Új foglalás').length, 0);
     assert.equal(buttons.filter((text) => text === 'Naptár export').length, 1);
     assert.equal(buttons.filter((text) => text === 'Tömeges szerkesztés').length, 1);
-    assert.doesNotMatch(html, /class="calendar-grid"/);
+    assert.equal(hasClass(html, (await styles('components/CalendarView'))['calendar-grid']), false);
     assert.ok(!buttons.includes('Törlés'));
     assert.ok(!buttons.includes('Eltávolítás'));
 
@@ -64,7 +74,7 @@ test('booker opens the calendar inside its single program workspace', async () =
   });
   const sidebar = html.match(/<aside\b[^>]*>([\s\S]*?)<\/aside>/)[1];
   assert.deepEqual(buttonLabels(sidebar), ['📅Programkezelés', '📊Áttekintés']);
-  assert.match(html, /class="calendar-grid"/);
+  assert.ok(hasClass(html, (await styles('components/CalendarView'))['calendar-grid']));
   assert.match(html, /<button[^>]*aria-pressed="true"[^>]*>Naptár<\/button>/);
   assert.equal(buttonLabels(html).filter((text) => text === '+ Új foglalás').length, 0);
 });
@@ -122,12 +132,13 @@ test('both detail dialogs show the complete multi-day session and keep their own
   const attendee = await render('components/AttendeeDetailModal', {
     session: multiDay, isSaved: false, busy: false, onClose: noop, onSave: noop, onRemove: noop,
   });
+  const detailStyles = await styles('components/SessionDetails');
   for (const html of [organiser, attendee]) {
     for (const text of ['Workflow test', 'Conference room', 'Test speaker', 'Speaker biography', 'Detailed event notes']) {
       assert.ok(html.includes(text), text);
     }
-    assert.match(html, /class="detail-multiday-badge"/);
-    assert.match(html, /class="detail-duration"/);
+    assert.ok(hasClass(html, detailStyles['detail-multiday-badge']));
+    assert.ok(hasClass(html, detailStyles['detail-duration']));
     assert.match(html, /09:00/);
     assert.match(html, /10:00/);
     assert.match(html, /2099/);
@@ -136,6 +147,78 @@ test('both detail dialogs show the complete multi-day session and keep their own
   assert.ok(buttonLabels(organiser).includes('Törlés'));
   assert.ok(!buttonLabels(attendee).includes('Törlés'));
   assert.ok(buttonLabels(attendee).includes('Mentés'));
+});
+
+test('each modal owns its layout classes, so a local selector cannot reach another modal', async () => {
+  const modals = [
+    ['components/DetailModal', { session, onClose: noop, onDelete: noop }],
+    ['components/AttendeeDetailModal', { session, isSaved: false, busy: false, onClose: noop, onSave: noop, onRemove: noop }],
+    ['components/BookingModal', { speakers: [], rooms: shared.rooms, onSave: noop, onClose: noop }],
+  ];
+  const rendered = await Promise.all(modals.map(async ([path, props]) => ({
+    path, css: await styles(path), html: await render(path, props),
+  })));
+  for (const owner of rendered) {
+    for (const localName of ['modal', 'modal-backdrop']) {
+      assert.ok(hasClass(owner.html, owner.css[localName]), `${owner.path}: ${localName}`);
+      for (const other of rendered.filter((candidate) => candidate !== owner)) {
+        assert.notEqual(owner.css[localName], other.css[localName]);
+        assert.equal(hasClass(other.html, owner.css[localName]), false, `${owner.path} must not style ${other.path}`);
+      }
+    }
+  }
+});
+
+test('organiser and admin shell selectors only match their own layout', async () => {
+  const shellProps = {
+    ...shared, initialUser: user, loading: true, error: null, onSetSessionStatus: noop, onLogout: noop,
+  };
+  const shells = await Promise.all(['App', 'components/admin/AdminApp'].map(async (path) => ({
+    path, css: await styles(path), html: await render(path, shellProps),
+  })));
+  for (const owner of shells) {
+    for (const localName of ['sidebar', 'topbar', 'main-area', 'content-area']) {
+      assert.ok(hasClass(owner.html, owner.css[localName]), `${owner.path}: ${localName}`);
+      for (const other of shells.filter((candidate) => candidate !== owner)) {
+        assert.notEqual(owner.css[localName], other.css[localName]);
+        assert.equal(hasClass(other.html, owner.css[localName]), false);
+      }
+    }
+  }
+});
+
+test('calendar and session cards keep all color and state styles after scoping', async () => {
+  const { SESSION_ACCENTS } = await server.ssrLoadModule('/src/frontend/lib/display.ts');
+  const { localDateKey } = await server.ssrLoadModule('/src/frontend/lib/sessionFormat.ts');
+  const today = new Date();
+  const sessions = Object.keys(SESSION_ACCENTS).map((color, index) => ({
+    ...session, id: session.id + index, color,
+    date: localDateKey(new Date(today.getFullYear(), today.getMonth(), index + 1)),
+    end_date: localDateKey(new Date(today.getFullYear(), today.getMonth(), index + 2)),
+    status: index === 0 ? 'cancelled' : 'scheduled',
+  }));
+  const calendarCss = await styles('components/CalendarView');
+  const cardsCss = await styles('components/SessionsView');
+  const calendar = await render('components/CalendarView', {
+    curMonth: today.getMonth(), curYear: today.getFullYear(), sessions,
+    selectedDate: sessions[0].date, onSelectDay: noop, onEventClick: noop, onNavigate: noop, onToday: noop,
+  });
+  const cards = await render('components/SessionsView', {
+    sessions, searchTerm: '', onEventClick: noop, selectable: true,
+    selectedIds: new Set([sessions[0].id]), onToggleSelect: noop,
+  });
+  for (const color of Object.keys(SESSION_ACCENTS)) {
+    assert.ok(calendarCss[color], `Calendar color: ${color}`);
+    assert.ok(cardsCss[color], `Card color: ${color}`);
+    assert.ok(hasClass(calendar, `${calendarCss['cal-event']} ${calendarCss[color]}`));
+    assert.ok(hasClass(cards, `${cardsCss['session-duration']} ${cardsCss[color]}`));
+  }
+  for (const state of ['today', 'selected', 'multiday']) {
+    assert.ok(hasClass(calendar, calendarCss[state]), `Calendar state: ${state}`);
+  }
+  for (const state of ['cancelled', 'selected', 'session-multiday-badge']) {
+    assert.ok(hasClass(cards, cardsCss[state]), `Card state: ${state}`);
+  }
 });
 
 const { ensureResponseOk } = await server.ssrLoadModule('/src/frontend/lib/api.ts');

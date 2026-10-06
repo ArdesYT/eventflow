@@ -8,6 +8,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import type { Speaker } from '../../../backend/types';
 import { groupDuplicateSpeakers } from '../../lib/speakerDuplicates';
 import { useI18n } from '../../i18n/I18nProvider';
+import styles from './SpeakersView.module.css';
 
 interface SpeakersViewProps {
   speakers: Speaker[];
@@ -144,38 +145,38 @@ export default function SpeakersView({
   }
 
   if (loading) {
-    return <div className="loader">{t('common.loading')}</div>;
+    return <div className={styles.loader}>{t('common.loading')}</div>;
   }
 
   return (
-    <div className="admin-speakers-panel">
-      <p className="admin-users-hint">
+    <div className={styles['admin-speakers-panel']}>
+      <p className={styles['admin-users-hint']}>
         {backendMode ? t('admin.speakers.hint') : t('admin.speakers.hintDemo')}
       </p>
 
       {actionError && (
-        <div className="error-banner" style={{ marginBottom: 12 }}>
+        <div className={styles['error-banner']} style={{ marginBottom: 12 }}>
           {actionError.startsWith('errors.') ? t(actionError) : actionError}
         </div>
       )}
 
       {backendMode && duplicateGroups.length > 0 && onMerge && (
-        <div className="admin-speakers-duplicates">
-          <h3 className="admin-speakers-duplicates-title">{t('admin.speakers.duplicatesTitle')}</h3>
-          <p className="admin-speakers-duplicates-hint">{t('admin.speakers.duplicatesHint')}</p>
+        <div className={styles['admin-speakers-duplicates']}>
+          <h3 className={styles['admin-speakers-duplicates-title']}>{t('admin.speakers.duplicatesTitle')}</h3>
+          <p className={styles['admin-speakers-duplicates-hint']}>{t('admin.speakers.duplicatesHint')}</p>
           {duplicateGroups.map((group) => (
-            <div key={group.key} className="admin-speakers-duplicate-card">
-              <div className="admin-speakers-duplicate-names">
+            <div key={group.key} className={styles['admin-speakers-duplicate-card']}>
+              <div className={styles['admin-speakers-duplicate-names']}>
                 {group.speakers.map((s) => (
-                  <span key={s.id} className="admin-speakers-duplicate-chip">
+                  <span key={s.id} className={styles['admin-speakers-duplicate-chip']}>
                     {s.name}
-                    <span className="admin-speakers-duplicate-count">({s.session_count ?? 0})</span>
+                    <span className={styles['admin-speakers-duplicate-count']}>({s.session_count ?? 0})</span>
                   </span>
                 ))}
               </div>
               <button
                 type="button"
-                className="btn-save admin-speaker-btn"
+                className={`${styles['btn-save']} ${styles['admin-speaker-btn']}`}
                 disabled={mergingKey === group.key}
                 onClick={() => handleMergeGroup(group)}
               >
@@ -189,35 +190,35 @@ export default function SpeakersView({
       )}
 
       {backendMode && (
-        <form className="admin-speakers-add" onSubmit={handleCreate}>
-          <div className="admin-speakers-add-fields">
+        <form className={styles['admin-speakers-add']} onSubmit={handleCreate}>
+          <div className={styles['admin-speakers-add-fields']}>
             <input
-              className="form-input"
+              className={styles['form-input']}
               placeholder={t('admin.speakers.namePlaceholder')}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
             />
             <input
-              className="form-input"
+              className={styles['form-input']}
               placeholder={t('admin.speakers.bioPlaceholder')}
               value={newBio}
               onChange={(e) => setNewBio(e.target.value)}
             />
           </div>
-          <button type="submit" className="btn-save" disabled={creating || !newName.trim()}>
+          <button type="submit" className={styles['btn-save']} disabled={creating || !newName.trim()}>
             {creating ? t('booking.saving') : t('admin.speakers.add')}
           </button>
         </form>
       )}
 
       {filtered.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🎤</div>
+        <div className={styles['empty-state']}>
+          <div className={styles['empty-state-icon']}>🎤</div>
           <div>{t('admin.speakers.empty')}</div>
         </div>
       ) : (
-        <div className="admin-users-table-wrap">
-          <table className="admin-users-table admin-speakers-table">
+        <div className={styles['admin-users-table-wrap']}>
+          <table className={`${styles['admin-users-table']} ${styles['admin-speakers-table']}`}>
             <thead>
               <tr>
                 <th>{t('admin.speakers.name')}</th>
@@ -232,46 +233,46 @@ export default function SpeakersView({
                 return (
                   <tr key={speaker.id}>
                     <td>
-                      <div className="admin-speaker-cell">
-                        <div className="speaker-avatar">{getInitials(speaker.name)}</div>
+                      <div className={styles['admin-speaker-cell']}>
+                        <div className={styles['speaker-avatar']}>{getInitials(speaker.name)}</div>
                         {isEditing ? (
                           <input
-                            className="form-input"
+                            className={styles['form-input']}
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
                           />
                         ) : (
-                          <span className="admin-user-name">{speaker.name}</span>
+                          <span className={styles['admin-user-name']}>{speaker.name}</span>
                         )}
                       </div>
                     </td>
                     <td>
-                      <span className="admin-speaker-count">
+                      <span className={styles['admin-speaker-count']}>
                         {speaker.session_count ?? 0}
                       </span>
                     </td>
-                    <td className="admin-speaker-bio-cell">
+                    <td className={styles['admin-speaker-bio-cell']}>
                       {isEditing ? (
                         <textarea
-                          className="form-textarea admin-speaker-bio-input"
+                          className={`${styles['form-textarea']} ${styles['admin-speaker-bio-input']}`}
                           rows={2}
                           value={editBio}
                           onChange={(e) => setEditBio(e.target.value)}
                           placeholder={t('admin.speakers.bioPlaceholder')}
                         />
                       ) : (
-                        <span className="admin-speaker-bio-preview">
+                        <span className={styles['admin-speaker-bio-preview']}>
                           {speaker.bio?.trim() || t('admin.speakers.noBio')}
                         </span>
                       )}
                     </td>
                     {backendMode && (
-                      <td className="admin-users-actions">
+                      <td className={styles['admin-users-actions']}>
                         {isEditing ? (
-                          <div className="admin-speaker-edit-actions">
+                          <div className={styles['admin-speaker-edit-actions']}>
                             <button
                               type="button"
-                              className="btn-save admin-speaker-btn"
+                              className={`${styles['btn-save']} ${styles['admin-speaker-btn']}`}
                               disabled={savingId === speaker.id || !editName.trim()}
                               onClick={() => handleSaveEdit(speaker.id)}
                             >
@@ -279,24 +280,24 @@ export default function SpeakersView({
                             </button>
                             <button
                               type="button"
-                              className="btn-cancel admin-speaker-btn"
+                              className={`${styles['btn-cancel']} ${styles['admin-speaker-btn']}`}
                               onClick={cancelEdit}
                             >
                               {t('common.cancel')}
                             </button>
                           </div>
                         ) : (
-                          <div className="admin-speaker-edit-actions">
+                          <div className={styles['admin-speaker-edit-actions']}>
                             <button
                               type="button"
-                              className="btn-save admin-speaker-btn"
+                              className={`${styles['btn-save']} ${styles['admin-speaker-btn']}`}
                               onClick={() => startEdit(speaker)}
                             >
                               {t('common.edit')}
                             </button>
                             <button
                               type="button"
-                              className="btn-danger admin-speaker-btn"
+                              className={`${styles['btn-danger']} ${styles['admin-speaker-btn']}`}
                               disabled={deletingId === speaker.id}
                               onClick={() => handleDelete(speaker)}
                             >

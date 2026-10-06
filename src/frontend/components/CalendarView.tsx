@@ -8,6 +8,7 @@ import type { Session } from '../../backend/types';
 import { isMultiDaySession, localDateKey, sessionSpansDate } from '../lib/sessionFormat';
 import { useI18n } from '../i18n/I18nProvider';
 import { formatMonthYear, getWeekdayLabels } from '../i18n/dateFormat';
+import styles from './CalendarView.module.css';
 
 interface CalendarViewProps {
   curMonth: number;
@@ -40,8 +41,8 @@ export default function CalendarView({
   for (let i = 0; i < startDow; i++) {
     const d = new Date(curYear, curMonth, -startDow + 1 + i);
     cells.push(
-      <div key={`pre${i}`} className="cal-cell other-month">
-        <div className="day-num">{d.getDate()}</div>
+      <div key={`pre${i}`} className={`${styles['cal-cell']} ${styles['other-month']}`}>
+        <div className={styles['day-num']}>{d.getDate()}</div>
       </div>,
     );
   }
@@ -57,7 +58,7 @@ export default function CalendarView({
     cells.push(
       <div
         key={ds}
-        className={`cal-cell${isToday ? ' today' : ''}${isSel ? ' selected' : ''}`}
+        className={`${styles['cal-cell']}${isToday ? ` ${styles.today}` : ''}${isSel ? ` ${styles.selected}` : ''}`}
         onClick={() => onSelectDay(ds)}
         role="button"
         tabIndex={0}
@@ -68,11 +69,11 @@ export default function CalendarView({
           }
         }}
       >
-        <div className="day-num">{d}</div>
+        <div className={styles['day-num']}>{d}</div>
         {dayEvents.slice(0, 3).map((ev) => (
           <div
             key={ev.id}
-            className={`cal-event ${ev.color}${isMultiDaySession(ev) ? ' multiday' : ''}`}
+            className={`${styles['cal-event']} ${styles[ev.color] ?? ''}${isMultiDaySession(ev) ? ` ${styles.multiday}` : ''}`}
             onClick={(e) => {
               e.stopPropagation();
               onEventClick(ev.id);
@@ -91,7 +92,7 @@ export default function CalendarView({
           </div>
         ))}
         {dayEvents.length > 3 && (
-          <div className="more-events">
+          <div className={styles['more-events']}>
             {t('calendar.moreEvents', { count: dayEvents.length - 3 })}
           </div>
         )}
@@ -102,35 +103,35 @@ export default function CalendarView({
   const trailing = (7 - ((startDow + daysInMonth) % 7)) % 7;
   for (let i = 1; i <= trailing; i++) {
     cells.push(
-      <div key={`post${i}`} className="cal-cell other-month">
-        <div className="day-num">{i}</div>
+      <div key={`post${i}`} className={`${styles['cal-cell']} ${styles['other-month']}`}>
+        <div className={styles['day-num']}>{i}</div>
       </div>,
     );
   }
 
   return (
     <>
-      <div className="cal-nav">
-        <button className="cal-nav-btn" onClick={() => onNavigate(-1)}>
+      <div className={styles['cal-nav']}>
+        <button className={styles['cal-nav-btn']} onClick={() => onNavigate(-1)}>
           &#8592;
         </button>
-        <div className="cal-month-title">{formatMonthYear(curMonth, curYear, locale)}</div>
-        <button className="today-btn" onClick={onToday}>
+        <div className={styles['cal-month-title']}>{formatMonthYear(curMonth, curYear, locale)}</div>
+        <button className={styles['today-btn']} onClick={onToday}>
           {t('calendar.today')}
         </button>
-        <button className="cal-nav-btn" onClick={() => onNavigate(1)}>
+        <button className={styles['cal-nav-btn']} onClick={() => onNavigate(1)}>
           &#8594;
         </button>
       </div>
-      <div className="calendar-grid">
-        <div className="cal-header-row">
+      <div className={styles['calendar-grid']}>
+        <div className={styles['cal-header-row']}>
           {dayLabels.map((l) => (
-            <div key={l} className="cal-header-cell">
+            <div key={l} className={styles['cal-header-cell']}>
               {l}
             </div>
           ))}
         </div>
-        <div className="cal-body">{cells}</div>
+        <div className={styles['cal-body']}>{cells}</div>
       </div>
     </>
   );

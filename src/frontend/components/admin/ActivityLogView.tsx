@@ -5,6 +5,7 @@
 import type { ActivityLogEntry } from '../../../backend/types';
 import { useI18n } from '../../i18n/I18nProvider';
 import { formatDateKey, formatTimeKey } from '../../i18n/dateFormat';
+import styles from './ActivityLogView.module.css';
 
 interface ActivityLogViewProps {
   entries: ActivityLogEntry[];
@@ -15,23 +16,23 @@ export default function ActivityLogView({ entries, loading }: ActivityLogViewPro
   const { t, locale } = useI18n();
 
   if (loading) {
-    return <div className="loader">{t('common.loading')}</div>;
+    return <div className={styles.loader}>{t('common.loading')}</div>;
   }
 
   if (entries.length === 0) {
     return (
-      <div className="empty-state">
-        <div className="empty-state-icon">📋</div>
+      <div className={styles['empty-state']}>
+        <div className={styles['empty-state-icon']}>📋</div>
         <div>{t('admin.audit.empty')}</div>
       </div>
     );
   }
 
   return (
-    <div className="admin-audit-panel">
-      <p className="admin-users-hint">{t('admin.audit.hint')}</p>
-      <div className="admin-audit-table-wrap">
-        <table className="admin-users-table admin-audit-table">
+    <div className={styles['admin-audit-panel']}>
+      <p className={styles['admin-users-hint']}>{t('admin.audit.hint')}</p>
+      <div className={styles['admin-audit-table-wrap']}>
+        <table className={`${styles['admin-users-table']} ${styles['admin-audit-table']}`}>
           <thead>
             <tr>
               <th>{t('admin.audit.time')}</th>
@@ -46,17 +47,17 @@ export default function ActivityLogView({ entries, loading }: ActivityLogViewPro
               const timePart = e.created_at.slice(11, 16);
               return (
                 <tr key={e.id}>
-                  <td className="admin-audit-time">
+                  <td className={styles['admin-audit-time']}>
                     {formatDateKey(datePart, locale)}{' '}
                     {formatTimeKey(timePart)}
                   </td>
                   <td>{e.user_name ?? '—'}</td>
                   <td>
-                    <span className="admin-audit-action-badge">
+                    <span className={styles['admin-audit-action-badge']}>
                       {t(`admin.audit.actions.${e.action.replace(/\./g, '_')}`)}
                     </span>
                   </td>
-                  <td className="admin-audit-details">{e.details ?? '—'}</td>
+                  <td className={styles['admin-audit-details']}>{e.details ?? '—'}</td>
                 </tr>
               );
             })}

@@ -1,0 +1,195 @@
+.form-input {
+  composes: form-input from '../../styles/forms.module.css';
+}
+
+.form-textarea {
+  composes: form-textarea from '../../styles/forms.module.css';
+}
+
+.btn-cancel {
+  composes: btn-cancel from '../../styles/buttons.module.css';
+}
+
+.btn-save {
+  composes: btn-save from '../../styles/buttons.module.css';
+}
+
+.btn-danger {
+  composes: btn-danger from '../../styles/buttons.module.css';
+}
+
+.speaker-avatar {
+  composes: speaker-avatar from '../../styles/avatars.module.css';
+}
+
+.admin-users-hint {
+  composes: admin-users-hint from '../../styles/text.module.css';
+}
+
+.empty-state {
+  composes: empty-state from '../../styles/feedback.module.css';
+}
+
+.empty-state-icon {
+  composes: empty-state-icon from '../../styles/feedback.module.css';
+}
+
+.loader {
+  composes: loader from '../../styles/feedback.module.css';
+}
+
+.error-banner {
+  composes: error-banner from '../../styles/feedback.module.css';
+}
+
+.admin-users-table-wrap {
+  composes: admin-users-table-wrap from '../../styles/tables.module.css';
+}
+
+.admin-users-table {
+  composes: admin-users-table from '../../styles/tables.module.css';
+}
+
+.admin-user-name {
+  composes: admin-user-name from '../../styles/tables.module.css';
+}
+
+.admin-users-actions {
+  composes: admin-users-actions from '../../styles/tables.module.css';
+}
+
+.admin-speakers-add {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.admin-speakers-add-fields {
+  display: flex;
+  flex: 1;
+  gap: 10px;
+  min-width: 240px;
+  flex-wrap: wrap;
+}
+
+.admin-speakers-add-fields .form-input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.admin-speaker-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-speaker-cell .speaker-avatar {
+  flex-shrink: 0;
+}
+
+.admin-speaker-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--gray-100);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.admin-speaker-bio-cell {
+  max-width: 320px;
+}
+
+.admin-speaker-bio-preview {
+  font-size: 13px;
+  color: var(--gray-500);
+  line-height: 1.45;
+}
+
+.admin-speaker-bio-input {
+  min-height: 56px;
+  resize: vertical;
+}
+
+.admin-speaker-edit-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.admin-speaker-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.admin-speakers-duplicates {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-md);
+}
+
+.admin-speakers-duplicates-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.admin-speakers-duplicates-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--gray-600);
+  line-height: 1.45;
+}
+
+.admin-speakers-duplicate-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+}
+
+.admin-speakers-duplicate-card + .admin-speakers-duplicate-card {
+  margin-top: 8px;
+}
+
+.admin-speakers-duplicate-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-speakers-duplicate-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 13px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 999px;
+}
+
+.admin-speakers-duplicate-count {
+  font-size: 11px;
+  color: var(--gray-500);
+}
+
+.admin-speakers-panel {}
+
+.admin-speakers-table {}

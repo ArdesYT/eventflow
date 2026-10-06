@@ -1,0 +1,53 @@
+.form-select {
+  composes: form-select from '../styles/forms.module.css';
+}
+
+.session-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.session-filters--compact {
+  margin-bottom: 0;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.session-filters--compact .session-filter-select {
+  min-width: 0;
+  flex: 1;
+  max-width: 200px;
+}
+
+.session-filter-select {
+  min-width: 160px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.session-filter-clear {
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px 8px;
+}
+
+.session-filter-clear:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .session-filters--compact {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .session-filters--compact .session-filter-select {
+    max-width: none;
+    flex: 1 1 calc(50% - 4px);
+  }
+}

@@ -6,6 +6,7 @@
  */
 import type { Session } from '../../backend/types';
 import { useI18n } from '../i18n/I18nProvider';
+import styles from './SessionFilters.module.css';
 
 interface SessionFiltersProps {
   sessions: Session[];
@@ -33,13 +34,13 @@ export default function SessionFilters({
 
   return (
     <div
-      className={`session-filters${compact ? ' session-filters--compact' : ''}${className ? ` ${className}` : ''}`}
+      className={`${styles['session-filters']}${compact ? ` ${styles['session-filters--compact']}` : ''}${className ? ` ${className}` : ''}`}
     >
       {[
         { label: 'filters.speaker', all: 'filters.allSpeakers', value: speakerFilter, options: speakers, onChange: onSpeakerChange },
         { label: 'filters.room', all: 'filters.allRooms', value: roomFilter, options: rooms, onChange: onRoomChange },
       ].map(({ label, all, value, options, onChange }) => (
-        <select key={label} className="form-select session-filter-select" value={value}
+        <select key={label} className={`${styles['form-select']} ${styles['session-filter-select']}`} value={value}
           onChange={(event) => onChange(event.target.value)} aria-label={t(label)}>
           <option value="">{t(all)}</option>
           {options.map((name) => <option key={name} value={name}>{name}</option>)}
@@ -48,7 +49,7 @@ export default function SessionFilters({
       {(speakerFilter || roomFilter) && (
         <button
           type="button"
-          className="session-filter-clear"
+          className={styles['session-filter-clear']}
           onClick={() => {
             onSpeakerChange('');
             onRoomChange('');

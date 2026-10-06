@@ -7,6 +7,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    css: {
+      modules: {
+        generateScopedName: '[local]__[hash:base64:5]',
+      },
+    },
     server: {
       port: 5173,
       proxy: {

@@ -1,0 +1,30 @@
+.modal-backdrop {
+  composes: modal-backdrop from '../styles/modal.module.css';
+}
+
+.modal {
+  composes: modal from '../styles/modal.module.css';
+}
+
+.btn-row {
+  composes: btn-row from '../styles/buttons.module.css';
+}
+
+.btn-cancel {
+  composes: btn-cancel from '../styles/buttons.module.css';
+}
+
+.btn-save {
+  composes: btn-save from '../styles/buttons.module.css';
+}
+
+.btn-danger {
+  composes: btn-danger from '../styles/buttons.module.css';
+}
+
+.attendee-cancelled-note {
+  font-size: 13px;
+  color: #b91c1c;
+  font-weight: 500;
+}
+.attendee-detail-modal {}

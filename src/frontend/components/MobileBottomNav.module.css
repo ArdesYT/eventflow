@@ -1,0 +1,95 @@
+.mobile-bottom-nav {
+  display: none;
+}
+@media (max-width: 768px) {
+
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 180;
+    min-height: var(--mobile-nav-bar);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: #fff;
+    border-top: 1px solid var(--gray-200);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+    align-items: stretch;
+    justify-content: space-around;
+    gap: 2px;
+  }
+
+  .mobile-bottom-nav--scroll {
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .mobile-bottom-nav--scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-bottom-nav-item {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 6px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--gray-500);
+    font-family: var(--font-ui);
+    font-size: 10px;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+
+  .mobile-bottom-nav--scroll .mobile-bottom-nav-item {
+    flex: 0 0 auto;
+    min-width: 72px;
+    max-width: 96px;
+    flex-shrink: 0;
+  }
+
+  .mobile-bottom-nav-item.active {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    font-weight: 500;
+  }
+
+  .mobile-bottom-nav-icon {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .mobile-bottom-nav-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .mobile-bottom-nav--icons.mobile-bottom-nav--scroll .mobile-bottom-nav-label {
+    display: none;
+  }
+
+  .mobile-bottom-nav--icons.mobile-bottom-nav--scroll .mobile-bottom-nav-item {
+    min-width: 44px;
+    max-width: none;
+    flex: 1 1 0;
+    padding: 6px 2px;
+  }
+
+  .mobile-bottom-nav--icons.mobile-bottom-nav--scroll {
+    overflow-x: hidden;
+    justify-content: space-between;
+  }
+}

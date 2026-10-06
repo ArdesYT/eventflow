@@ -31,6 +31,7 @@ import CalendarView from './CalendarView';
 import AttendeeDetailModal from './AttendeeDetailModal';
 import ScheduleConflictModal from './ScheduleConflictModal';
 import EventCountdown from './EventCountdown';
+import styles from './PublicEventsPage.module.css';
 
 type Tab = 'all' | 'saved' | 'speakers';
 
@@ -194,11 +195,7 @@ export default function PublicEventsPage({
     return (
       <article
         key={ev.id}
-        className={
-          'public-session-card' +
-          (live ? ' live' : '') +
-          (cancelled ? ' cancelled' : '')
-        }
+        className={`${styles['public-session-card']}${live ? ` ${styles.live}` : ''}${cancelled ? ` ${styles.cancelled}` : ''}`}
         onClick={() => setDetailId(ev.id)}
         role="button"
         tabIndex={0}
@@ -210,92 +207,92 @@ export default function PublicEventsPage({
         }}
       >
         <div
-          className="public-session-accent"
+          className={styles['public-session-accent']}
           style={{ background: accent }}
         />
-        <div className="public-session-time">
+        <div className={styles['public-session-time']}>
           {multiDay ? (
-            <div className="public-time-range">{formatSessionDateRange(ev, locale)}</div>
+            <div className={styles['public-time-range']}>{formatSessionDateRange(ev, locale)}</div>
           ) : (
             <>
-              <div className="public-time-start">{formatTimeKey(ev.start_time)}</div>
-              <div className="public-time-end">{formatTimeKey(ev.end_time)}</div>
+              <div className={styles['public-time-start']}>{formatTimeKey(ev.start_time)}</div>
+              <div className={styles['public-time-end']}>{formatTimeKey(ev.end_time)}</div>
             </>
           )}
         </div>
-        <div className="public-session-body">
-          <div className="public-session-title-row">
-            <div className="public-session-title">
+        <div className={styles['public-session-body']}>
+          <div className={styles['public-session-title-row']}>
+            <div className={styles['public-session-title']}>
               {ev.title}
               {cancelled && (
-                <span className="session-cancelled-badge">{t('session.cancelled')}</span>
+                <span className={styles['session-cancelled-badge']}>{t('session.cancelled')}</span>
               )}
-              {live && <span className="public-live-badge">{t('public.liveNow')}</span>}
+              {live && <span className={styles['public-live-badge']}>{t('public.liveNow')}</span>}
               {multiDay && (
-                <span className="public-multiday-badge">{t('booking.multiDay')}</span>
+                <span className={styles['public-multiday-badge']}>{t('booking.multiDay')}</span>
               )}
               {hasConflict && !guestMode && (
-                <span className="public-conflict-badge" title={t('public.scheduleConflict')}>
+                <span className={styles['public-conflict-badge']} title={t('public.scheduleConflict')}>
                   ⚠
                 </span>
               )}
             </div>
-            {isSaved && <span className="public-saved-badge">{t('public.savedSession')}</span>}
+            {isSaved && <span className={styles['public-saved-badge']}>{t('public.savedSession')}</span>}
           </div>
-          <div className="public-session-meta">
-            <div className="public-session-speaker">
-              <div className="public-speaker-dot">{getInitials(ev.speaker_name)}</div>
-              <div className="public-speaker-info">
+          <div className={styles['public-session-meta']}>
+            <div className={styles['public-session-speaker']}>
+              <div className={styles['public-speaker-dot']}>{getInitials(ev.speaker_name)}</div>
+              <div className={styles['public-speaker-info']}>
                 <span>{ev.speaker_name}</span>
                 {ev.speaker_bio?.trim() && (
-                  <p className="public-speaker-bio">{ev.speaker_bio}</p>
+                  <p className={styles['public-speaker-bio']}>{ev.speaker_bio}</p>
                 )}
               </div>
             </div>
             <div
-              className="public-session-room"
+              className={styles['public-session-room']}
               style={{ background: accent + '22' }}
             >
               {ev.room_name}
             </div>
           </div>
-          {ev.description && <p className="public-session-desc">{ev.description}</p>}
+          {ev.description && <p className={styles['public-session-desc']}>{ev.description}</p>}
         </div>
       </article>
     );
   }
   const showProgramViews = tab === 'all' || tab === 'saved';
   return (
-    <div className="public-page">
-      <header className="public-nav">
-        <div className="public-nav-brand">
-          <div className="public-nav-logo">EF</div>
+    <div className={styles['public-page']}>
+      <header className={styles['public-nav']}>
+        <div className={styles['public-nav-brand']}>
+          <div className={styles['public-nav-logo']}>EF</div>
           <div>
-            <div className="public-nav-name">EventFlow</div>
+            <div className={styles['public-nav-name']}>EventFlow</div>
           </div>
         </div>
-        <div className="public-nav-right">
-          <LanguageSwitcher variant="select" className="public-nav-lang" />
-          <div className="public-nav-toolbar">
+        <div className={styles['public-nav-right']}>
+          <LanguageSwitcher variant="select" className={styles['public-nav-lang']} />
+          <div className={styles['public-nav-toolbar']}>
             {guestMode ? (
-              <button type="button" className="btn-save public-login-btn" onClick={onLoginRequest}>
+              <button type="button" className={`${styles['btn-save']} ${styles['public-login-btn']}`} onClick={onLoginRequest}>
                 {t('public.login')}
               </button>
             ) : (
               <>
-                <div className="public-user-pill">
-                  <div className="public-user-avatar">{getInitials(user?.name ?? '')}</div>
-                  <span className="public-user-name">{user?.name}</span>
-                  <span className="public-user-role">{t('public.attendee')}</span>
+                <div className={styles['public-user-pill']}>
+                  <div className={styles['public-user-avatar']}>{getInitials(user?.name ?? '')}</div>
+                  <span className={styles['public-user-name']}>{user?.name}</span>
+                  <span className={styles['public-user-role']}>{t('public.attendee')}</span>
                 </div>
                 <button
                   type="button"
-                  className="public-logout-btn"
+                  className={styles['public-logout-btn']}
                   onClick={onLogout}
                   title={t('common.logout')}
                   aria-label={t('common.logout')}
                 >
-                  <span className="public-logout-label">{t('common.logout')}</span>
+                  <span className={styles['public-logout-label']}>{t('common.logout')}</span>
                 </button>
               </>
             )}
@@ -303,50 +300,50 @@ export default function PublicEventsPage({
         </div>
       </header>
       {guestMode && (
-        <div className="public-guest-banner">
+        <div className={styles['public-guest-banner']}>
           <span>{t('public.guestBanner')}</span>
         </div>
       )}
-      <div className="public-hero-area">
-        <section className="public-hero">
-          <div className="public-hero-bg" aria-hidden="true" />
-          <div className="public-hero-content">
-            <div className="public-hero-text">
-              <div className="public-hero-eyebrow">{t('public.programsEyebrow')}</div>
-              <h1 className="public-hero-title">{event?.name ?? t('public.heroTitle')}</h1>
-              <p className="public-hero-sub">{event?.description ?? t('public.heroSub')}</p>
+      <div className={styles['public-hero-area']}>
+        <section className={styles['public-hero']}>
+          <div className={styles['public-hero-bg']} aria-hidden="true" />
+          <div className={styles['public-hero-content']}>
+            <div className={styles['public-hero-text']}>
+              <div className={styles['public-hero-eyebrow']}>{t('public.programsEyebrow')}</div>
+              <h1 className={styles['public-hero-title']}>{event?.name ?? t('public.heroTitle')}</h1>
+              <p className={styles['public-hero-sub']}>{event?.description ?? t('public.heroSub')}</p>
               {event?.venue && (
-                <p className="public-hero-venue">📍 {event.venue}</p>
+                <p className={styles['public-hero-venue']}>📍 {event.venue}</p>
               )}
               <EventCountdown event={event} />
             </div>
-            <div className="public-hero-stats">
-              <div className="public-stat-card">
-                <div className="public-stat-num">{upcoming.length}</div>
-                <div className="public-stat-label">{t('public.activeEvents')}</div>
+            <div className={styles['public-hero-stats']}>
+              <div className={styles['public-stat-card']}>
+                <div className={styles['public-stat-num']}>{upcoming.length}</div>
+                <div className={styles['public-stat-label']}>{t('public.activeEvents')}</div>
               </div>
-              <div className="public-stat-card">
-                <div className="public-stat-num">{uniqueDays}</div>
-                <div className="public-stat-label">{t('public.programDays')}</div>
+              <div className={styles['public-stat-card']}>
+                <div className={styles['public-stat-num']}>{uniqueDays}</div>
+                <div className={styles['public-stat-label']}>{t('public.programDays')}</div>
               </div>
               {!guestMode && (
-                <div className="public-stat-card">
-                  <div className="public-stat-num">{savedSessions.length}</div>
-                  <div className="public-stat-label">{t('public.mySchedule')}</div>
+                <div className={styles['public-stat-card']}>
+                  <div className={styles['public-stat-num']}>{savedSessions.length}</div>
+                  <div className={styles['public-stat-label']}>{t('public.mySchedule')}</div>
                 </div>
               )}
               {liveCount > 0 && (
-                <div className="public-stat-card public-stat-card--live">
-                  <div className="public-stat-num">{liveCount}</div>
-                  <div className="public-stat-label">{t('public.liveNow')}</div>
+                <div className={`${styles['public-stat-card']} ${styles['public-stat-card--live']}`}>
+                  <div className={styles['public-stat-num']}>{liveCount}</div>
+                  <div className={styles['public-stat-label']}>{t('public.liveNow')}</div>
                 </div>
               )}
             </div>
           </div>
         </section>
-        <div className="public-control-panel">
+        <div className={styles['public-control-panel']}>
           <nav
-            className={'public-tabs' + (showProgramViews ? '' : ' public-tabs--solo')}
+            className={`${styles['public-tabs']}${showProgramViews ? '' : ` ${styles['public-tabs--solo']}`}`}
             role="tablist"
           >
             {TABS.filter(({ id }) => !guestMode || id !== 'saved').map(({ id, labelKey }) => (
@@ -355,20 +352,20 @@ export default function PublicEventsPage({
                 type="button"
                 role="tab"
                 aria-selected={tab === id}
-                className={`public-tab${tab === id ? ' active' : ''}`}
+                className={`${styles['public-tab']}${tab === id ? ` ${styles.active}` : ''}`}
                 onClick={() => setTab(id)}
               >
                 {t(labelKey)}
                 {id === 'saved' && savedSessions.length > 0 && (
-                  <span className="public-tab-badge">{savedSessions.length}</span>
+                  <span className={styles['public-tab-badge']}>{savedSessions.length}</span>
                 )}
               </button>
             ))}
           </nav>
           {showProgramViews && (
-            <div className="public-toolbar">
-              <label className="public-search-wrap">
-                <svg className="public-search-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <div className={styles['public-toolbar']}>
+              <label className={styles['public-search-wrap']}>
+                <svg className={styles['public-search-icon']} viewBox="0 0 20 20" fill="none" aria-hidden="true">
                   <path
                     d="M9 3.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11Z"
                     stroke="currentColor"
@@ -378,35 +375,35 @@ export default function PublicEventsPage({
                 </svg>
                 <input
                   type="search"
-                  className="public-search-input"
+                  className={styles['public-search-input']}
                   placeholder={t('public.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   aria-label={t('public.searchPlaceholder')}
                 />
               </label>
-              <div className="public-toolbar-bottom">
+              <div className={styles['public-toolbar-bottom']}>
                 <button
                   type="button"
-                  className={'public-today-btn' + (todayOnly ? ' active' : '')}
+                  className={`${styles['public-today-btn']}${todayOnly ? ` ${styles.active}` : ''}`}
                   onClick={() => setTodayOnly((v) => !v)}
                 >
                   {t('public.todayFilter')}
                 </button>
                 <SessionFilters
                   compact
-                  className="public-filters"
+                  className={styles['public-filters']}
                   sessions={baseSessions}
                   speakerFilter={speakerFilter}
                   roomFilter={roomFilter}
                   onSpeakerChange={setSpeakerFilter}
                   onRoomChange={setRoomFilter}
                 />
-                <button type="button" className="btn-export public-export-btn" onClick={handleExportIcs}>{t('export.ics')}</button>
-                <div className="public-view-toggle" role="group" aria-label={t('public.viewList')}>
+                <button type="button" className={`${styles['btn-export']} ${styles['public-export-btn']}`} onClick={handleExportIcs}>{t('export.ics')}</button>
+                <div className={styles['public-view-toggle']} role="group" aria-label={t('public.viewList')}>
                   {PROGRAM_VIEWS.map(({ mode, labelKey }) => (
                     <button key={mode} type="button"
-                      className={`public-view-btn${viewMode === mode ? ' active' : ''}`}
+                      className={`${styles['public-view-btn']}${viewMode === mode ? ` ${styles.active}` : ''}`}
                       onClick={() => setViewMode(mode)}>
                       {t(labelKey)}
                     </button>
@@ -417,36 +414,36 @@ export default function PublicEventsPage({
           )}
         </div>
       </div>
-      <main className="public-main">
-        {loading && <div className="public-status">{t('common.loading')}</div>}
-        {error && <div className="public-status error">{error}</div>}
-        {scheduleError && <div className="public-status error">{scheduleError}</div>}
+      <main className={styles['public-main']}>
+        {loading && <div className={styles['public-status']}>{t('common.loading')}</div>}
+        {error && <div className={`${styles['public-status']} ${styles.error}`}>{error}</div>}
+        {scheduleError && <div className={`${styles['public-status']} ${styles.error}`}>{scheduleError}</div>}
         {!loading && tab === 'all' && upcoming.length === 0 && !error && (
-          <div className="public-empty">
-            <div className="empty-icon">📅</div>
+          <div className={styles['public-empty']}>
+            <div className={styles['empty-icon']}>📅</div>
             <h3>{t('public.emptyTitle')}</h3>
             <p>{t('public.emptySub')}</p>
           </div>
         )}
         {!loading && tab === 'saved' && savedSessions.length === 0 && (
-          <div className="public-empty">
-            <div className="empty-icon">⭐</div>
+          <div className={styles['public-empty']}>
+            <div className={styles['empty-icon']}>⭐</div>
             <h3>{t('public.savedEmptyTitle')}</h3>
             <p>{t('public.savedEmptySub')}</p>
           </div>
         )}
         {!loading && showProgramViews && filteredSessions.length === 0 && baseSessions.length > 0 && (
-          <div className="public-empty">
-            <div className="empty-icon">🔍</div>
+          <div className={styles['public-empty']}>
+            <div className={styles['empty-icon']}>🔍</div>
             <h3>{t('public.noResults')}</h3>
             <p>{t('public.noResultsSub')}</p>
           </div>
         )}
         {tab === 'saved' && !guestMode && onToggleNotifications && (
-          <div className="public-notify-row">
+          <div className={styles['public-notify-row']}>
             <button
               type="button"
-              className={'public-notify-btn' + (notificationsOn ? ' active' : '')}
+              className={`${styles['public-notify-btn']}${notificationsOn ? ` ${styles.active}` : ''}`}
               onClick={() => onToggleNotifications(!notificationsOn)}
             >
               {notificationsOn ? t('public.notificationsOn') : t('public.notificationsOff')}
@@ -454,37 +451,37 @@ export default function PublicEventsPage({
           </div>
         )}
         {tab === 'saved' && savedSessions.length > 0 && (
-          <p className="public-saved-summary">
+          <p className={styles['public-saved-summary']}>
             {savedSessions.length === 1
               ? t('public.savedCount', { count: savedSessions.length })
               : t('public.savedCount_plural', { count: savedSessions.length })}
           </p>
         )}
         {tab === 'speakers' && (
-          <div className="public-speakers-grid">
+          <div className={styles['public-speakers-grid']}>
             {speakers.length === 0 ? (
-              <div className="public-empty">
-                <div className="empty-icon">🎤</div>
+              <div className={styles['public-empty']}>
+                <div className={styles['empty-icon']}>🎤</div>
                 <h3>{t('public.speakersEmpty')}</h3>
               </div>
             ) : (
               speakers.map((sp) => (
-                <article key={sp.name} className="public-speaker-card">
-                  <div className="public-speaker-card-avatar">{getInitials(sp.name)}</div>
-                  <div className="public-speaker-card-body">
-                    <h3 className="public-speaker-card-name">{sp.name}</h3>
-                    <p className="public-speaker-card-count">
+                <article key={sp.name} className={styles['public-speaker-card']}>
+                  <div className={styles['public-speaker-card-avatar']}>{getInitials(sp.name)}</div>
+                  <div className={styles['public-speaker-card-body']}>
+                    <h3 className={styles['public-speaker-card-name']}>{sp.name}</h3>
+                    <p className={styles['public-speaker-card-count']}>
                       {t(sp.sessions.length === 1 ? 'public.speakerSessionCount' : 'public.speakerSessionCount_plural', {
                         count: sp.sessions.length,
                       })}
                     </p>
-                    {sp.bio && <p className="public-speaker-card-bio">{sp.bio}</p>}
-                    <ul className="public-speaker-sessions">
+                    {sp.bio && <p className={styles['public-speaker-card-bio']}>{sp.bio}</p>}
+                    <ul className={styles['public-speaker-sessions']}>
                       {sp.sessions.slice(0, 4).map((s) => (
                         <li key={s.id}>
                           <button
                             type="button"
-                            className="public-speaker-session-link"
+                            className={styles['public-speaker-session-link']}
                             onClick={() => setDetailId(s.id)}
                           >
                             {s.title}
@@ -499,15 +496,15 @@ export default function PublicEventsPage({
           </div>
         )}
         {showProgramViews && viewMode === 'list' && multiDaySessions.length > 0 && (
-          <section className="public-day public-multiday-section">
-            <header className="public-day-header public-multiday-header">
-              <div className="public-day-circle public-multiday-circle">📅</div>
+          <section className={`${styles['public-day']} ${styles['public-multiday-section']}`}>
+            <header className={`${styles['public-day-header']} ${styles['public-multiday-header']}`}>
+              <div className={`${styles['public-day-circle']} ${styles['public-multiday-circle']}`}>📅</div>
               <div>
-                <div className="public-day-label">{t('public.multiDaySection')}</div>
-                <div className="public-day-today-tag">{t('booking.multiDay')}</div>
+                <div className={styles['public-day-label']}>{t('public.multiDaySection')}</div>
+                <div className={styles['public-day-today-tag']}>{t('booking.multiDay')}</div>
               </div>
             </header>
-            <div className="public-session-list">
+            <div className={styles['public-session-list']}>
               {multiDaySessions.map(renderSessionCard)}
             </div>
           </section>
@@ -517,28 +514,28 @@ export default function PublicEventsPage({
             const header = formatDayHeader(ds, locale);
             const isToday = isTodayDateKey(ds);
             return (
-              <section key={ds} className="public-day">
-                <header className="public-day-header">
-                  <div className={'public-day-circle' + (isToday ? ' today' : '')}>
+              <section key={ds} className={styles['public-day']}>
+                <header className={styles['public-day-header']}>
+                  <div className={`${styles['public-day-circle']}${isToday ? ` ${styles.today}` : ''}`}>
                     {header.dayNum}
                   </div>
                   <div>
-                    <div className="public-day-label">
+                    <div className={styles['public-day-label']}>
                       {header.weekday}, {header.monthShort} {header.dayNum}.
                     </div>
                     {isToday && (
-                      <div className="public-day-today-tag">{t('public.todayPrograms')}</div>
+                      <div className={styles['public-day-today-tag']}>{t('public.todayPrograms')}</div>
                     )}
                   </div>
                 </header>
-                <div className="public-session-list">
+                <div className={styles['public-session-list']}>
                   {grouped[ds].map(renderSessionCard)}
                 </div>
               </section>
             );
           })}
         {showProgramViews && viewMode === 'agenda' && filteredSessions.length > 0 && (
-          <div className="public-agenda-wrap">
+          <div className={styles['public-agenda-wrap']}>
             <AgendaView
               sessions={filteredSessions}
               onEventClick={setDetailId}
@@ -546,7 +543,7 @@ export default function PublicEventsPage({
           </div>
         )}
         {showProgramViews && viewMode === 'calendar' && (
-          <div className="public-calendar-wrap">
+          <div className={styles['public-calendar-wrap']}>
             <CalendarView
               curMonth={month.getMonth()}
               curYear={month.getFullYear()}

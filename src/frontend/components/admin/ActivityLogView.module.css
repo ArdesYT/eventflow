@@ -1,0 +1,48 @@
+.admin-users-hint {
+  composes: admin-users-hint from '../../styles/text.module.css';
+}
+
+.empty-state {
+  composes: empty-state from '../../styles/feedback.module.css';
+}
+
+.empty-state-icon {
+  composes: empty-state-icon from '../../styles/feedback.module.css';
+}
+
+.loader {
+  composes: loader from '../../styles/feedback.module.css';
+}
+
+.admin-users-table {
+  composes: admin-users-table from '../../styles/tables.module.css';
+}
+
+.admin-audit-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-audit-time {
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.admin-audit-details {
+  font-size: 12px;
+  color: var(--gray-600);
+  max-width: 280px;
+  word-break: break-word;
+}
+
+.admin-audit-action-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--gray-100);
+  border-radius: 999px;
+}
+
+.admin-audit-panel {}
+
+.admin-audit-table {}

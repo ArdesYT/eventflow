@@ -1,0 +1,18 @@
+/* Szándékosan közös alapstílusok; a komponensek composes segítségével veszik át őket. */
+.section-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--gray-800);
+  margin-bottom: 14px;
+}
+
+.admin-users-hint {
+  font-size: 13px;
+  color: var(--gray-500);
+  margin-bottom: 14px;
+}
+
+.admin-upcoming-empty {
+  font-size: 13px;
+  color: var(--gray-500);
+}

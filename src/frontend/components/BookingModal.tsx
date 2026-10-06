@@ -20,6 +20,7 @@ import {
 } from '../lib/sessionBooking';
 import LocalizedDateInput from './LocalizedDateInput';
 import { useI18n } from '../i18n/I18nProvider';
+import styles from './BookingModal.module.css';
 
 /** Foglalási modal props — űrlap kezdeti értékek, előadók, mentés callback. */
 interface BookingModalProps {
@@ -206,24 +207,24 @@ export default function BookingModal({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2 className="modal-title">
+    <div className={styles['modal-backdrop']} onClick={onClose}>
+      <div className={styles.modal} onClick={e => e.stopPropagation()}>
+        <div className={styles['modal-header']}>
+          <h2 className={styles['modal-title']}>
             {initialValues ? t('booking.editTitle') : t('booking.title')}
           </h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className={styles['modal-close']} onClick={onClose}>×</button>
         </div>
 
         {!initialValues && (
-          <div className="form-group">
-            <label className="form-label">{t('booking.templatesLabel')}</label>
-            <div className="booking-template-row">
+          <div className={styles['form-group']}>
+            <label className={styles['form-label']}>{t('booking.templatesLabel')}</label>
+            <div className={styles['booking-template-row']}>
               {SESSION_TEMPLATES.map((tpl) => (
                 <button
                   key={tpl.id}
                   type="button"
-                  className={`booking-template-btn color-${tpl.color}`}
+                  className={`${styles['booking-template-btn']} ${styles[`color-${tpl.color}`] ?? ''}`}
                   onClick={() => applyTemplate(tpl.id)}
                 >
                   {t(`booking.templates.${tpl.id}`)}
@@ -233,27 +234,27 @@ export default function BookingModal({
           </div>
         )}
 
-        <div className="form-group">
-          <label className="form-label">{t('booking.sessionTitle')}</label>
+        <div className={styles['form-group']}>
+          <label className={styles['form-label']}>{t('booking.sessionTitle')}</label>
           <input
-            className={`form-input${errors.title ? ' error' : ''}`}
+            className={`${styles['form-input']}${errors.title ? ` ${styles.error}` : ''}`}
             placeholder={t('booking.titlePlaceholder')}
             value={form.title}
             onChange={e => set('title', e.target.value)}
           />
         </div>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t('booking.startDate')}</label>
+        <div className={styles['form-row']}>
+          <div className={styles['form-group']}>
+            <label className={styles['form-label']}>{t('booking.startDate')}</label>
             <LocalizedDateInput
               value={form.date}
               hasError={!!errors.date}
               onChange={handleStartDateChange}
             />
           </div>
-          <div className="form-group">
-            <label className="form-label">{t('booking.endDate')}</label>
+          <div className={styles['form-group']}>
+            <label className={styles['form-label']}>{t('booking.endDate')}</label>
             <LocalizedDateInput
               value={form.end_date}
               min={form.date}
@@ -264,14 +265,14 @@ export default function BookingModal({
         </div>
 
         {isMultiDay && (
-          <p className="booking-multiday-hint">{t('booking.multiDayHint')}</p>
+          <p className={styles['booking-multiday-hint']}>{t('booking.multiDayHint')}</p>
         )}
 
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t('booking.room')}</label>
+        <div className={styles['form-row']}>
+          <div className={styles['form-group']}>
+            <label className={styles['form-label']}>{t('booking.room')}</label>
             <select
-              className="form-select"
+              className={styles['form-select']}
               value={form.room_id}
               onChange={e => handleRoomChange(Number(e.target.value))}
             >
@@ -280,41 +281,41 @@ export default function BookingModal({
               ))}
             </select>
           </div>
-          <div className="form-group">
-            <label className="form-label">{t('booking.durationPreview')}</label>
-            <div className="booking-duration-preview" aria-live="polite">
+          <div className={styles['form-group']}>
+            <label className={styles['form-label']}>{t('booking.durationPreview')}</label>
+            <div className={styles['booking-duration-preview']} aria-live="polite">
               {durationPreview ? (
                 <>
-                  <span className="booking-duration-days">
+                  <span className={styles['booking-duration-days']}>
                     {durationPreview.days === 1
                       ? t('booking.dayCount', { count: 1 })
                       : t('booking.dayCount_plural', { count: durationPreview.days })}
                   </span>
-                  <span className="booking-duration-sep">·</span>
-                  <span className="booking-duration-time">{durationPreview.label}</span>
+                  <span className={styles['booking-duration-sep']}>·</span>
+                  <span className={styles['booking-duration-time']}>{durationPreview.label}</span>
                 </>
               ) : (
-                <span className="booking-duration-empty">{t('booking.durationInvalid')}</span>
+                <span className={styles['booking-duration-empty']}>{t('booking.durationInvalid')}</span>
               )}
             </div>
           </div>
         </div>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t('booking.startTime')}</label>
+        <div className={styles['form-row']}>
+          <div className={styles['form-group']}>
+            <label className={styles['form-label']}>{t('booking.startTime')}</label>
             <input
-              className="form-input"
+              className={styles['form-input']}
               type="time"
               lang={bcp47}
               value={form.start_time}
               onChange={e => set('start_time', e.target.value)}
             />
           </div>
-          <div className="form-group">
-            <label className="form-label">{t('booking.endTime')}</label>
+          <div className={styles['form-group']}>
+            <label className={styles['form-label']}>{t('booking.endTime')}</label>
             <input
-              className={`form-input${errors.end_time ? ' error' : ''}`}
+              className={`${styles['form-input']}${errors.end_time ? ` ${styles.error}` : ''}`}
               type="time"
               lang={bcp47}
               value={form.end_time}
@@ -324,9 +325,9 @@ export default function BookingModal({
         </div>
 
         {conflictGroups.length > 0 && (
-          <div className="booking-conflict-preview" role="alert">
+          <div className={styles['booking-conflict-preview']} role="alert">
             {conflictGroups.map((kind) => (
-              <div key={kind} className="booking-conflict-block">
+              <div key={kind} className={styles['booking-conflict-block']}>
                 <strong>{t(`booking.${kind}`)}</strong>
                 <ul>
                   {conflicts[kind].map((s) => (
@@ -338,28 +339,28 @@ export default function BookingModal({
           </div>
         )}
 
-        <div className="form-group">
-          <label className="form-label">{t('booking.speaker')}</label>
+        <div className={styles['form-group']}>
+          <label className={styles['form-label']}>{t('booking.speaker')}</label>
           {speakers.length > 4 && (
-            <input className="form-input" style={{ marginBottom: 8 }} placeholder={t('booking.speakerSearch')}
+            <input className={styles['form-input']} style={{ marginBottom: 8 }} placeholder={t('booking.speakerSearch')}
               value={speakerFilter} onChange={(event) => setSpeakerFilter(event.target.value)} />
           )}
-          <select className={`form-select${errors.speaker_name ? ' error' : ''}`}
+          <select className={`${styles['form-select']}${errors.speaker_name ? ` ${styles.error}` : ''}`}
             aria-label={t('booking.speaker')} value={form.speaker_id} onChange={(event) => handleSpeakerSelect(Number(event.target.value))}>
             <option value={0}>{t('booking.speakerRequired')}</option>
             {filteredSpeakerOptions.map((speaker) => <option key={speaker.id} value={speaker.id}>{speaker.name}</option>)}
           </select>
-          <p className="booking-catalog-hint">{t('booking.speakerCatalogHint')}</p>
-          {errors.speaker_name && <p className="login-error" role="alert">{errors.speaker_name}</p>}
+          <p className={styles['booking-catalog-hint']}>{t('booking.speakerCatalogHint')}</p>
+          {errors.speaker_name && <p className={styles['login-error']} role="alert">{errors.speaker_name}</p>}
         </div>
 
-        <div className="form-group">
-          <label className="form-label">{t('booking.categoryColor')}</label>
-          <div className="color-picker">
+        <div className={styles['form-group']}>
+          <label className={styles['form-label']}>{t('booking.categoryColor')}</label>
+          <div className={styles['color-picker']}>
             {COLORS.map(c => (
               <div
                 key={c}
-                className={`color-dot color-${c}${form.color === c ? ' active' : ''}`}
+                className={`${styles['color-dot']} ${styles[`color-${c}`] ?? ''}${form.color === c ? ` ${styles.active}` : ''}`}
                 onClick={() => set('color', c)}
                 title={c}
               />
@@ -367,20 +368,20 @@ export default function BookingModal({
           </div>
         </div>
 
-        <div className="form-group">
-          <label className="form-label">{t('booking.description')}</label>
+        <div className={styles['form-group']}>
+          <label className={styles['form-label']}>{t('booking.description')}</label>
           <textarea
-            className="form-textarea"
+            className={styles['form-textarea']}
             placeholder={t('booking.descriptionPlaceholder')}
             value={form.description}
             onChange={e => set('description', e.target.value)}
           />
         </div>
 
-        {saveError && <div className="login-error" style={{marginBottom:"12px"}}>{saveError}</div>}
-        <div className="btn-row">
-          <button type="button" className="btn-cancel" onClick={onClose}>{t('common.cancel')}</button>
-          <button type="button" className="btn-save" onClick={handleSave} disabled={saving}>
+        {saveError && <div className={styles['login-error']} style={{marginBottom:"12px"}}>{saveError}</div>}
+        <div className={styles['btn-row']}>
+          <button type="button" className={styles['btn-cancel']} onClick={onClose}>{t('common.cancel')}</button>
+          <button type="button" className={styles['btn-save']} onClick={handleSave} disabled={saving}>
             {saving ? t('booking.saving') : t('booking.saveBooking')}
           </button>
         </div>

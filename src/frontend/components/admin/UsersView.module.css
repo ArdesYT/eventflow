@@ -1,0 +1,95 @@
+.form-select {
+  composes: form-select from '../../styles/forms.module.css';
+}
+
+.btn-danger {
+  composes: btn-danger from '../../styles/buttons.module.css';
+}
+
+.admin-users-hint {
+  composes: admin-users-hint from '../../styles/text.module.css';
+}
+
+.empty-state {
+  composes: empty-state from '../../styles/feedback.module.css';
+}
+
+.empty-state-icon {
+  composes: empty-state-icon from '../../styles/feedback.module.css';
+}
+
+.admin-users-table-wrap {
+  composes: admin-users-table-wrap from '../../styles/tables.module.css';
+}
+
+.admin-users-table {
+  composes: admin-users-table from '../../styles/tables.module.css';
+}
+
+.admin-user-name {
+  composes: admin-user-name from '../../styles/tables.module.css';
+}
+
+.admin-users-actions {
+  composes: admin-users-actions from '../../styles/tables.module.css';
+}
+
+.admin-users-panel {
+  background: #fff;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-you-badge {
+  display: inline-block;
+  font-size: 10px;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--gray-100);
+  color: var(--gray-500);
+}
+
+.admin-role-select {
+  min-width: 130px;
+  padding: 6px 10px;
+}
+
+.admin-delete-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.admin-user-rooms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+}
+
+.admin-room-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.admin-rooms-toggle {
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.admin-users-na {
+  color: var(--gray-400);
+}
+
+.admin-user-rooms {}

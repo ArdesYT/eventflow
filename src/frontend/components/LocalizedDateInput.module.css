@@ -1,0 +1,33 @@
+.form-input {
+  composes: form-input from '../styles/forms.module.css';
+}
+
+.error {
+  composes: error from '../styles/forms.module.css';
+}
+
+.localized-date-field {
+  position: relative;
+}
+
+.localized-date-display {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.localized-date-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.localized-date-field.error .localized-date-display {
+  border-color: var(--red-500, #e02424);
+}

@@ -1,0 +1,55 @@
+.modal-header {
+  composes: modal-header from '../styles/modal.module.css';
+}
+
+.modal-title {
+  composes: modal-title from '../styles/modal.module.css';
+}
+
+.modal-close {
+  composes: modal-close from '../styles/modal.module.css';
+}
+
+.detail-row {
+  composes: detail-row from '../styles/details.module.css';
+}
+
+.detail-label {
+  composes: detail-label from '../styles/details.module.css';
+}
+
+.detail-value {
+  composes: detail-value from '../styles/details.module.css';
+}
+
+.session-cancelled-badge {
+  composes: session-cancelled-badge from '../styles/badges.module.css';
+}
+
+.detail-speaker-bio {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--gray-500);
+  line-height: 1.45;
+}
+
+.detail-duration {
+  font-weight: 400;
+  color: var(--gray-500);
+  font-size: 13px;
+}
+
+.detail-multiday-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  vertical-align: middle;
+}

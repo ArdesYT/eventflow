@@ -1,0 +1,47 @@
+.section-title {
+  composes: section-title from '../styles/text.module.css';
+}
+
+.room-bar-container {
+  background: #fff;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.bar-row {
+  margin-bottom: 14px;
+}
+
+.bar-row-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+
+.bar-room-name {
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.bar-count {
+  color: var(--gray-400);
+  font-size: 12px;
+}
+
+.bar-track {
+  background: var(--gray-100);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 6px;
+  border-radius: 4px;
+  background: var(--primary);
+  transition: width 0.4s ease;
+}

@@ -1,0 +1,44 @@
+/* Szándékosan közös alapstílusok; a komponensek composes segítségével veszik át őket. */
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.cal-month-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--gray-900);
+  flex: 1;
+}
+
+.cal-nav-btn {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--gray-600);
+  font-family: var(--font-ui);
+  transition: background 0.1s;
+}
+
+.cal-nav-btn:hover {
+  background: var(--gray-50);
+}
+
+@media (max-width: 768px) {
+
+  .cal-nav {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cal-month-title {
+    font-size: 17px;
+    flex: 1 1 100%;
+    order: -1;
+  }
+}

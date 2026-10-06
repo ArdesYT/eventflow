@@ -1,0 +1,45 @@
+.form-group {
+  composes: form-group from '../../styles/forms.module.css';
+}
+
+.form-label {
+  composes: form-label from '../../styles/forms.module.css';
+}
+
+.form-input {
+  composes: form-input from '../../styles/forms.module.css';
+}
+
+.form-textarea {
+  composes: form-textarea from '../../styles/forms.module.css';
+}
+
+.form-row {
+  composes: form-row from '../../styles/forms.module.css';
+}
+
+.btn-save {
+  composes: btn-save from '../../styles/buttons.module.css';
+}
+
+.admin-users-hint {
+  composes: admin-users-hint from '../../styles/text.module.css';
+}
+
+.error-banner {
+  composes: error-banner from '../../styles/feedback.module.css';
+}
+
+.success-banner {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background: #ecfdf5;
+  border: 1px solid #86efac;
+  border-radius: var(--radius-md);
+  color: #166534;
+  font-size: 13px;
+}
+
+.event-profile-editor {
+  max-width: 560px;
+}

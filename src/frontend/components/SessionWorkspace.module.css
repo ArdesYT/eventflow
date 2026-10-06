@@ -1,0 +1,66 @@
+.form-input {
+  composes: form-input from '../styles/forms.module.css';
+}
+
+.btn-export {
+  composes: btn-export from '../styles/buttons.module.css';
+}
+
+.error-banner {
+  composes: error-banner from '../styles/feedback.module.css';
+}
+
+.view-toggle {
+  display: flex;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.view-btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--gray-500);
+  background: #fff;
+  border: none;
+  font-family: var(--font-ui);
+  transition: all 0.1s;
+}
+
+.view-btn.active {
+  background: var(--gray-100);
+  color: var(--gray-800);
+  font-weight: 500;
+}
+
+.sessions-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.session-workspace-toolbar,
+.session-workspace-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.session-workspace-toolbar { justify-content: space-between; margin-bottom: 20px; }
+
+.session-workspace-filters { margin-bottom: 20px; }
+
+.session-workspace-filters > .form-input { max-width: 460px; margin-bottom: 12px; }
+
+@media (max-width: 640px) {
+  .session-workspace-actions { width: 100%; }
+  .session-workspace-actions > button { flex: 1; }
+  .session-workspace-toolbar .view-toggle { width: 100%; }
+  .session-workspace-toolbar .view-btn { flex: 1; }
+}
+
+.session-workspace {}

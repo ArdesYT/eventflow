@@ -1,0 +1,30 @@
+/* Szándékosan közös alapstílusok; a komponensek composes segítségével veszik át őket. */
+.hint-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.hint-badge.admin    { background: #ede9fe; color: #5b21b6; }
+
+.hint-badge.booker   { background: var(--primary-light); color: var(--primary-dark); }
+
+.hint-badge.attendee { background: #d1fae5; color: #065f46; }
+
+.session-cancelled-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  text-decoration: none;
+  white-space: nowrap;
+  vertical-align: middle;
+}
