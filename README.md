@@ -63,33 +63,17 @@ DB_NAME=eventflow
 
 Ha `Access denied for user 'eventflow'` hibát kapsz, hozd létre a felhasználót phpMyAdminban, vagy állítsd át a `.env`-et root fiókra.
 
-### Docker (csak adatbázis)
-
-```bash
-docker compose up db -d
-# .env: DB_USER=eventflow, DB_PASS=eventflow
-```
-
 ---
 
 ## Production
 
-### Docker (ajánlott)
-
-```bash
-cp .env.example .env
-# Kötelező: JWT_SECRET=hosszú-véletlen-string
-docker compose up --build -d
-```
-
-- Alkalmazás: http://localhost:3000  
-- Health: http://localhost:3000/api/health  
-- Seed konténerben: `docker compose exec app npm run seed`
-
 ### Kézi telepítés
+
+Állítsd be a helyi MariaDB adatbázist az „Adatbázis beállítása” rész szerint.
 
 ```bash
 npm ci
+cp .env.example .env
 npm run build
 ```
 
@@ -241,7 +225,6 @@ src/
       authStorage.ts, authFetch.ts    JWT perzisztencia és API hívások
       scheduleApi.ts, scheduleStorage.ts   Mentett program
 documentation/      EventFlow_Dokumentacio.docx
-docker-compose.yml  Production stack (app + MariaDB)
 ```
 
 ---
