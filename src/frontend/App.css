@@ -1053,7 +1053,7 @@ body {
 .login-left {
   width: 42%;
   min-width: 340px;
-  background: var(--gray-900);
+  background: #1a2b57;
   display: flex;
   flex-direction: column;
   padding: 48px 48px 40px;
