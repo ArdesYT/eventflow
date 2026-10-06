@@ -4,8 +4,9 @@
  * Props: sessions, sessionSaves (mentések száma), onEventClick.
  */
 import type { Session, SessionSavesMap } from '../../backend/types';
+import { SESSION_ACCENTS } from '../lib/display';
 import { formatSessionTimeRange } from '../lib/sessionBooking';
-import { groupSessionsForList, isSessionCancelled } from '../lib/sessionFormat';
+import { groupSessionsForList, isSessionCancelled, localDateKey } from '../lib/sessionFormat';
 import { useI18n } from '../i18n/I18nProvider';
 import { formatWeekdayLong } from '../i18n/dateFormat';
 
@@ -15,25 +16,13 @@ interface AgendaViewProps {
   onEventClick: (id: number) => void;
 }
 
-const ACCENT: Record<string, string> = {
-  blue: '#1a56db',
-  amber: '#f59e0b',
-  green: '#057a55',
-  red: '#e02424',
-};
-
-function toDateStr(y: number, m: number, d: number): string {
-  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-}
-
 export default function AgendaView({
   sessions,
   sessionSaves,
   onEventClick,
 }: AgendaViewProps) {
   const { t, locale } = useI18n();
-  const today = new Date();
-  const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
+  const todayStr = localDateKey();
 
   const { multiDay, singleDayByDate } = groupSessionsForList(sessions);
   const { sortedDates, grouped } = singleDayByDate;
@@ -68,7 +57,7 @@ export default function AgendaView({
       >
         <div
           className="agenda-event-accent"
-          style={{ background: ACCENT[ev.color] ?? '#1a56db' }}
+          style={{ background: SESSION_ACCENTS[ev.color] ?? '#1a56db' }}
         />
         <div className="agenda-event-body">
           <div className="agenda-event-title">

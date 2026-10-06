@@ -4,12 +4,9 @@
  * Props: session, savedBy, savesLoaded, onClose, onDelete, onEdit, onDuplicate, onSetStatus.
  */
 import type { Session, SessionSaveUser } from '../../backend/types';
-import {
-  formatDuration,
-  formatSessionTimeRange,
-  sessionDurationMinutes,
-} from '../lib/sessionBooking';
-import { formatSessionDateRange, isMultiDaySession, isSessionCancelled } from '../lib/sessionFormat';
+import { getInitials } from '../lib/display';
+import { isSessionCancelled } from '../lib/sessionFormat';
+import { SessionDetailHeader, SessionDetails } from './SessionDetails';
 import { useI18n } from '../i18n/I18nProvider';
 
 interface DetailModalProps {
@@ -23,23 +20,6 @@ interface DetailModalProps {
   onSetStatus?: (id: number, status: 'scheduled' | 'cancelled') => void;
 }
 
-const ACCENT: Record<string, string> = {
-  blue: '#1a56db',
-  amber: '#f59e0b',
-  green: '#057a55',
-  red: '#e02424',
-};
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
-
 export default function DetailModal({
   session,
   savedBy,
@@ -50,81 +30,16 @@ export default function DetailModal({
   onDuplicate,
   onSetStatus,
 }: DetailModalProps) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const showSaves = savesLoaded !== undefined;
-  const durationMin = sessionDurationMinutes(session);
   const cancelled = isSessionCancelled(session);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                background: ACCENT[session.color] ?? '#1a56db',
-                flexShrink: 0,
-              }}
-            />
-            <h2 className="modal-title">
-              {session.title}
-              {cancelled && (
-                <span className="session-cancelled-badge">{t('session.cancelled')}</span>
-              )}
-            </h2>
-          </div>
-          <button type="button" className="modal-close" onClick={onClose}>
-            ×
-          </button>
-        </div>
+        <SessionDetailHeader session={session} onClose={onClose} />
         <div>
-          <div className="detail-row">
-            <span className="detail-label">
-              {isMultiDaySession(session) ? t('detail.dateRange') : t('detail.date')}
-            </span>
-            <span className="detail-value">
-              {formatSessionDateRange(session, locale)}
-              {isMultiDaySession(session) && (
-                <span className="detail-multiday-badge">{t('booking.multiDay')}</span>
-              )}
-            </span>
-          </div>
-          <div className="detail-row">
-            <span className="detail-label">{t('detail.time')}</span>
-            <span className="detail-value">
-              {formatSessionTimeRange(session, locale)}
-              {durationMin > 0 && (
-                <span className="detail-duration">
-                  {' '}
-                  ({t('detail.duration', { duration: formatDuration(durationMin) })})
-                </span>
-              )}
-            </span>
-          </div>
-          <div className="detail-row">
-            <span className="detail-label">{t('detail.room')}</span>
-            <span className="detail-value">{session.room_name}</span>
-          </div>
-          <div className="detail-row">
-            <span className="detail-label">{t('detail.speaker')}</span>
-            <div className="detail-value">
-              <div>{session.speaker_name}</div>
-              {session.speaker_bio?.trim() && (
-                <p className="detail-speaker-bio">{session.speaker_bio}</p>
-              )}
-            </div>
-          </div>
-          {session.description && (
-            <div className="detail-row">
-              <span className="detail-label">{t('detail.notes')}</span>
-              <span className="detail-value" style={{ fontWeight: 400 }}>
-                {session.description}
-              </span>
-            </div>
-          )}
+          <SessionDetails session={session} />
           {showSaves && (
             <div className="detail-row detail-row-saves">
               <span className="detail-label">{t('detail.savedBy')}</span>

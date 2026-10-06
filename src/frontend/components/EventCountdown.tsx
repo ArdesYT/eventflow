@@ -7,17 +7,10 @@ import { useEffect, useState } from 'react';
 import type { EventProfile } from '../../backend/types';
 import { useI18n } from '../i18n/I18nProvider';
 
-function eventStartAt(event: EventProfile): Date | null {
-  if (!event.start_date) return null;
-  const d = new Date(`${event.start_date}T09:00:00`);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function eventEndAt(event: EventProfile): Date | null {
-  const end = event.end_date ?? event.start_date;
-  if (!end) return null;
-  const d = new Date(`${end}T23:59:59`);
-  return Number.isNaN(d.getTime()) ? null : d;
+function eventTime(dateKey: string | null, time: string): number | null {
+  if (!dateKey) return null;
+  const timestamp = new Date(`${dateKey}T${time}`).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
 }
 
 interface EventCountdownProps {
@@ -27,22 +20,20 @@ interface EventCountdownProps {
 export default function EventCountdown({ event }: EventCountdownProps) {
   const { t } = useI18n();
   // Óra frissítése másodpercenként a visszaszámlálóhoz
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState(Date.now);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
   if (!event?.start_date) return null;
 
-  const start = eventStartAt(event);
-  const end = eventEndAt(event);
-  if (!start) return null;
+  const start = eventTime(event.start_date, '09:00:00');
+  const end = eventTime(event.end_date ?? event.start_date, '23:59:59');
+  if (start === null) return null;
 
-  const nowMs = now.getTime();
-
-  if (end && nowMs > end.getTime()) {
+  if (end !== null && now > end) {
     return (
       <div className="public-hero-countdown public-hero-countdown--ended">
         {t('public.countdownEnded')}
@@ -50,7 +41,7 @@ export default function EventCountdown({ event }: EventCountdownProps) {
     );
   }
 
-  if (nowMs >= start.getTime()) {
+  if (now >= start) {
     return (
       <div className="public-hero-countdown public-hero-countdown--live">
         <span className="public-countdown-live-dot" aria-hidden="true" />
@@ -59,7 +50,7 @@ export default function EventCountdown({ event }: EventCountdownProps) {
     );
   }
 
-  const diff = start.getTime() - nowMs;
+  const diff = start - now;
   const days = Math.floor(diff / 86400000);
   const hours = Math.floor((diff % 86400000) / 3600000);
   const minutes = Math.floor((diff % 3600000) / 60000);

@@ -3,6 +3,7 @@
  * Használat: SessionWorkspace; a kapott lista már szűrt.
  * Props: sessions, sessionSaves, searchTerm, onEventClick, selectable/selectedIds/onToggleSelect (tömeges művelethez).
  */
+import { getInitials } from '../lib/display';
 import type { Session, SessionSavesMap } from '../../backend/types';
 import { formatTimeKey } from '../i18n/dateFormat';
 import { formatSessionDateRange, isMultiDaySession, isSessionCancelled } from '../lib/sessionFormat';
@@ -19,15 +20,6 @@ interface SessionsViewProps {
   onToggleSelect?: (id: number) => void;
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
-
 export default function SessionsView({
   sessions,
   sessionSaves,
@@ -38,9 +30,7 @@ export default function SessionsView({
   onToggleSelect,
 }: SessionsViewProps) {
   const { t, locale } = useI18n();
-  const filtered = sessions;
-
-  if (filtered.length === 0) {
+  if (sessions.length === 0) {
     return (
       <div className="empty-state">
         <div className="empty-state-icon">🔍</div>
@@ -56,19 +46,18 @@ export default function SessionsView({
   return (
     <>
       <p style={{ marginBottom: '16px', fontSize: '13px', color: 'var(--gray-400)' }}>
-        {filtered.length === 1
-          ? t('sessions.count', { count: filtered.length })
-          : t('sessions.count_plural', { count: filtered.length })}
+        {t(sessions.length === 1 ? 'sessions.count' : 'sessions.count_plural', { count: sessions.length })}
       </p>
       <div className="sessions-grid">
-        {filtered.map((s) => {
+        {sessions.map((s) => {
           const saveCount = sessionSaves?.[s.id]?.length ?? 0;
+          const cancelled = isSessionCancelled(s);
           return (
           <div
             key={s.id}
             className={
               'session-card' +
-              (isSessionCancelled(s) ? ' cancelled' : '') +
+              (cancelled ? ' cancelled' : '') +
               (selectable && selectedIds?.has(s.id) ? ' selected' : '')
             }
             onClick={() => onEventClick(s.id)}
@@ -104,7 +93,7 @@ export default function SessionsView({
             </div>
             <div className="session-title">
               {s.title}
-              {isSessionCancelled(s) && (
+              {cancelled && (
                 <span className="session-cancelled-badge">{t('session.cancelled')}</span>
               )}
             </div>

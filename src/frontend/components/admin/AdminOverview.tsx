@@ -4,9 +4,10 @@
  * Props: users, sessions, event.
  */
 import type { EventProfile, Session, User } from '../../../backend/types';
-import { formatSessionDateRange } from '../../lib/sessionFormat';
+import { formatSessionDateRange, localDateKey } from '../../lib/sessionFormat';
 import { formatTimeKey } from '../../i18n/dateFormat';
 import { useI18n } from '../../i18n/I18nProvider';
+import StatCards from '../StatCards';
 
 interface AdminOverviewProps {
   users: User[];
@@ -14,20 +15,12 @@ interface AdminOverviewProps {
   event: EventProfile;
 }
 
-function todayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
 export default function AdminOverview({ users, sessions, event }: AdminOverviewProps) {
   const { t, locale } = useI18n();
 
-  const admins = users.filter((u) => u.role === 'admin').length;
-  const bookers = users.filter((u) => u.role === 'booker').length;
-  const attendees = users.filter((u) => u.role === 'attendee').length;
   const rooms = new Set(sessions.map((s) => s.room_name)).size;
   const speakers = new Set(sessions.map((s) => s.speaker_name)).size;
-  const today = todayStr();
+  const today = localDateKey();
   const upcoming = sessions
     .filter((s) => s.date >= today)
     .sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time))
@@ -47,43 +40,21 @@ export default function AdminOverview({ users, sessions, event }: AdminOverviewP
           </p>
         )}
       </div>
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-label">{t('admin.stats.users')}</div>
-          <div className="stat-value">{users.length}</div>
-          <div className="stat-sub">{t('admin.stats.usersSub')}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">{t('admin.stats.sessions')}</div>
-          <div className="stat-value">{sessions.length}</div>
-          <div className="stat-sub">{t('admin.stats.sessionsSub')}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">{t('admin.stats.rooms')}</div>
-          <div className="stat-value">{rooms}</div>
-          <div className="stat-sub">{t('admin.stats.roomsSub')}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">{t('admin.stats.speakers')}</div>
-          <div className="stat-value">{speakers}</div>
-          <div className="stat-sub">{t('admin.stats.speakersSub')}</div>
-        </div>
-      </div>
+      <StatCards cards={[
+        { labelKey: 'admin.stats.users', value: users.length, subKey: 'admin.stats.usersSub' },
+        { labelKey: 'admin.stats.sessions', value: sessions.length, subKey: 'admin.stats.sessionsSub' },
+        { labelKey: 'admin.stats.rooms', value: rooms, subKey: 'admin.stats.roomsSub' },
+        { labelKey: 'admin.stats.speakers', value: speakers, subKey: 'admin.stats.speakersSub' },
+      ]} />
 
       <div className="section-title">{t('admin.stats.rolesTitle')}</div>
       <div className="admin-role-grid">
-        <div className="admin-role-card">
-          <span className="hint-badge admin">{t('login.admin')}</span>
-          <span className="admin-role-count">{admins}</span>
-        </div>
-        <div className="admin-role-card">
-          <span className="hint-badge booker">{t('login.booker')}</span>
-          <span className="admin-role-count">{bookers}</span>
-        </div>
-        <div className="admin-role-card">
-          <span className="hint-badge attendee">{t('login.attendee')}</span>
-          <span className="admin-role-count">{attendees}</span>
-        </div>
+        {(['admin', 'booker', 'attendee'] as const).map((role) => (
+          <div key={role} className="admin-role-card">
+            <span className={`hint-badge ${role}`}>{t(`login.${role}`)}</span>
+            <span className="admin-role-count">{users.filter((user) => user.role === role).length}</span>
+          </div>
+        ))}
       </div>
 
       <div className="section-title" style={{ marginTop: 28 }}>

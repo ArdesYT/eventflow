@@ -7,7 +7,7 @@
  */
 
 import type { EventProfile } from '../../backend/types';
-import { authFetch } from './authFetch';
+import { authRequest } from './authFetch';
 import { apiUrl } from './api';
 
 /**
@@ -28,13 +28,9 @@ export async function fetchActiveEvent(): Promise<EventProfile> {
  * @throws Error a backend message mezőjével vagy általános hibával
  */
 export async function updateEventProfile(body: Partial<EventProfile>): Promise<EventProfile> {
-  const res = await authFetch('/api/admin/event', {
+  const res = await authRequest('/api/admin/event', 'Failed to update event', {
     method: 'PATCH',
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message ?? 'Failed to update event');
-  }
   return res.json();
 }

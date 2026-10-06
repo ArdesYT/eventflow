@@ -23,3 +23,14 @@ export function apiUrl(path: string): string {
   const p = path.startsWith('/') ? path : `/${path}`;
   return API_BASE ? `${API_BASE}${p}` : p;
 }
+
+/** Read backend errors only when a request fails; leave successful bodies untouched. */
+export async function ensureResponseOk(
+  response: Response,
+  fallback: string,
+  statusErrors: Partial<Record<number, string>> = {},
+): Promise<void> {
+  if (response.ok) return;
+  const data = await response.json().catch(() => ({}));
+  throw new Error(statusErrors[response.status] ?? data.message ?? fallback);
+}

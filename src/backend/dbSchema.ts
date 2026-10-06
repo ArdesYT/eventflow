@@ -1,38 +1,31 @@
-/**
- * =============================================================================
- * dbSchema.ts — Futásidőben futó séma-migrációk (ensure*)
- * =============================================================================
- *
- * A szerver indulásakor (initDatabase) hívódik meg minden ensure* függvény.
- * Cél: régi eventflow.sql dump + új funkciók közötti szakadék pótlása
- * anélkül, hogy külön migrációs CLI-t kellene futtatni.
- *
- * FIGYELEM: Ez NEM helyettesíti a verziózott SQL migrációkat nagy projektnél,
- * de fejlesztés/demo környezetben kényelmes.
- * =============================================================================
- */
-
+/** Startup migrations for existing EventFlow databases. */
 import type { Pool, PoolConnection } from 'mariadb';
 
-/**
- * sessions.status oszlop — 'scheduled' | 'cancelled'.
- * Lemondott előadások megmaradnak, de nem ütköznek és szűrhetők.
- */
-export async function ensureSessionStatusColumn(pool: Pool): Promise<void> {
+async function migrate(
+  pool: Pool,
+  name: string,
+  run: (conn: PoolConnection) => Promise<void>,
+): Promise<void> {
   let conn: PoolConnection | undefined;
   try {
     conn = await pool.getConnection();
+    await run(conn);
+  } catch (err) {
+    console.error(`Schema migration (${name}) failed:`, err);
+  } finally {
+    conn?.release();
+  }
+}
+
+export function ensureSessionStatusColumn(pool: Pool): Promise<void> {
+  return migrate(pool, 'sessions.status', async (conn) => {
     const cols = await conn.query("SHOW COLUMNS FROM sessions LIKE 'status'");
     if (!cols.length) {
       await conn.query(
         "ALTER TABLE sessions ADD COLUMN status ENUM('scheduled','cancelled') NOT NULL DEFAULT 'scheduled'",
       );
     }
-  } catch (err) {
-    console.error('Schema migration (sessions.status) failed:', err);
-  } finally {
-    if (conn) conn.release();
-  }
+  });
 }
 
 /**
@@ -40,10 +33,8 @@ export async function ensureSessionStatusColumn(pool: Pool): Promise<void> {
  * Ha üres a booker listája → jelenleg bármely terem engedélyezett (server.ts logika).
  * Demo booker@example.com kap 1. és 2. termet seed-ként.
  */
-export async function ensureUserRoomsTable(pool: Pool): Promise<void> {
-  let conn: PoolConnection | undefined;
-  try {
-    conn = await pool.getConnection();
+export function ensureUserRoomsTable(pool: Pool): Promise<void> {
+  return migrate(pool, 'user_rooms', async (conn) => {
     await conn.query(`
       CREATE TABLE IF NOT EXISTS user_rooms (
         user_id INT NOT NULL,
@@ -68,21 +59,15 @@ export async function ensureUserRoomsTable(pool: Pool): Promise<void> {
         ]);
       }
     }
-  } catch (err) {
-    console.error('Schema migration (user_rooms) failed:', err);
-  } finally {
-    if (conn) conn.release();
-  }
+  });
 }
 
 /**
  * activity_log — admin audit napló (ki mit csinált, mikor).
  * Az admin felület „Audit” fülén jelenik meg.
  */
-export async function ensureActivityLogTable(pool: Pool): Promise<void> {
-  let conn: PoolConnection | undefined;
-  try {
-    conn = await pool.getConnection();
+export function ensureActivityLogTable(pool: Pool): Promise<void> {
+  return migrate(pool, 'activity_log', async (conn) => {
     await conn.query(`
       CREATE TABLE IF NOT EXISTS activity_log (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -95,11 +80,7 @@ export async function ensureActivityLogTable(pool: Pool): Promise<void> {
         INDEX idx_activity_created (created_at DESC)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-  } catch (err) {
-    console.error('Schema migration (activity_log) failed:', err);
-  } finally {
-    if (conn) conn.release();
-  }
+  });
 }
 
 /**
@@ -110,10 +91,8 @@ export async function ensureActivityLogTable(pool: Pool): Promise<void> {
  * Üres DB esetén seed „EventFlow 2026” sor.
  * sessions.event_id oszlop is itt kerül hozzá (jelenleg kevésbé használt).
  */
-export async function ensureEventsTable(pool: Pool): Promise<void> {
-  let conn: PoolConnection | undefined;
-  try {
-    conn = await pool.getConnection();
+export function ensureEventsTable(pool: Pool): Promise<void> {
+  return migrate(pool, 'events', async (conn) => {
     await conn.query(`
       CREATE TABLE IF NOT EXISTS events (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -170,11 +149,7 @@ export async function ensureEventsTable(pool: Pool): Promise<void> {
       );
       await conn.query('UPDATE sessions SET event_id = ? WHERE event_id IS NULL', [eventId]);
     }
-  } catch (err) {
-    console.error('Schema migration (events) failed:', err);
-  } finally {
-    if (conn) conn.release();
-  }
+  });
 }
 
 /**

@@ -1,61 +1,34 @@
-/**
- * =============================================================================
- * sessionConflicts.ts — Ütközés-ellenőrzés ütemezéskor
- * =============================================================================
- *
- * Üzleti szabályok:
- *  1. Ugyanabban a teremben nem lehet átfedő időpont (roomOverlap)
- *  2. Ugyanabban a teremben legalább 2 óra kell két előadás között (roomBuffer)
- *  3. Egy előadó nem lehet két helyen egyszerre (speakerOverlap)
- *
- * A server.ts assertNoSessionConflicts és a frontend BookingModal is használja.
- * Lemondott (cancelled) előadásokat figyelmen kívül hagyjuk.
- * =============================================================================
- */
-
+// Rooms need a two-hour gap; speakers cannot overlap. Cancelled sessions are ignored.
 import type { Session } from './types';
+import { formatDate, formatTime } from './datetime';
 
-/** Dátum + idő stringből Date objektum (helyi értelmezés). */
-function toRange(date: string, time: string): Date {
-  const t = String(time).match(/(\d{2}:\d{2})/)?.[1] ?? time;
-  return new Date(`${date}T${t}:00`);
-}
+type SessionTimes = Pick<Session, 'date' | 'start_time' | 'end_time'> & { end_date?: string };
+interface TimeRange { start: number; end: number }
 
-/** Két óra milliszekundumban — minimális szünet ugyanabban a teremben. */
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
-/**
- * Két időintervallum átfed-e (többnapos előadásnál end_date is számít).
- */
-export function sessionsOverlap(
-  a: { date: string; end_date?: string; start_time: string; end_time: string },
-  b: { date: string; end_date?: string; start_time: string; end_time: string },
-): boolean {
-  const aStart = toRange(a.date, a.start_time);
-  const aEnd = toRange(a.end_date ?? a.date, a.end_time);
-  const bStart = toRange(b.date, b.start_time);
-  const bEnd = toRange(b.end_date ?? b.date, b.end_time);
-  return aStart < bEnd && bStart < aEnd;
+function timeRange(session: SessionTimes): TimeRange {
+  return {
+    start: new Date(`${session.date}T${formatTime(session.start_time)}:00`).getTime(),
+    end: new Date(`${session.end_date ?? session.date}T${formatTime(session.end_time)}:00`).getTime(),
+  };
 }
 
-/**
- * 2 órás buffer sértés: nem fedik át egymást, de nincs közöttük 2 óra szünet.
- * Csak akkor true, ha sessionsOverlap false lenne, de a távolság < 2 óra.
- */
-export function hasBufferConflict(
-  a: { date: string; end_date?: string; start_time: string; end_time: string },
-  b: { date: string; end_date?: string; start_time: string; end_time: string },
-): boolean {
-  if (!sessionsOverlap(a, b)) {
-    const aStart = toRange(a.date, a.start_time);
-    const aEnd = toRange(a.end_date ?? a.date, a.end_time);
-    const bStart = toRange(b.date, b.start_time);
-    const bEnd = toRange(b.end_date ?? b.date, b.end_time);
-    if (aStart.getTime() >= bEnd.getTime() + TWO_HOURS_MS) return false;
-    if (bStart.getTime() >= aEnd.getTime() + TWO_HOURS_MS) return false;
-    return true;
-  }
-  return true;
+function rangesOverlap(a: TimeRange, b: TimeRange): boolean {
+  return a.start < b.end && b.start < a.end;
+}
+
+function rangesWithinBuffer(a: TimeRange, b: TimeRange): boolean {
+  return !(a.start >= b.end + TWO_HOURS_MS || b.start >= a.end + TWO_HOURS_MS);
+}
+
+export function sessionsOverlap(a: SessionTimes, b: SessionTimes): boolean {
+  return rangesOverlap(timeRange(a), timeRange(b));
+}
+
+/** Includes overlapping sessions as well as gaps shorter than two hours. */
+export function hasBufferConflict(a: SessionTimes, b: SessionTimes): boolean {
+  return rangesWithinBuffer(timeRange(a), timeRange(b));
 }
 
 /** Egy jelölt előadás ütközéseinek eredménye. */
@@ -72,14 +45,10 @@ export interface SessionConflictResult {
  */
 export function checkSessionConflicts(
   existing: Session[],
-  candidate: {
+  candidate: SessionTimes & {
     id?: number;
     room_id: number;
     speaker_id: number;
-    date: string;
-    end_date?: string;
-    start_time: string;
-    end_time: string;
     status?: string;
   },
 ): SessionConflictResult {
@@ -89,36 +58,24 @@ export function checkSessionConflicts(
     speakerOverlap: false,
   };
 
-  const cand = {
-    date: candidate.date,
-    end_date: candidate.end_date ?? candidate.date,
-    start_time: candidate.start_time,
-    end_time: candidate.end_time,
-  };
+  const candidateRange = timeRange(candidate);
 
   for (const s of existing) {
     if (candidate.id != null && s.id === candidate.id) continue;
     if (s.status === 'cancelled') continue;
 
-    const other = {
-      date: s.date,
-      end_date: s.end_date ?? s.date,
-      start_time: s.start_time,
-      end_time: s.end_time,
-    };
+    const sameRoom = s.room_id === candidate.room_id;
+    const sameSpeaker = candidate.speaker_id > 0 && s.speaker_id === candidate.speaker_id;
+    if (!sameRoom && !sameSpeaker) continue;
 
-    if (s.room_id === candidate.room_id) {
-      if (sessionsOverlap(cand, other)) result.roomOverlap = true;
-      else if (hasBufferConflict(cand, other)) result.roomBuffer = true;
+    const otherRange = timeRange(s);
+    const overlap = rangesOverlap(candidateRange, otherRange);
+    if (sameRoom) {
+      if (overlap) result.roomOverlap = true;
+      else if (rangesWithinBuffer(candidateRange, otherRange)) result.roomBuffer = true;
     }
 
-    if (
-      candidate.speaker_id > 0 &&
-      s.speaker_id === candidate.speaker_id &&
-      sessionsOverlap(cand, other)
-    ) {
-      result.speakerOverlap = true;
-    }
+    if (sameSpeaker && overlap) result.speakerOverlap = true;
   }
 
   return result;
@@ -129,30 +86,14 @@ export function checkSessionConflicts(
  * Kezeli a MariaDB Date típusát és a datetime string formátumot.
  */
 export function sessionFromRow(row: Record<string, unknown>): Session {
-  const start = row.start_time instanceof Date
-    ? row.start_time
-    : String(row.start_time);
-  const end = row.end_time instanceof Date ? row.end_time : String(row.end_time);
-  const date = start instanceof Date
-    ? `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
-    : String(start).slice(0, 10);
-  const endDate = end instanceof Date
-    ? `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`
-    : String(end).slice(0, 10);
-  const parseTime = (v: string | Date) => {
-    if (v instanceof Date) {
-      return `${String(v.getHours()).padStart(2, '0')}:${String(v.getMinutes()).padStart(2, '0')}`;
-    }
-    return String(v).match(/(\d{2}:\d{2})/)?.[1] ?? String(v);
-  };
   return {
     id: Number(row.id),
     title: String(row.title),
     description: row.description != null ? String(row.description) : undefined,
-    date,
-    end_date: endDate,
-    start_time: parseTime(start as string | Date),
-    end_time: parseTime(end as string | Date),
+    date: formatDate(row.start_time),
+    end_date: formatDate(row.end_time),
+    start_time: formatTime(row.start_time),
+    end_time: formatTime(row.end_time),
     room_id: Number(row.room_id),
     speaker_id: Number(row.speaker_id),
     room_name: String(row.room_name ?? ''),

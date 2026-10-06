@@ -4,10 +4,10 @@
  * Props: sessions, rooms (opcionális, alapértelmezés FALLBACK_ROOMS).
  */
 import { useMemo, useState } from 'react';
-import type { Session } from '../../../backend/types';
-import type { Room } from '../../../backend/types';
+import type { Room, Session } from '../../../backend/types';
+import { SESSION_ACCENTS } from '../../lib/display';
 import { FALLBACK_ROOMS, roomLabel } from '../../lib/rooms';
-import { sessionSpansDate } from '../../lib/sessionFormat';
+import { localDateKey, sessionSpansDate } from '../../lib/sessionFormat';
 import { formatTimeKey } from '../../i18n/dateFormat';
 import { useI18n } from '../../i18n/I18nProvider';
 
@@ -15,24 +15,8 @@ const DAY_START = 8;
 const DAY_END = 20;
 const DAY_MINUTES = (DAY_END - DAY_START) * 60;
 
-const ACCENT: Record<string, string> = {
-  blue: '#1a56db',
-  amber: '#f59e0b',
-  green: '#057a55',
-  red: '#e02424',
-};
-
-function monthKeyFromDate(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
 function parseMinutes(time: string): number {
-  const m = String(time).match(/(\d{2}):(\d{2})/);
+  const m = time.match(/(\d{2}):(\d{2})/);
   if (!m) return DAY_START * 60;
   return Number(m[1]) * 60 + Number(m[2]);
 }
@@ -54,13 +38,14 @@ export default function RoomsUsage({
   rooms?: Room[];
 }) {
   const { t, bcp47 } = useI18n();
-  const [monthKey, setMonthKey] = useState(() => monthKeyFromDate(new Date()));
-  const [dayKey, setDayKey] = useState(todayStr);
+  const [month, setMonth] = useState(() => new Date());
+  const [dayKey, setDayKey] = useState(localDateKey);
+  const monthKey = localDateKey(month).slice(0, 7);
+  const monthLabel = month.toLocaleDateString(bcp47, { year: 'numeric', month: 'long' });
 
   // Havi előadásszám teremenként a kiválasztott hónapban
   const counts = useMemo(() => {
     const map = new Map<number, number>();
-    for (const r of rooms) map.set(r.id, 0);
     for (const s of sessions) {
       if (s.date.startsWith(monthKey)) {
         map.set(s.room_id, (map.get(s.room_id) ?? 0) + 1);
@@ -77,32 +62,19 @@ export default function RoomsUsage({
 
   const max = Math.max(...counts.map((c) => c.count), 1);
 
-  function prevMonth() {
-    const [y, m] = monthKey.split('-').map(Number);
-    const date = new Date(y, m - 1, 1);
-    date.setMonth(date.getMonth() - 1);
-    setMonthKey(monthKeyFromDate(date));
-  }
-  function nextMonth() {
-    const [y, m] = monthKey.split('-').map(Number);
-    const date = new Date(y, m - 1, 1);
-    date.setMonth(date.getMonth() + 1);
-    setMonthKey(monthKeyFromDate(date));
+  function navigateMonth(direction: -1 | 1) {
+    setMonth((previous) => new Date(previous.getFullYear(), previous.getMonth() + direction, 1));
   }
 
   return (
     <div className="rooms-usage-panel">
       <div className="section-title">{t('admin.rooms.monthlyTitle')}</div>
       <div className="cal-nav" style={{ marginBottom: 12 }}>
-        <button type="button" className="cal-nav-btn" onClick={prevMonth} aria-label="Previous month">◀</button>
+        <button type="button" className="cal-nav-btn" onClick={() => navigateMonth(-1)} aria-label="Previous month">◀</button>
         <div className="cal-month-title" style={{ textAlign: 'center' }}>
-          {(() => {
-            const [y, m] = monthKey.split('-').map(Number);
-            const d = new Date(y, m - 1, 1);
-            return d.toLocaleDateString(bcp47, { year: 'numeric', month: 'long' });
-          })()}
+          {monthLabel}
         </div>
-        <button type="button" className="cal-nav-btn" onClick={nextMonth} aria-label="Next month">▶</button>
+        <button type="button" className="cal-nav-btn" onClick={() => navigateMonth(1)} aria-label="Next month">▶</button>
       </div>
 
       <div className="rooms-usage-bars">
@@ -163,7 +135,7 @@ export default function RoomsUsage({
                       style={{
                         left: `${pos.left}%`,
                         width: `${width}%`,
-                        background: ACCENT[s.color] ?? '#1a56db',
+                        background: SESSION_ACCENTS[s.color] ?? '#1a56db',
                       }}
                       title={`${s.title} (${formatTimeKey(s.start_time)} – ${formatTimeKey(s.end_time)})`}
                     >

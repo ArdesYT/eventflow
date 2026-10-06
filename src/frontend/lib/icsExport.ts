@@ -13,13 +13,16 @@ function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-/** Helyi dátum + idő → ICS UTC formátum (YYYYMMDDTHHMMSSZ) */
-function toIcsUtc(date: string, time: string): string {
-  const d = new Date(`${date}T${time}:00`);
+/** UTC formátum (YYYYMMDDTHHMMSSZ) az időbélyeghez és a session időpontjaihoz. */
+function formatIcsUtc(d: Date): string {
   return (
     `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}` +
     `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`
   );
+}
+
+function toIcsUtc(date: string, time: string): string {
+  return formatIcsUtc(new Date(`${date}T${time}:00`));
 }
 
 /** ICS speciális karakterek escape-elése a szövegmezőkben */
@@ -33,15 +36,11 @@ function escapeIcs(text: string): string {
 
 /** RFC 5545 sor tördelés max 75 karakter (folytató sorok szóközzel) */
 function foldLine(line: string): string {
-  const max = 75;
-  if (line.length <= max) return line;
-  let out = line.slice(0, max) + '\r\n';
-  let rest = line.slice(max);
-  while (rest.length > max - 1) {
-    out += ' ' + rest.slice(0, max - 1) + '\r\n';
-    rest = rest.slice(max - 1);
+  const lines = [line.slice(0, 75)];
+  for (let offset = 75; offset < line.length; offset += 74) {
+    lines.push(` ${line.slice(offset, offset + 74)}`);
   }
-  return out + ' ' + rest;
+  return lines.join('\r\n');
 }
 
 /**
@@ -51,10 +50,7 @@ function foldLine(line: string): string {
  * @returns .ics fájl tartalma (CRLF sorvégekkel)
  */
 export function buildIcsCalendar(sessions: Session[], calendarName: string): string {
-  const now = new Date();
-  const dtstamp =
-    `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}` +
-    `T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
+  const dtstamp = formatIcsUtc(new Date());
 
   const events = sessions.map((s) => {
     const uid = `eventflow-session-${s.id}@eventflow`;

@@ -3,6 +3,7 @@
  * Nézetek: áttekintés, felhasználók, előadások, termek, előadók, audit, eseményprofil.
  * Props: initialUser, event, rooms, sessions, users, CRUD callback-ek, backendMode, onLogout.
  */
+import { getInitials } from '../../lib/display';
 import { useState, useEffect } from 'react';
 import type {
   CreateSessionBody,
@@ -14,6 +15,7 @@ import type {
   User,
   AdminViewType,
   BookingFormData,
+  ActivityLogEntry,
 } from '../../../backend/types';
 import EventProfileEditor from './EventProfileEditor';
 import {
@@ -33,7 +35,6 @@ import ActivityLogView from './ActivityLogView';
 import LanguageSwitcher from '../LanguageSwitcher';
 import MobileBottomNav from '../MobileBottomNav';
 import { fetchActivityLog } from '../../lib/adminApi';
-import type { ActivityLogEntry } from '../../../backend/types';
 import { useI18n } from '../../i18n/I18nProvider';
 import { translateError } from '../../i18n/translateError';
 import '../../App.css';
@@ -47,25 +48,6 @@ const NAV_ITEMS: { view: AdminViewType; icon: string; labelKey: string }[] = [
   { view: 'audit', icon: '📋', labelKey: 'admin.nav.audit' },
   { view: 'event', icon: '⚙️', labelKey: 'admin.nav.event' },
 ];
-
-const PAGE_TITLE_KEYS: Record<AdminViewType, string> = {
-  overview: 'admin.nav.overview',
-  users: 'admin.nav.users',
-  sessions: 'admin.nav.sessions',
-  rooms: 'admin.nav.rooms',
-  speakers: 'admin.nav.speakers',
-  audit: 'admin.nav.audit',
-  event: 'admin.nav.event',
-};
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
 
 /** Admin alkalmazás props — teljes admin state és CRUD callback-ek. */
 interface AdminAppProps {
@@ -194,25 +176,18 @@ export default function AdminApp({
     onRefreshSessions();
   }
 
-  async function handleRoleChange(userId: number, role: User['role']) {
+  async function runUserAction(action: () => Promise<void>, fallback = 'errors.saveError') {
     setUserActionError(null);
     try {
-      await onUpdateUserRole(userId, role);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'errors.saveError';
-      setUserActionError(msg);
+      await action();
+    } catch (error) {
+      setUserActionError(error instanceof Error ? error.message : fallback);
     }
   }
 
   async function handleDeleteUser(userId: number) {
     if (!window.confirm(t('admin.users.confirmDelete'))) return;
-    setUserActionError(null);
-    try {
-      await onDeleteUser(userId);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'errors.deleteError';
-      setUserActionError(msg);
-    }
+    return runUserAction(() => onDeleteUser(userId), 'errors.deleteError');
   }
 
   return (
@@ -245,7 +220,7 @@ export default function AdminApp({
       <div className="main-area">
         <div className="topbar">
           <div className="topbar-left">
-            <h1 className="page-title">{t(PAGE_TITLE_KEYS[currentView])}</h1>
+            <h1 className="page-title">{t(`admin.nav.${currentView}`)}</h1>
             <span className="hint-badge admin admin-topbar-badge">
               {t('login.admin')}
             </span>
@@ -334,7 +309,7 @@ export default function AdminApp({
                 <UsersView
                   users={users}
                   currentUserId={initialUser.id}
-                  onRoleChange={handleRoleChange}
+                  onRoleChange={(id, role) => runUserAction(() => onUpdateUserRole(id, role))}
                   onRoomsChange={backendMode ? onUpdateUserRooms : undefined}
                   onDelete={handleDeleteUser}
                 />

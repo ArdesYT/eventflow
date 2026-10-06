@@ -203,12 +203,10 @@ export default function SessionWorkspace({
       )}
       {viewMode === 'agenda' && <AgendaView sessions={filteredSessions} sessionSaves={sessionSaves ?? undefined} onEventClick={setDetailId} />}
       {viewMode === 'calendar' && (
-        <>
-          <CalendarView curMonth={month.getMonth()} curYear={month.getFullYear()} sessions={filteredSessions}
-            selectedDate={selectedDate} onSelectDay={selectBookingDay} onEventClick={setDetailId}
-            onNavigate={(direction) => { setMonth(new Date(month.getFullYear(), month.getMonth() + direction, 1)); setSelectedDate(null); }}
-            onToday={() => { setMonth(new Date()); setSelectedDate(null); }} />
-        </>
+        <CalendarView curMonth={month.getMonth()} curYear={month.getFullYear()} sessions={filteredSessions}
+          selectedDate={selectedDate} onSelectDay={selectBookingDay} onEventClick={setDetailId}
+          onNavigate={(direction) => { setMonth(new Date(month.getFullYear(), month.getMonth() + direction, 1)); setSelectedDate(null); }}
+          onToday={() => { setMonth(new Date()); setSelectedDate(null); }} />
       )}
       {detailSession && <DetailModal session={detailSession} savedBy={sessionSaves?.[detailSession.id]}
         savesLoaded={sessionSaves !== null} onClose={() => setDetailId(null)}

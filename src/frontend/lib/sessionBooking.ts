@@ -88,6 +88,18 @@ function toRange(date: string, time: string): Date {
 /** Terem buffer szabály: minimum 2 óra két foglalás között */
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
+type TimeRange = Pick<Session, 'date' | 'end_date' | 'start_time' | 'end_time'>;
+
+function rangeTimes(range: TimeRange): [Date, Date] {
+  return [toRange(range.date, range.start_time), toRange(range.end_date ?? range.date, range.end_time)];
+}
+
+function durationMinutes(range: TimeRange): number {
+  const [start, end] = rangeTimes(range);
+  const minutes = (end.getTime() - start.getTime()) / 60000;
+  return Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes) : 0;
+}
+
 /**
  * Van-e terem ütközés (átfedés vagy 2 órán belüli buffer) a megadott űrlappal.
  * @param sessions - Összes meglévő session
@@ -100,21 +112,12 @@ export function hasRoomConflict(
   data: BookingFormData,
   excludeSessionId?: number,
 ): boolean {
-  const endDate = data.end_date || data.date;
-  const newStart = toRange(data.date, data.start_time);
-  const newEnd = toRange(endDate, data.end_time);
-
-  return sessions.some((s) => {
-    if (excludeSessionId != null && s.id === excludeSessionId) return false;
-    if (s.room_id !== data.room_id) return false;
-    const sEnd = s.end_date ?? s.date;
-    const existingStart = toRange(s.date, s.start_time);
-    const existingEnd = toRange(sEnd, s.end_time);
-    // 2 órás buffer után nincs ütközés
-    if (newStart.getTime() >= existingEnd.getTime() + TWO_HOURS_MS) return false;
-    if (existingStart.getTime() >= newEnd.getTime() + TWO_HOURS_MS) return false;
-    return true;
-  });
+  const candidate = { ...data, end_date: data.end_date || data.date };
+  return sessions.some((session) =>
+    (excludeSessionId == null || session.id !== excludeSessionId) &&
+    session.room_id === data.room_id &&
+    hasBufferConflictBetween(candidate, session),
+  );
 }
 
 /**
@@ -137,11 +140,7 @@ export function validateBookingTimes(data: BookingFormData): 'endBeforeStart' | 
  * @returns Percek száma; 0 érvénytelen vagy nem pozitív tartománynál
  */
 export function bookingDurationMinutes(data: BookingFormData): number {
-  const endDate = data.end_date || data.date;
-  const start = toRange(data.date, data.start_time);
-  const end = toRange(endDate, data.end_time);
-  const diff = (end.getTime() - start.getTime()) / 60000;
-  return Number.isFinite(diff) && diff > 0 ? Math.round(diff) : 0;
+  return durationMinutes({ ...data, end_date: data.end_date || data.date });
 }
 
 /**
@@ -159,11 +158,7 @@ export function bookingDayCount(data: BookingFormData): number {
  * @param session - Session idő mezőkkel
  */
 export function sessionDurationMinutes(session: Session): number {
-  const endDate = session.end_date ?? session.date;
-  const start = toRange(session.date, session.start_time);
-  const end = toRange(endDate, session.end_time);
-  const diff = (end.getTime() - start.getTime()) / 60000;
-  return Number.isFinite(diff) && diff > 0 ? Math.round(diff) : 0;
+  return durationMinutes(session);
 }
 
 /**
@@ -191,10 +186,8 @@ export function formatDuration(minutes: number): string {
  * @param b - Második session
  */
 export function sessionsOverlap(a: Session, b: Session): boolean {
-  const aStart = toRange(a.date, a.start_time);
-  const aEnd = toRange(a.end_date ?? a.date, a.end_time);
-  const bStart = toRange(b.date, b.start_time);
-  const bEnd = toRange(b.end_date ?? b.date, b.end_time);
+  const [aStart, aEnd] = rangeTimes(a);
+  const [bStart, bEnd] = rangeTimes(b);
   return aStart < bEnd && bStart < aEnd;
 }
 
@@ -214,8 +207,7 @@ export function findScheduleConflicts(saved: Session[], candidate: Session): Ses
  */
 export function isSessionLive(session: Session, now = new Date()): boolean {
   if (isSessionCancelled(session)) return false;
-  const start = toRange(session.date, session.start_time);
-  const end = toRange(session.end_date ?? session.date, session.end_time);
+  const [start, end] = rangeTimes(session);
   return now >= start && now <= end;
 }
 
@@ -255,22 +247,13 @@ export function bookingFormToCandidateSession(
 
 /** Terem buffer ütközés: átfedés VAGY 2 órán belüli közelség */
 function hasBufferConflictBetween(
-  a: { date: string; end_date?: string; start_time: string; end_time: string },
-  b: { date: string; end_date?: string; start_time: string; end_time: string },
+  a: TimeRange,
+  b: TimeRange,
 ): boolean {
-  if (sessionsOverlap(
-    { ...a, end_date: a.end_date ?? a.date } as Session,
-    { ...b, end_date: b.end_date ?? b.date } as Session,
-  )) {
-    return true;
-  }
-  const aStart = toRange(a.date, a.start_time);
-  const aEnd = toRange(a.end_date ?? a.date, a.end_time);
-  const bStart = toRange(b.date, b.start_time);
-  const bEnd = toRange(b.end_date ?? b.date, b.end_time);
-  if (aStart.getTime() >= bEnd.getTime() + TWO_HOURS_MS) return false;
-  if (bStart.getTime() >= aEnd.getTime() + TWO_HOURS_MS) return false;
-  return true;
+  const [aStart, aEnd] = rangeTimes(a);
+  const [bStart, bEnd] = rangeTimes(b);
+  return !(aStart.getTime() >= bEnd.getTime() + TWO_HOURS_MS ||
+    bStart.getTime() >= aEnd.getTime() + TWO_HOURS_MS);
 }
 
 /**

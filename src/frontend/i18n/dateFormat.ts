@@ -92,12 +92,7 @@ export function getWeekdayLabels(locale: Locale, short = false): string[] {
   const fmt = new Intl.DateTimeFormat(LOCALE_BCP47[locale], {
     weekday: short ? 'short' : 'short',
   });
-  const labels: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(2024, 0, 1 + i);
-    labels.push(fmt.format(d).replace('.', ''));
-  }
-  return labels;
+  return Array.from({ length: 7 }, (_, day) => fmt.format(new Date(2024, 0, 1 + day)).replace('.', ''));
 }
 
 /** Mini-naptár egybetűs hétköznap címkék. */

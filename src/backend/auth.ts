@@ -1,23 +1,7 @@
-/**
- * =============================================================================
- * auth.ts — JWT alapú hitelesítés és jogosultság-ellenőrzés
- * =============================================================================
- *
- * Felelősség:
- *  - Bejelentkezés után JWT token kiállítása (signToken)
- *  - Kérésenkénti token ellenőrzés (createAuthMiddleware)
- *  - Szerepkör-alapú végpontvédelem (requireRoles, requireAdmin)
- *
- * Token formátum: Authorization: Bearer <jwt>
- * Payload: { sub: userId, role, email }
- *
- * A jelszó hash-elés NEM itt történik — a server.ts register/login végpontokban (bcrypt).
- * =============================================================================
- */
-
+/** JWT authentication; permissions always use the user's current database role. */
 import type { Request, Response, NextFunction } from 'express';
 import jwt, { type SignOptions } from 'jsonwebtoken';
-import type { Pool, PoolConnection } from 'mariadb';
+import type { Pool } from 'mariadb';
 import type { User, UserRole } from './types';
 
 /** JWT aláírási kulcs — production-ban kötelező egyedi érték (.env JWT_SECRET). */
@@ -34,12 +18,7 @@ export interface JwtPayload {
 }
 
 /** A kéréshez csatolt, DB-ből frissített felhasználó (jelszó nélkül). */
-export interface AuthenticatedUser {
-  id: number;
-  name: string;
-  email: string;
-  role: UserRole;
-}
+export type AuthenticatedUser = Pick<User, 'id' | 'name' | 'email' | 'role'>;
 
 /** Express Request kiterjesztése — middleware után req.authUser kitöltődik. */
 export interface AuthenticatedRequest extends Request {
@@ -90,9 +69,8 @@ async function loadUserById(
   pool: Pool,
   userId: number,
 ): Promise<AuthenticatedUser | null> {
-  let conn: PoolConnection | undefined;
+  const conn = await pool.getConnection();
   try {
-    conn = await pool.getConnection();
     const rows = await conn.query(
       'SELECT id, name, email, role FROM users WHERE id = ?',
       [userId],
@@ -106,7 +84,7 @@ async function loadUserById(
       role: String(row.role).trim().toLowerCase() as UserRole,
     };
   } finally {
-    if (conn) conn.release();
+    conn.release();
   }
 }
 
@@ -151,13 +129,17 @@ export function createAuthMiddleware(pool: Pool) {
  * Példa: const requireBookerOrAdmin = requireRoles('booker', 'admin');
  */
 export function requireRoles(...roles: UserRole[]) {
+  return roleGuard(roles, 'Nincs jogosultsága ehhez a művelethez.');
+}
+
+function roleGuard(roles: UserRole[], forbiddenMessage: string) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.authUser) {
       res.status(401).json({ message: 'Bejelentkezés szükséges.' });
       return;
     }
     if (!roles.includes(req.authUser.role)) {
-      res.status(403).json({ message: 'Nincs jogosultsága ehhez a művelethez.' });
+      res.status(403).json({ message: forbiddenMessage });
       return;
     }
     next();
@@ -165,18 +147,4 @@ export function requireRoles(...roles: UserRole[]) {
 }
 
 /** Csak admin szerepkör — admin felület végpontjaihoz. */
-export function requireAdmin(
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction,
-): void {
-  if (!req.authUser) {
-    res.status(401).json({ message: 'Bejelentkezés szükséges.' });
-    return;
-  }
-  if (req.authUser.role !== 'admin') {
-    res.status(403).json({ message: 'Csak adminisztrátorok számára.' });
-    return;
-  }
-  next();
-}
+export const requireAdmin = roleGuard(['admin'], 'Csak adminisztrátorok számára.');

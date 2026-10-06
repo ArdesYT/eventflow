@@ -6,7 +6,7 @@
  * Fő exportok: {@link authHeaders}, {@link authFetch}.
  */
 
-import { apiUrl } from './api';
+import { apiUrl, ensureResponseOk } from './api';
 import { loadAuthToken } from './authStorage';
 
 /**
@@ -38,4 +38,16 @@ export async function authFetch(
 ): Promise<Response> {
   const headers = authHeaders(init.headers as HeadersInit);
   return fetch(apiUrl(path), { ...init, headers });
+}
+
+/** Authenticated request with consistent backend error handling. */
+export async function authRequest(
+  path: string,
+  fallback: string,
+  init: RequestInit = {},
+  statusErrors: Partial<Record<number, string>> = {},
+): Promise<Response> {
+  const response = await authFetch(path, init);
+  await ensureResponseOk(response, fallback, statusErrors);
+  return response;
 }

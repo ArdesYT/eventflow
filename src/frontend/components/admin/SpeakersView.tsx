@@ -3,6 +3,7 @@
  * AdminApp speakers nézet; backend módban API, demo módban csak olvasás.
  * Props: speakers, loading, backendMode, searchTerm, onCreate/onUpdate/onDelete/onMerge.
  */
+import { getInitials } from '../../lib/display';
 import { useMemo, useState, type FormEvent } from 'react';
 import type { Speaker } from '../../../backend/types';
 import { groupDuplicateSpeakers } from '../../lib/speakerDuplicates';
@@ -17,16 +18,6 @@ interface SpeakersViewProps {
   onUpdate: (id: number, name: string, bio: string) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onMerge?: (keepId: number, mergeIds: number[]) => Promise<void>;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 export default function SpeakersView({

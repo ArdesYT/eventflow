@@ -17,6 +17,12 @@ const MYSQL_DT = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/;
 /** Csak idő: HH:mm */
 const TIME_ONLY = /^(\d{2}):(\d{2})/;
 
+/** Local calendar date, without converting to UTC. */
+export function localDateKey(date: Date = new Date()): string {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 /**
  * DB/API datetime szöveg → naptári dátum + HH:mm (helyi, timezone meglepetés nélkül).
  * @param raw - start_time, end_time vagy date mező értéke
@@ -39,9 +45,9 @@ export function parseSessionDateTime(raw: string): { date: string; time: string 
   }
 
   // Csak idő (pl. "14:30") — dátum üres marad
-  if (TIME_ONLY.test(value) && !value.includes('-')) {
-    const t = TIME_ONLY.exec(value)!;
-    return { date: '', time: `${t[1]}:${t[2]}` };
+  const time = TIME_ONLY.exec(value);
+  if (time && !value.includes('-')) {
+    return { date: '', time: `${time[1]}:${time[2]}` };
   }
 
   // Utolsó esély: ISO / Date.parse
@@ -49,7 +55,7 @@ export function parseSessionDateTime(raw: string): { date: string; time: string 
   if (!Number.isNaN(d.getTime())) {
     const pad = (n: number) => String(n).padStart(2, '0');
     return {
-      date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+      date: localDateKey(d),
       time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
     };
   }
@@ -195,8 +201,7 @@ export function enumerateDateRange(start: string, end: string): string[] {
   const cur = new Date(sy, sm - 1, sd);
   const last = new Date(ey, em - 1, ed);
   while (cur <= last) {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    dates.push(`${cur.getFullYear()}-${pad(cur.getMonth() + 1)}-${pad(cur.getDate())}`);
+    dates.push(localDateKey(cur));
     cur.setDate(cur.getDate() + 1);
   }
   return dates;

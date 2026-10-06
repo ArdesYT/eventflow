@@ -36,11 +36,8 @@ function getNested(obj: Record<string, unknown>, path: string): string | undefin
   const parts = path.split('.');
   let cur: unknown = obj;
   for (const part of parts) {
-    if (cur && typeof cur === 'object' && part in cur) {
-      cur = (cur as Record<string, unknown>)[part];
-    } else {
-      return undefined;
-    }
+    if (!cur || typeof cur !== 'object' || !(part in cur)) return undefined;
+    cur = (cur as Record<string, unknown>)[part];
   }
   return typeof cur === 'string' ? cur : undefined;
 }

@@ -24,7 +24,7 @@ export default function LocalizedDateInput({
   hasError = false,
   placeholder,
 }: LocalizedDateInputProps) {
-  const { locale } = useI18n();
+  const { locale, bcp47 } = useI18n();
   const nativeRef = useRef<HTMLInputElement>(null);
 
   // Natív date input megnyitása — showPicker() vagy focus+click fallback
@@ -54,7 +54,7 @@ export default function LocalizedDateInput({
         className="localized-date-native"
         value={value}
         min={min}
-        lang={locale === 'hu' ? 'hu-HU' : locale === 'de' ? 'de-DE' : 'en-GB'}
+        lang={bcp47}
         onChange={(e) => onChange(e.target.value)}
         tabIndex={-1}
         aria-hidden="true"

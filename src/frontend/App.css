@@ -211,26 +211,6 @@ body {
   color: var(--gray-400);
 }
 
-.btn-new {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-family: var(--font-ui);
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.btn-new:hover {
-  background: var(--primary-dark);
-}
-
 /* ─── Content area ────────────────────────── */
 .content-area {
   flex: 1;
@@ -1423,41 +1403,6 @@ body {
   min-height: 32px;
 }
 
-.lang-switcher-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--gray-600);
-  flex-shrink: 0;
-  cursor: default;
-}
-
-.lang-switcher-select {
-  flex: 1;
-  min-width: 0;
-  border: none;
-  background: transparent;
-  font-family: var(--font-ui);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--gray-800);
-  padding: 8px 28px 8px 0;
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right center;
-}
-
-.lang-switcher-select:focus {
-  outline: none;
-}
-
-.lang-switcher-select:focus-visible {
-  outline: 2px solid var(--primary-light);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
 /* ─── Admin dashboard ───────────────────────────────────── */
 .admin-sidebar {
   border-right-color: #e9e5ff;
@@ -1872,11 +1817,6 @@ body {
   background: var(--primary-light);
   color: var(--primary-dark);
   vertical-align: middle;
-}
-
-.agenda-multiday-tag {
-  color: var(--gray-400);
-  font-size: 12px;
 }
 
 .public-time-range {
@@ -2556,47 +2496,6 @@ body {
   min-width: 0;
 }
 
-.public-save-btn {
-  flex-shrink: 0;
-  padding: 7px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--primary);
-  background: #fff;
-  color: var(--primary);
-  font-size: 12px;
-  font-weight: 600;
-  font-family: var(--font-ui);
-  cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.public-save-btn:hover:not(:disabled) {
-  background: var(--primary-light);
-}
-
-.public-save-btn.saved {
-  border-color: var(--gray-200);
-  background: var(--gray-50);
-  color: var(--gray-500);
-  cursor: default;
-}
-
-.public-save-btn.remove {
-  border-color: #fca5a5;
-  color: var(--danger);
-}
-
-.public-save-btn.remove:hover:not(:disabled) {
-  background: var(--danger-light);
-}
-
-.public-save-btn:disabled {
-  opacity: 0.7;
-  cursor: wait;
-}
-
 .public-session-meta {
   display: flex;
   align-items: center;
@@ -2668,16 +2567,6 @@ body {
   border-bottom: 1px solid rgba(26, 86, 219, 0.12);
   font-size: 13px;
   color: var(--gray-700);
-}
-
-.public-guest-login-link {
-  background: none;
-  border: none;
-  color: var(--primary);
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 13px;
-  text-decoration: underline;
 }
 
 .public-login-btn {
@@ -2768,21 +2657,6 @@ body {
 
 .public-speaker-session-link:hover {
   text-decoration: underline;
-}
-
-.attendee-conflict-warning {
-  margin-top: 12px;
-  padding: 12px 14px;
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #92400e;
-}
-
-.attendee-conflict-warning ul {
-  margin: 6px 0 0;
-  padding-left: 18px;
 }
 
 .login-browse-btn {
@@ -2997,10 +2871,6 @@ body {
   color: #1d4ed8;
   background: #eff6ff;
   border-color: #93c5fd;
-}
-
-.public-load-demo-btn {
-  margin-top: 16px;
 }
 
 .admin-demo-seed-banner {
@@ -3411,15 +3281,8 @@ body {
 }
 
 /* ─── Mobile shell (booker + admin) ───────────────────── */
-.mobile-menu-btn {
-  display: none;
-}
 
 .mobile-bottom-nav {
-  display: none;
-}
-
-.sidebar-backdrop {
   display: none;
 }
 
@@ -3455,44 +3318,8 @@ body {
     box-shadow: var(--shadow-md);
   }
 
-  .sidebar--open {
-    transform: translateX(0);
-  }
-
   .sidebar-nav {
     display: none;
-  }
-
-  .sidebar-backdrop {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 190;
-    border: none;
-    background: rgba(15, 23, 42, 0.45);
-    cursor: pointer;
-    padding: 0;
-  }
-
-  .mobile-menu-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    flex-shrink: 0;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-sm);
-    background: #fff;
-    color: var(--gray-700);
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-    font-family: var(--font-ui);
-  }
-
-  .mobile-menu-btn:hover {
-    background: var(--gray-50);
   }
 
   .mobile-bottom-nav {
@@ -3638,11 +3465,6 @@ body {
     font-size: 11px;
   }
 
-  .btn-new {
-    padding: 7px 12px;
-    font-size: 12px;
-  }
-
   .topbar-user-name {
     display: none;
   }
@@ -3721,24 +3543,9 @@ body {
     gap: 10px;
   }
 
-  .admin-stats-row {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .admin-users-table-wrap,
-  .rooms-usage-table-wrap {
+  .admin-users-table-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-  }
-
-  .bulk-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  .bulk-toolbar-actions {
-    flex-wrap: wrap;
   }
 
   /* Login + public (existing) */
@@ -3746,10 +3553,6 @@ body {
   .login-right {
     min-height: 100dvh;
     padding: 24px 20px;
-  }
-  .login-card {
-    width: 100%;
-    max-width: 420px;
   }
 
   .public-hero-content {

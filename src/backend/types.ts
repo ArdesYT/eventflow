@@ -1,13 +1,4 @@
-/**
- * =============================================================================
- * types.ts — Közös TypeScript típusok (backend + frontend)
- * =============================================================================
- *
- * A frontend közvetlenül importálja ezt a fájlt — egy forrás az API szerződéshez.
- * Ne tegyünk ide futásidejű kódot, csak típusokat és type aliasokat.
- * =============================================================================
- */
-
+/** Shared API types for the backend and frontend. Keep this module free of runtime code. */
 /** Előadás kártya színe a naptárban / listában. */
 export type EventColor = 'blue' | 'amber' | 'green' | 'red';
 
@@ -108,30 +99,16 @@ export interface Session extends SessionRow {
 }
 
 // ── Data the frontend submits when creating a booking ─────────────────────────
-export interface BookingFormData {
-  title: string;
-  description: string;
+export interface BookingFormData extends Required<Omit<SessionRow, 'id'>> {
   date: string;
   end_date: string;
-  start_time: string;
-  end_time: string;
-  room_id: number;      // FK — sent to the DB
-  speaker_id: number;   // FK — sent to the DB
   room_name: string;    // for optimistic UI update only, not written to DB
   speaker_name: string; // for optimistic UI update only, not written to DB
-  color: EventColor;
 }
 
 // ── Subset actually written to the DB by POST /api/sessions ──────────────────
-export interface CreateSessionBody {
-  title: string;
-  description?: string;
-  start_time: string;
-  end_time: string;
-  room_id: number;
-  speaker_id: number;
+export interface CreateSessionBody extends Omit<SessionRow, 'id'> {
   speaker_name?: string;
-  color: EventColor;
 }
 
 

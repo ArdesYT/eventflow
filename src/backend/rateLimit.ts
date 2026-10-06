@@ -1,16 +1,4 @@
-/**
- * =============================================================================
- * rateLimit.ts — Egyszerű memória-alapú rate limiter
- * =============================================================================
- *
- * IP + útvonal kulcson számolja a kéréseket egy időablakon belül.
- * Jelenleg főleg auth végpontokon használjuk (brute-force védelem).
- *
- * Korlát: egy processz memóriájában él — több szerver/instance esetén
- * nem osztozik (production-ban Redis ajánlott helyette).
- * =============================================================================
- */
-
+/** Per-process request limits keyed by IP and path; instances do not share counters. */
 import type { Request, Response, NextFunction } from 'express';
 
 /** Egy IP+path páros számlálója és ablak vége. */

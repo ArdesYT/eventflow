@@ -6,6 +6,7 @@ import type { SessionWorkspaceProps } from './components/SessionWorkspace';
 import StatsView from './components/StatsView';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import MobileBottomNav from './components/MobileBottomNav';
+import { getInitials } from './lib/display';
 import { useI18n } from './i18n/I18nProvider';
 import './App.css';
 
@@ -56,7 +57,7 @@ export default function App({ initialUser, loading, error, onSetSessionStatus, o
           <div className="topbar-right">
             <LanguageSwitcher />
             <div className="topbar-user-pill">
-              <div className="topbar-user-avatar">{initialUser.name.split(' ').filter(Boolean).map((word) => word[0]).join('').slice(0, 2).toUpperCase()}</div>
+              <div className="topbar-user-avatar">{getInitials(initialUser.name)}</div>
               <span className="topbar-user-name">{initialUser.name}</span>
             </div>
             <button className="topbar-logout-btn" onClick={onLogout} title={t('common.signOut')} aria-label={t('common.signOut')}>⎋</button>

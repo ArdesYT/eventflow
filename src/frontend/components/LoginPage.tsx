@@ -8,6 +8,7 @@ import { DEMO_USERS, getDemoUser } from '../lib/demoUsers';
 import { useI18n } from '../i18n/I18nProvider';
 import { translateError } from '../i18n/translateError';
 import LanguageSwitcher from './LanguageSwitcher';
+import logo from '../../assets/Logo.png';
 
 /** Bejelentkezési oldal props — offline flag és auth callback-ek. */
 interface LoginPageProps {
@@ -26,18 +27,19 @@ export default function LoginPage({ offlineMode, onBrowseGuest, onLogin, onRegis
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const registering = mode === 'register';
 
   // Űrlap beküldés — validáció, majd onLogin vagy onRegister hívása
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email || !password || (mode === 'register' && !name.trim())) {
+    if (!email || !password || (registering && !name.trim())) {
       setError(t('login.fillAllFields'));
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      if (mode === 'register') {
+      if (registering) {
         await onRegister({ name: name.trim(), email, password });
       } else {
         await onLogin({ email, password });
@@ -67,28 +69,20 @@ export default function LoginPage({ offlineMode, onBrowseGuest, onLogin, onRegis
     <div className="login-page">
       <div className="login-left">
         <div className="login-brand">
-          <div className='login-brand-logo'><img src="..\..\src\assets\Logo.png"></img></div>
+          <div className="login-brand-logo"><img src={logo} alt="EventFlow" /></div>
           <div>
             <div className="login-brand-name">EventFlow</div>
             <div className="login-brand-tagline">{t('login.tagline')}</div>
           </div>
         </div>
         <div className="login-decorative">
-          <div className="deco-card deco-card-1">
-            <div className="deco-dot blue" />
-            <div className="deco-line" />
-            <div className="deco-line short" />
-          </div>
-          <div className="deco-card deco-card-2">
-            <div className="deco-dot amber" />
-            <div className="deco-line" />
-            <div className="deco-line short" />
-          </div>
-          <div className="deco-card deco-card-3">
-            <div className="deco-dot green" />
-            <div className="deco-line" />
-            <div className="deco-line short" />
-          </div>
+          {['blue', 'amber', 'green'].map((color, index) => (
+            <div key={color} className={`deco-card deco-card-${index + 1}`}>
+              <div className={`deco-dot ${color}`} />
+              <div className="deco-line" />
+              <div className="deco-line short" />
+            </div>
+          ))}
         </div>
         <p className="login-left-footer">
           {t('login.footer').split('\n').map((line, i, arr) => (
@@ -107,10 +101,10 @@ export default function LoginPage({ offlineMode, onBrowseGuest, onLogin, onRegis
           </div>
           <div className="login-form-header">
             <h1 className="login-title">
-              {mode === 'register' ? t('login.registerTitle') : t('login.welcome')}
+              {t(registering ? 'login.registerTitle' : 'login.welcome')}
             </h1>
             <p className="login-subtitle">
-              {mode === 'register' ? t('login.registerSubtitle') : t('login.subtitle')}
+              {t(registering ? 'login.registerSubtitle' : 'login.subtitle')}
             </p>
           </div>
 
@@ -125,7 +119,7 @@ export default function LoginPage({ offlineMode, onBrowseGuest, onLogin, onRegis
             </div>
           )}
 
-          {mode === 'register' && (
+          {registering && (
             <div className="login-field">
               <label className="login-label">{t('login.name')}</label>
               <input
@@ -177,7 +171,7 @@ export default function LoginPage({ offlineMode, onBrowseGuest, onLogin, onRegis
           <button className="login-btn" type="submit" disabled={loading}>
             {loading ? (
               <span className="login-spinner" />
-            ) : mode === 'register' ? (
+            ) : registering ? (
               t('login.register')
             ) : (
               t('login.signIn')
@@ -185,7 +179,7 @@ export default function LoginPage({ offlineMode, onBrowseGuest, onLogin, onRegis
           </button>
 
           <div className="login-mode-toggle">
-            {mode === 'register' ? (
+            {registering ? (
               <p>
                 {t('login.loginPrompt')}{' '}
                 <button

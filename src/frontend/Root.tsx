@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type {
   BookingFormData,
+  CreateSessionBody,
   EventProfile,
   Room,
   User,
@@ -20,9 +21,9 @@ import LoginPage from './components/LoginPage';
 import PublicEventsPage from './components/PublicEventsPage';
 import App from './App';
 import AdminApp from './components/admin/AdminApp';
-import { apiUrl } from './lib/api';
+import { apiUrl, ensureResponseOk } from './lib/api';
 import { loadStoredAuth, saveAuth, clearAuth } from './lib/authStorage';
-import { authFetch } from './lib/authFetch';
+import { authFetch, authRequest } from './lib/authFetch';
 import { DEMO_USERS } from './lib/demoUsers';
 import { normalizeSession, parseSessionDateTime } from './lib/sessionFormat';
 import { bookingFormToApiBody } from './lib/sessionBooking';
@@ -91,6 +92,10 @@ function demoUsersList(): User[] {
   });
 }
 
+function normalizeUserRole(user: User): User {
+  return { ...user, role: user.role?.trim().toLowerCase() as UserRole };
+}
+
 async function isBackendReachable(): Promise<boolean> {
   try {
     const res = await fetch(apiUrl('/api/health'), {
@@ -132,17 +137,8 @@ export default function Root() {
   const [eventProfile, setEventProfile] = useState<EventProfile>(DEFAULT_EVENT);
 
   // Hibaüzenetek lokalizálása
-  const displayError = error
-    ? error.startsWith('errors.')
-      ? t(error)
-      : translateError(error, t)
-    : null;
-
-  const displayScheduleError = scheduleError
-    ? scheduleError.startsWith('errors.')
-      ? t(scheduleError)
-      : translateError(scheduleError, t)
-    : null;
+  const displayError = error ? translateError(error, t) : null;
+  const displayScheduleError = scheduleError ? translateError(scheduleError, t) : null;
 
   // —— Adatbetöltők (useCallback) ——
   const fetchSessions = useCallback(async () => {
@@ -164,7 +160,7 @@ export default function Root() {
     setUsersLoading(true);
     try {
       const list = await fetchAdminUsers();
-      setUsers(list.map((u) => ({ ...u, role: u.role?.trim().toLowerCase() as UserRole })));
+      setUsers(list.map(normalizeUserRole));
     } catch (e) {
       console.error('fetchUsers failed:', e);
       setUsers(demoUsersList());
@@ -188,7 +184,7 @@ export default function Root() {
               setUser(null);
             } else {
               const fresh = (await res.json()) as User;
-              const u = { ...fresh, role: fresh.role?.trim().toLowerCase() as UserRole };
+              const u = normalizeUserRole(fresh);
               saveAuth(u, auth.token);
               setUser(u);
             }
@@ -276,11 +272,7 @@ export default function Root() {
 
   // —— Effect: böngésző értesítések szinkronizálása attendee mentett programjával ——
   useEffect(() => {
-    if (!user || user.role?.trim().toLowerCase() !== 'attendee') {
-      stopSessionNotifications();
-      return;
-    }
-    if (!notificationsEnabled()) {
+    if (!user || user.role?.trim().toLowerCase() !== 'attendee' || !notificationsEnabled()) {
       stopSessionNotifications();
       return;
     }
@@ -290,25 +282,17 @@ export default function Root() {
 
   // —— Effect: booker/admin sessionSaves betöltése ——
   useEffect(() => {
-    if (!user || !backendMode) return;
-    const role = user.role?.trim().toLowerCase();
-    if (role === 'admin' || role === 'booker') {
-      fetchSessionSavesMap();
-    }
-  }, [user, backendMode, fetchSessionSavesMap]);
+    fetchSessionSavesMap();
+  }, [fetchSessionSavesMap]);
 
   // —— Effect: 5 mp-enkénti polling — sessions + role-specifikus adatok frissítése ——
   useEffect(() => {
     if (!user || !backendMode) return;
-    const role = user.role?.trim().toLowerCase();
 
     const id = setInterval(() => {
       fetchSessions();
-      if (role === 'attendee') {
-        fetchSavedSchedule();
-      } else if (role === 'admin' || role === 'booker') {
-        fetchSessionSavesMap();
-      }
+      fetchSavedSchedule();
+      fetchSessionSavesMap();
     }, POLL_INTERVAL_MS);
     return () => clearInterval(id);
   }, [user, backendMode, fetchSessions, fetchSavedSchedule, fetchSessionSavesMap]);
@@ -376,13 +360,10 @@ export default function Root() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message ?? 'errors.invalidCredentials');
-      }
+      await ensureResponseOk(res, 'errors.invalidCredentials');
       const data = await res.json();
       const raw = data.user ?? data;
-      const u: User = { ...raw, role: raw.role?.trim().toLowerCase() as UserRole };
+      const u = normalizeUserRole(raw);
       if (data.token) saveAuth(u, data.token);
       return u;
     }
@@ -410,48 +391,38 @@ export default function Root() {
       body: JSON.stringify(credentials),
     });
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.message ?? 'errors.saveError');
-    }
+    await ensureResponseOk(res, 'errors.saveError');
 
-    const loggedInUser = await handleLogin({
+    return handleLogin({
       email: credentials.email,
       password: credentials.password,
     });
-
-    return loggedInUser;
   }
 
   // —— Kezelők: előadás CRUD (create, update, delete, bulk, status) ——
-  async function handleCreate(body: object): Promise<void> {
+  async function handleCreate(body: CreateSessionBody): Promise<void> {
     if (backendMode) {
-      const res = await authFetch('/api/sessions', {
+      await authRequest('/api/sessions', 'errors.saveError', {
         method: 'POST',
         body: JSON.stringify(body),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message ?? 'errors.saveError');
-      }
       await fetchSessions();
     } else {
-      const b = body as CreateSessionBodyLocal;
-      const start = parseSessionDateTime(b.start_time ?? '');
-      const end = parseSessionDateTime(b.end_time ?? '');
+      const start = parseSessionDateTime(body.start_time);
+      const end = parseSessionDateTime(body.end_time);
       const newSession: Session = {
         id: Date.now(),
-        title: b.title ?? '',
-        description: b.description ?? '',
+        title: body.title,
+        description: body.description ?? '',
         date: start?.date ?? '',
         end_date: end?.date ?? start?.date ?? '',
         start_time: start?.time ?? '',
         end_time: end?.time ?? '',
-        room_id: b.room_id ?? 1,
-        speaker_id: b.speaker_id ?? 1,
-        room_name: rooms.find((room) => room.id === b.room_id)?.name ?? '',
-        speaker_name: sessions.find((session) => session.speaker_id === b.speaker_id)?.speaker_name ?? '',
-        color: b.color ?? 'blue',
+        room_id: body.room_id,
+        speaker_id: body.speaker_id,
+        room_name: rooms.find((room) => room.id === body.room_id)?.name ?? '',
+        speaker_name: sessions.find((session) => session.speaker_id === body.speaker_id)?.speaker_name ?? '',
+        color: body.color,
       };
       setSessions((prev) => [...prev, newSession]);
     }
@@ -459,11 +430,7 @@ export default function Root() {
 
   async function handleDelete(id: number): Promise<void> {
     if (backendMode) {
-      const res = await authFetch(`/api/sessions/${id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message ?? 'errors.deleteError');
-      }
+      await authRequest(`/api/sessions/${id}`, 'errors.deleteError', { method: 'DELETE' });
       await fetchSessions();
     } else {
       setSessions((prev) => prev.filter((s) => s.id !== id));
@@ -472,14 +439,10 @@ export default function Root() {
 
   async function handleUpdateSession(id: number, data: BookingFormData): Promise<void> {
     if (backendMode) {
-      const res = await authFetch(`/api/sessions/${id}`, {
+      await authRequest(`/api/sessions/${id}`, 'errors.saveError', {
         method: 'PATCH',
         body: JSON.stringify(bookingFormToApiBody(data)),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message ?? 'errors.saveError');
-      }
       await fetchSessions();
     } else {
       setSessions((prev) =>
@@ -487,17 +450,8 @@ export default function Root() {
           session.id === id
             ? {
                 ...session,
-                title: data.title,
-                description: data.description,
-                date: data.date,
+                ...data,
                 end_date: data.end_date || data.date,
-                start_time: data.start_time,
-                end_time: data.end_time,
-                room_id: data.room_id,
-                room_name: data.room_name,
-                speaker_id: data.speaker_id,
-                speaker_name: data.speaker_name,
-                color: data.color,
               }
             : session,
         ),
@@ -549,8 +503,7 @@ export default function Root() {
 
   async function handleUpdateEvent(data: Partial<EventProfile>) {
     if (!backendMode || user?.role !== 'admin') return;
-    const updated = await updateEventProfile(data);
-    setEventProfile(updated);
+    setEventProfile(await updateEventProfile(data));
   }
 
   async function handleToggleNotifications(enable: boolean): Promise<boolean> {
@@ -569,10 +522,8 @@ export default function Root() {
   async function handleDeleteUser(userId: number) {
     if (backendMode && user?.role === 'admin') {
       await deleteAdminUser(userId);
-      setUsers((prev) => prev.filter((u) => u.id !== userId));
-    } else {
-      setUsers((prev) => prev.filter((u) => u.id !== userId));
     }
+    setUsers((prev) => prev.filter((u) => u.id !== userId));
   }
 
   async function handleSetSessionStatus(id: number, status: 'scheduled' | 'cancelled') {
@@ -608,25 +559,7 @@ export default function Root() {
   }
 
   // —— Render: szerepkör és auth alapú routing ——
-  if (!user && guestBrowse) {
-    return (
-      <PublicEventsPage
-        guestMode
-        event={eventProfile}
-        sessions={sessions}
-        savedSessions={[]}
-        loading={loading}
-        error={displayError}
-        scheduleError={null}
-        scheduleBusyId={null}
-        onSaveSession={async () => {}}
-        onRemoveSession={async () => {}}
-        onLoginRequest={() => setGuestBrowse(false)}
-      />
-    );
-  }
-
-  if (!user) {
+  if (!user && !guestBrowse) {
     return (
       <LoginPage
         offlineMode={backendMode === false}
@@ -646,85 +579,71 @@ export default function Root() {
     );
   }
 
-  const role = user.role?.trim().toLowerCase();
+  const role = user?.role?.trim().toLowerCase();
+  const managementProps = {
+    sessions,
+    rooms,
+    sessionSaves,
+    onRefreshSessionSaves: fetchSessionSavesMap,
+    loading,
+    error: displayError,
+    backendMode: backendMode === true,
+    onBulkUpdateSessions: handleBulkUpdateSessions,
+    onSetSessionStatus: handleSetSessionStatus,
+    onLogout: handleLogout,
+  };
 
-  if (role === 'admin') {
+  if (user && role === 'admin') {
     return (
       <AdminApp
+        {...managementProps}
         initialUser={user}
-        sessions={sessions}
         users={users}
-        sessionSaves={sessionSaves}
-        onRefreshSessionSaves={fetchSessionSavesMap}
-        loading={loading}
         usersLoading={usersLoading}
-        error={displayError}
-        backendMode={backendMode === true}
         onUpdateUserRole={handleUpdateUserRole}
         onUpdateUserRooms={handleUpdateUserRooms}
-        onBulkUpdateSessions={handleBulkUpdateSessions}
         onDeleteUser={handleDeleteUser}
         onDeleteSession={handleDelete}
         onCreateSession={handleCreate}
         onUpdateSession={handleUpdateSession}
         onRefreshSessions={fetchSessions}
-        onSetSessionStatus={handleSetSessionStatus}
         event={eventProfile}
         onUpdateEvent={handleUpdateEvent}
-        rooms={rooms}
         onLoadDemo={backendMode ? handleLoadDemo : undefined}
         loadingDemo={loadingDemo}
-        onLogout={handleLogout}
       />
     );
   }
 
-  if (role === 'booker') {
+  if (user && role === 'booker') {
     return (
       <App
+        {...managementProps}
         initialUser={user}
-        backendMode={backendMode === true}
-        rooms={rooms}
-        sessions={sessions}
-        sessionSaves={sessionSaves}
-        onRefreshSessionSaves={fetchSessionSavesMap}
-        loading={loading}
-        error={displayError}
         onCreate={handleCreate}
         onUpdate={handleUpdateSession}
         onDelete={handleDelete}
-        onSetSessionStatus={handleSetSessionStatus}
-        onBulkUpdateSessions={handleBulkUpdateSessions}
-        onLogout={handleLogout}
       />
     );
   }
 
   return (
     <PublicEventsPage
+      guestMode={!user}
       event={eventProfile}
       sessions={sessions}
-      savedSessions={savedSessions}
+      savedSessions={user ? savedSessions : []}
       loading={loading}
       error={displayError}
-      scheduleError={displayScheduleError}
-      scheduleBusyId={scheduleBusyId}
+      scheduleError={user ? displayScheduleError : null}
+      scheduleBusyId={user ? scheduleBusyId : null}
       user={user}
       onSaveSession={handleSaveSession}
       onRemoveSession={handleRemoveSession}
-      onToggleNotifications={handleToggleNotifications}
-      notificationsOn={notificationsEnabled()}
-      onLogout={handleLogout}
+      onToggleNotifications={user ? handleToggleNotifications : undefined}
+      notificationsOn={!!user && notificationsEnabled()}
+      onLogout={user ? handleLogout : undefined}
+      onLoginRequest={user ? undefined : () => setGuestBrowse(false)}
     />
   );
-}
-
-interface CreateSessionBodyLocal {
-  title?: string;
-  description?: string;
-  start_time?: string;
-  end_time?: string;
-  room_id?: number;
-  speaker_id?: number;
-  color?: Session['color'];
 }

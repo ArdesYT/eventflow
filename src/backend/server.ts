@@ -1,23 +1,4 @@
-/**
- * =============================================================================
- * server.ts — EventFlow backend belépési pont (Express + MariaDB)
- * =============================================================================
- *
- * Felelősség:
- *  - REST API (/api/*) — előadások, auth, admin, nyilvános esemény
- *  - JWT middleware, szerepkör-ellenőrzés
- *  - MariaDB connection pool
- *  - Production: statikus frontend kiszolgálás (dist/)
- *  - Indításkor: initDatabase() — dbSchema ensure* migrációk
- *
- * Szerepkörök:
- *  - admin: felhasználók, előadók, audit, esemény profil
- *  - booker: foglalás, szerkesztés (saját termekkel korlátozva)
- *  - attendee: mentett program
- *  - vendég: nincs token — csak GET /api/sessions, /api/event
- * =============================================================================
- */
-
+/** Express API, database initialization, and production frontend hosting. */
 import express from 'express';
 import type { Request, Response } from 'express';
 import * as mariadb from 'mariadb';
@@ -53,6 +34,7 @@ import {
 import { createRateLimiter } from './rateLimit';
 import { checkSessionConflicts, sessionFromRow } from './sessionConflicts';
 import { resolveSessionSpeakerId } from './sessionSpeaker';
+import { formatDate, formatDatetime } from './datetime';
 import {
     createAuthMiddleware,
     requireAdmin,
@@ -101,19 +83,13 @@ if (
 
 /** SQL events sor → EventProfile API válasz (dátumok YYYY-MM-DD). */
 function mapEventRow(row: Record<string, unknown>): EventProfile {
-    const fmt = (v: unknown) => {
-        if (v instanceof Date) {
-            return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;
-        }
-        return v != null ? String(v).slice(0, 10) : null;
-    };
     return {
         id: Number(row.id),
         name: String(row.name),
         slug: String(row.slug),
         venue: row.venue != null ? String(row.venue) : null,
-        start_date: fmt(row.start_date),
-        end_date: fmt(row.end_date),
+        start_date: row.start_date != null ? formatDate(row.start_date) : null,
+        end_date: row.end_date != null ? formatDate(row.end_date) : null,
         description: row.description != null ? String(row.description) : null,
         is_active: Boolean(row.is_active),
     };
@@ -146,14 +122,10 @@ async function assertNoSessionConflicts(
         WHERE s.start_time != '0000-00-00 00:00:00'
     `);
     const existing = rows.map(sessionFromRow);
-    const date = candidate.start_time.slice(0, 10);
-    const endDate = candidate.end_time.slice(0, 10);
     const conflicts = checkSessionConflicts(existing, {
-        id: candidate.id,
-        room_id: candidate.room_id,
-        speaker_id: candidate.speaker_id,
-        date,
-        end_date: endDate,
+        ...candidate,
+        date: candidate.start_time.slice(0, 10),
+        end_date: candidate.end_time.slice(0, 10),
         start_time: parseTimeFromDatetime(candidate.start_time),
         end_time: parseTimeFromDatetime(candidate.end_time),
     });
@@ -163,6 +135,20 @@ async function assertNoSessionConflicts(
     if (conflicts.speakerOverlap) {
         throw new Error('SPEAKER_BUSY');
     }
+}
+
+const SESSION_ERRORS = new Map<string, { status: number; message: string }>([
+    ['INVALID_SPEAKER', { status: 400, message: 'Csak meglévő előadó választható.' }],
+    ['ROOM_FORBIDDEN', { status: 403, message: 'Nincs jogosultsága ehhez a teremhez.' }],
+    ['ROOM_BUSY', { status: 409, message: 'A kiválasztott terem foglalt a megadott időben.' }],
+    ['SPEAKER_BUSY', { status: 409, message: 'Az előadó már foglalt ebben az időben.' }],
+]);
+
+function respondToSessionError(err: unknown, res: Response): boolean {
+    const error = err instanceof Error ? SESSION_ERRORS.get(err.message) : undefined;
+    if (!error) return false;
+    res.status(error.status).json({ message: error.message });
+    return true;
 }
 
 /** users tábla sor → API User (jelszó soha nem megy ki). */
@@ -231,7 +217,7 @@ app.get('/api/health', async (_req: Request, res: Response) => {
     } catch {
         res.status(503).json({ status: 'degraded', version: '1.0.0', db: 'disconnected' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -252,7 +238,7 @@ app.get('/api/rooms', async (_req: Request, res: Response) => {
         console.error('Rooms list error:', err);
         res.status(500).json({ message: 'Nem sikerült lekérni a termeket.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -272,23 +258,9 @@ app.get('/api/event', async (_req: Request, res: Response) => {
         console.error('Event load error:', err);
         res.status(500).json({ message: 'Nem sikerült lekérni az eseményt.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
-
-// 1. Összes előadás lekérése
-// Helper: Date object -> "YYYY-MM-DD HH:mm:ss"
-function formatDatetime(d: Date): string {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-
-function sliceDatePart(value: unknown): string {
-    if (value instanceof Date) {
-        return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
-    }
-    return String(value).slice(0, 10);
-}
 
 function parseSessionDatetime(value: string): Date | null {
     const d = new Date(value.trim().replace(' ', 'T'));
@@ -302,22 +274,14 @@ function isValidSessionRange(startTime: string, endTime: string): boolean {
 }
 
 function formatSessionRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
-    return rows.map((row) => {
-        const startFormatted = row.start_time instanceof Date ? formatDatetime(row.start_time) : row.start_time;
-        const endFormatted = row.end_time instanceof Date ? formatDatetime(row.end_time) : row.end_time;
-        const date = sliceDatePart(row.start_time);
-        const endDate = sliceDatePart(row.end_time);
-        const rawStatus = String(row.status ?? 'scheduled').toLowerCase();
-        const status: SessionStatus = rawStatus === 'cancelled' ? 'cancelled' : 'scheduled';
-        return {
-            ...row,
-            start_time: startFormatted,
-            end_time: endFormatted,
-            date,
-            end_date: endDate,
-            status,
-        };
-    });
+    return rows.map((row) => ({
+        ...row,
+        start_time: row.start_time instanceof Date ? formatDatetime(row.start_time) : row.start_time,
+        end_time: row.end_time instanceof Date ? formatDatetime(row.end_time) : row.end_time,
+        date: formatDate(row.start_time),
+        end_date: formatDate(row.end_time),
+        status: String(row.status ?? 'scheduled').toLowerCase() === 'cancelled' ? 'cancelled' : 'scheduled',
+    }));
 }
 
 // 1. Előadások listája (nyilvános — vendég is eléri)
@@ -339,7 +303,7 @@ app.get('/api/sessions', async (_req: Request, res: Response) => {
         console.error("Lekérdezési hiba:", err);
         res.status(500).json({ message: "Nem sikerült lekérni az előadásokat." });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -352,11 +316,10 @@ function mapSpeakerRow(row: Record<string, unknown>): Speaker {
     };
 }
 
-const SPEAKERS_LIST_QUERY = `
+const SPEAKERS_QUERY = `
     SELECT sp.id, sp.name, sp.bio,
            (SELECT COUNT(*) FROM sessions s WHERE s.speaker_id = sp.id) AS session_count
     FROM speakers sp
-    ORDER BY sp.name ASC
 `;
 
 // 1b. Előadók listája (booker / admin)
@@ -364,13 +327,13 @@ app.get('/api/speakers', authenticate, requireBookerOrAdmin, async (_req: Authen
     let conn: PoolConnection | undefined;
     try {
         conn = await pool.getConnection();
-        const rows: Record<string, unknown>[] = await conn.query(SPEAKERS_LIST_QUERY);
+        const rows: Record<string, unknown>[] = await conn.query(`${SPEAKERS_QUERY} ORDER BY sp.name ASC`);
         res.json(rows.map(mapSpeakerRow));
     } catch (err) {
         console.error('Speakers list error:', err);
         res.status(500).json({ message: 'Nem sikerült lekérni az előadókat.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -405,7 +368,7 @@ app.post('/api/speakers', authenticate, requireAdmin, async (req: AuthenticatedR
         console.error('Speaker create error:', err);
         res.status(500).json({ message: 'Nem sikerült létrehozni az előadót.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -457,9 +420,7 @@ app.patch('/api/speakers/:id', authenticate, requireAdmin, async (req: Authentic
         }
 
         const rows: Record<string, unknown>[] = await conn.query(
-            `SELECT sp.id, sp.name, sp.bio,
-                    (SELECT COUNT(*) FROM sessions s WHERE s.speaker_id = sp.id) AS session_count
-             FROM speakers sp WHERE sp.id = ?`,
+            `${SPEAKERS_QUERY} WHERE sp.id = ?`,
             [id],
         );
         res.json(mapSpeakerRow(rows[0]));
@@ -467,7 +428,7 @@ app.patch('/api/speakers/:id', authenticate, requireAdmin, async (req: Authentic
         console.error('Speaker update error:', err);
         res.status(500).json({ message: 'Nem sikerült frissíteni az előadót.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -521,9 +482,7 @@ app.post('/api/speakers/merge', authenticate, requireAdmin, async (req: Authenti
         });
 
         const rows: Record<string, unknown>[] = await conn.query(
-            `SELECT sp.id, sp.name, sp.bio,
-                    (SELECT COUNT(*) FROM sessions s WHERE s.speaker_id = sp.id) AS session_count
-             FROM speakers sp WHERE sp.id = ?`,
+            `${SPEAKERS_QUERY} WHERE sp.id = ?`,
             [keepId],
         );
         res.json({
@@ -534,7 +493,7 @@ app.post('/api/speakers/merge', authenticate, requireAdmin, async (req: Authenti
         console.error('Speaker merge error:', err);
         res.status(500).json({ message: 'Nem sikerült egyesíteni az előadókat.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -554,7 +513,7 @@ app.delete('/api/speakers/:id', authenticate, requireAdmin, async (req: Authenti
         console.error('Speaker delete error:', err);
         res.status(500).json({ message: 'Nem sikerült törölni az előadót.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -573,8 +532,7 @@ app.get('/api/sessions/saves', authenticate, requireBookerOrAdmin, async (_req: 
         const saves: SessionSavesMap = {};
         for (const row of rows) {
             const sessionId = Number(row.session_id);
-            if (!saves[sessionId]) saves[sessionId] = [];
-            saves[sessionId].push({
+            (saves[sessionId] ??= []).push({
                 id: Number(row.id),
                 name: String(row.name),
                 email: String(row.email),
@@ -586,7 +544,7 @@ app.get('/api/sessions/saves', authenticate, requireBookerOrAdmin, async (_req: 
         console.error('Session saves list error:', err);
         res.status(500).json({ message: 'Nem sikerült lekérni a mentések listáját.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -620,7 +578,7 @@ app.post('/api/auth/register', authRateLimit, async (req: Request, res: Response
         console.error("Regisztrációs hiba:", err);
         res.status(500).json({ message: "Hiba történt a mentés során." });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -654,7 +612,7 @@ app.post('/api/auth/login', authRateLimit, async (req: Request, res: Response) =
         console.error("Bejelentkezési hiba:", err);
         res.status(500).json({ message: "Szerver hiba." });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -669,7 +627,7 @@ app.get('/api/auth/me', authenticate, async (req: AuthenticatedRequest, res: Res
         console.error('Auth me error:', err);
         res.status(500).json({ message: 'Szerver hiba.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -694,7 +652,7 @@ app.get('/api/my-schedule', authenticate, requireAttendee, async (req: Authentic
         console.error('My schedule list error:', err);
         res.status(500).json({ message: 'Nem sikerült lekérni a mentett programot.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -723,7 +681,7 @@ app.post('/api/my-schedule/:sessionId', authenticate, requireAttendee, async (re
         console.error('My schedule add error:', err);
         res.status(500).json({ message: 'Nem sikerült menteni az előadást.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -750,7 +708,7 @@ app.delete('/api/my-schedule/:sessionId', authenticate, requireAttendee, async (
         console.error('My schedule remove error:', err);
         res.status(500).json({ message: 'Nem sikerült eltávolítani az előadást.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -790,22 +748,11 @@ app.post('/api/sessions', authenticate, requireBookerOrAdmin, async (req: Authen
 
         res.status(201).json({ id: String(newId), message: "Előadás létrehozva!" });
     } catch (err) {
-        if (err instanceof Error && err.message === 'INVALID_SPEAKER') {
-            return res.status(400).json({ message: 'Csak meglévő előadó választható.' });
-        }
-        if (err instanceof Error && err.message === 'ROOM_FORBIDDEN') {
-            return res.status(403).json({ message: 'Nincs jogosultsága ehhez a teremhez.' });
-        }
-        if (err instanceof Error && err.message === 'ROOM_BUSY') {
-            return res.status(409).json({ message: 'A kiválasztott terem foglalt a megadott időben.' });
-        }
-        if (err instanceof Error && err.message === 'SPEAKER_BUSY') {
-            return res.status(409).json({ message: 'Az előadó már foglalt ebben az időben.' });
-        }
+        if (respondToSessionError(err, res)) return;
         console.error("Admin mentési hiba:", err);
         res.status(500).json({ message: "Szerver hiba az előadás mentésekor." });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -845,22 +792,11 @@ app.patch('/api/sessions/:id', authenticate, requireBookerOrAdmin, async (req: A
         await logActivity(conn, req.authUser!.id, 'session.update', 'session', Number(id), { title });
         res.json({ message: "Előadás frissítve." });
     } catch (err) {
-        if (err instanceof Error && err.message === 'INVALID_SPEAKER') {
-            return res.status(400).json({ message: 'Csak meglévő előadó választható.' });
-        }
-        if (err instanceof Error && err.message === 'ROOM_FORBIDDEN') {
-            return res.status(403).json({ message: 'Nincs jogosultsága ehhez a teremhez.' });
-        }
-        if (err instanceof Error && err.message === 'ROOM_BUSY') {
-            return res.status(409).json({ message: 'A kiválasztott terem foglalt a megadott időben.' });
-        }
-        if (err instanceof Error && err.message === 'SPEAKER_BUSY') {
-            return res.status(409).json({ message: 'Az előadó már foglalt ebben az időben.' });
-        }
+        if (respondToSessionError(err, res)) return;
         console.error("Frissítési hiba:", err);
         res.status(500).json({ message: "Szerver hiba az előadás frissítésekor." });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -892,7 +828,7 @@ app.patch('/api/sessions/:id/status', authenticate, requireBookerOrAdmin, async 
         console.error('Session status error:', err);
         res.status(500).json({ message: 'Nem sikerült frissíteni a státuszt.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -915,7 +851,7 @@ app.delete('/api/sessions/:id', authenticate, requireBookerOrAdmin, async (req: 
         console.error("Törlési hiba:", err);
         res.status(500).json({ message: "Szerver hiba a törlés során." });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -979,7 +915,7 @@ app.patch('/api/sessions/bulk', authenticate, requireBookerOrAdmin, async (req: 
         console.error('Bulk session update error:', err);
         res.status(500).json({ message: 'Nem sikerült frissíteni az előadásokat.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -1014,7 +950,7 @@ app.get('/api/admin/users', authenticate, requireAdmin, async (_req: Authenticat
         console.error('Admin users list error:', err);
         res.status(500).json({ message: 'Nem sikerült lekérni a felhasználókat.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -1053,7 +989,7 @@ app.patch('/api/admin/users/:id', authenticate, requireAdmin, async (req: Authen
         console.error('Admin user update error:', err);
         res.status(500).json({ message: 'Nem sikerült frissíteni a felhasználót.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -1090,7 +1026,7 @@ app.put('/api/admin/users/:id/rooms', authenticate, requireAdmin, async (req: Au
         console.error('Admin user rooms error:', err);
         res.status(500).json({ message: 'Nem sikerült frissíteni a termeket.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -1125,7 +1061,7 @@ app.get('/api/admin/activity-log', authenticate, requireAdmin, async (_req: Auth
         console.error('Activity log error:', err);
         res.status(500).json({ message: 'Nem sikerült lekérni a naplót.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -1162,7 +1098,7 @@ app.patch('/api/admin/event', authenticate, requireAdmin, async (req: Authentica
         console.error('Event update error:', err);
         res.status(500).json({ message: 'Nem sikerült frissíteni az eseményt.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -1187,7 +1123,7 @@ app.delete('/api/admin/users/:id', authenticate, requireAdmin, async (req: Authe
         console.error('Admin user delete error:', err);
         res.status(500).json({ message: 'Nem sikerült törölni a felhasználót.' });
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 });
 
@@ -1208,7 +1144,7 @@ async function logSessionCountHint(): Promise<void> {
     } catch {
         /* DB not ready yet */
     } finally {
-        if (conn) conn.release();
+        conn?.release();
     }
 }
 

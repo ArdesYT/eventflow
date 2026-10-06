@@ -71,6 +71,7 @@ export default function UsersView({
             {users.map((u) => {
               const isSelf = u.id === currentUserId;
               const isBooker = u.role === 'booker';
+              const roomIds = u.assigned_room_ids ?? [];
               return (
                 <tr key={u.id}>
                   <td>
@@ -106,10 +107,8 @@ export default function UsersView({
                             setExpandedRoomsId(expandedRoomsId === u.id ? null : u.id)
                           }
                         >
-                          {(u.assigned_room_ids?.length ?? 0) > 0
-                            ? t('admin.users.roomsCount', {
-                                count: u.assigned_room_ids!.length,
-                              })
+                          {roomIds.length > 0
+                            ? t('admin.users.roomsCount', { count: roomIds.length })
                             : t('admin.users.allRooms')}
                         </button>
                         {expandedRoomsId === u.id && (
@@ -118,7 +117,7 @@ export default function UsersView({
                               <label key={r.id} className="admin-room-check">
                                 <input
                                   type="checkbox"
-                                  checked={u.assigned_room_ids?.includes(r.id) ?? false}
+                                  checked={roomIds.includes(r.id)}
                                   disabled={savingRoomsId === u.id}
                                   onChange={() => toggleRoom(u, r.id)}
                                 />

@@ -13,7 +13,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "axios": "^1.13.6",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -47,8 +46,5 @@
     "vite": "^8.0.1"
   },
   "description": "EventFlow — konferencia- és eseményprogram-kezelő (React + Express + MariaDB)",
-  "main": "eslint.config.js",
-  "keywords": [],
-  "author": "",
   "license": "ISC"
 }

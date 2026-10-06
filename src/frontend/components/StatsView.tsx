@@ -3,8 +3,10 @@
  * Összesítő kártyák, terem szerinti eloszlás, közelgő előadások AgendaView-val.
  * Props: sessions, sessionSaves, onEventClick (átirányítás a programkezelőbe).
  */
+import { localDateKey } from '../lib/sessionFormat';
 import type { Session, SessionSavesMap } from '../../backend/types';
 import AgendaView from './AgendaView';
+import StatCards from './StatCards';
 import { useI18n } from '../i18n/I18nProvider';
 
 interface StatsViewProps {
@@ -13,24 +15,17 @@ interface StatsViewProps {
   onEventClick: (id: number) => void;
 }
 
-function toDateStr(y: number, m: number, d: number): string {
-  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-}
-
 export default function StatsView({ sessions, sessionSaves, onEventClick }: StatsViewProps) {
   const { t } = useI18n();
-  const today = new Date();
-  const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
-
-  const uniqueRooms = new Set(sessions.map((s) => s.room_name)).size;
+  const todayStr = localDateKey();
   const uniqueSpeakers = new Set(sessions.map((s) => s.speaker_name)).size;
   const uniqueDays = new Set(sessions.map((s) => s.date)).size;
 
-  const roomCount: Record<string, number> = {};
-  sessions.forEach((s) => {
-    roomCount[s.room_name] = (roomCount[s.room_name] ?? 0) + 1;
-  });
-  const sortedRooms = Object.entries(roomCount).sort((a, b) => b[1] - a[1]);
+  const roomCount = new Map<string, number>();
+  for (const session of sessions) {
+    roomCount.set(session.room_name, (roomCount.get(session.room_name) ?? 0) + 1);
+  }
+  const sortedRooms = [...roomCount].sort((a, b) => b[1] - a[1]);
   const maxCount = sortedRooms[0]?.[1] ?? 1;
 
   const upcoming = sessions
@@ -40,28 +35,12 @@ export default function StatsView({ sessions, sessionSaves, onEventClick }: Stat
 
   return (
     <>
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-label">{t('stats.totalSessions')}</div>
-          <div className="stat-value">{sessions.length}</div>
-          <div className="stat-sub">{t('stats.totalSessionsSub')}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">{t('stats.roomsUsed')}</div>
-          <div className="stat-value">{uniqueRooms}</div>
-          <div className="stat-sub">{t('stats.roomsUsedSub')}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">{t('stats.speakers')}</div>
-          <div className="stat-value">{uniqueSpeakers}</div>
-          <div className="stat-sub">{t('stats.speakersSub')}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">{t('stats.eventDays')}</div>
-          <div className="stat-value">{uniqueDays}</div>
-          <div className="stat-sub">{t('stats.eventDaysSub')}</div>
-        </div>
-      </div>
+      <StatCards cards={[
+        { labelKey: 'stats.totalSessions', value: sessions.length, subKey: 'stats.totalSessionsSub' },
+        { labelKey: 'stats.roomsUsed', value: roomCount.size, subKey: 'stats.roomsUsedSub' },
+        { labelKey: 'stats.speakers', value: uniqueSpeakers, subKey: 'stats.speakersSub' },
+        { labelKey: 'stats.eventDays', value: uniqueDays, subKey: 'stats.eventDaysSub' },
+      ]} />
 
       <div className="section-title">{t('stats.byRoom')}</div>
       <div className="room-bar-container">

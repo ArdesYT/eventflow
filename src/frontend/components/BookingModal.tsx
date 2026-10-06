@@ -6,6 +6,7 @@
  *        allowedRoomIds, onSave, onClose, saving, saveError.
  */
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { localDateKey } from '../lib/sessionFormat';
 import type { BookingFormData, EventColor, Room, Session, SessionTemplateId, Speaker } from '../../backend/types';
 import { FALLBACK_ROOMS, roomLabel } from '../lib/rooms';
 import {
@@ -38,11 +39,6 @@ interface BookingModalProps {
 
 const COLORS: EventColor[] = ['blue', 'amber', 'green', 'red'];
 
-function todayStr(): string {
-  const t = new Date();
-  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-}
-
 export default function BookingModal({
   initialDate,
   initialValues,
@@ -60,11 +56,11 @@ export default function BookingModal({
   const { t, bcp47 } = useI18n();
   const [speakerFilter, setSpeakerFilter] = useState('');
   // Fő űrlap állapot — BookingFormData mezők
-  const [form, setForm] = useState<BookingFormData>({
+  const [form, setForm] = useState<BookingFormData>(() => ({
     title:        '',
     description:  '',
-    date:         initialDate ?? todayStr(),
-    end_date:     initialDate ?? todayStr(),
+    date:         initialDate ?? localDateKey(),
+    end_date:     initialDate ?? localDateKey(),
     start_time:   '09:00',
     end_time:     '10:00',
     room_id:      rooms[0]?.id ?? 1,
@@ -72,10 +68,8 @@ export default function BookingModal({
     room_name:    rooms[0] ? roomLabel(rooms[0], t) : '',
     speaker_name: '',
     color:        'blue',
-  });
+  }));
   const [errors, setErrors] = useState<Partial<Record<keyof BookingFormData, string>>>({});
-  // Szerkesztés inicializálás duplikált effect futás ellen (React StrictMode)
-  const initializedEditKeyRef = useRef<string | null>(null);
   // Jelzi, ha a felhasználó manuálisan választott előadót (ne írja felül az auto-kitöltés)
   const speakerTouchedRef = useRef(false);
 
@@ -90,37 +84,16 @@ export default function BookingModal({
     }
   }, [initialDate]);
 
-  // Szerkesztés/duplikálás: initialValues betöltése egyszer azonos kulcsra
+  // Az előadólista frissítése nem állíthatja vissza a felhasználó módosításait.
   useEffect(() => {
-    if (!initialValues) {
-      initializedEditKeyRef.current = null;
-      return;
-    }
-
-    const editKey = [
-      initialValues.date,
-      initialValues.end_date,
-      initialValues.start_time,
-      initialValues.end_time,
-      initialValues.speaker_id,
-      initialValues.title,
-    ].join('\0');
-
-    if (initializedEditKeyRef.current === editKey) return;
-
-    initializedEditKeyRef.current = editKey;
-    setForm(initialValues);
-  }, [initialValues, speakers]);
-
-  const speakerOptions = speakers;
+    if (initialValues) setForm(initialValues);
+  }, [initialValues]);
 
   const filteredSpeakerOptions = useMemo(() => {
     const q = speakerFilter.trim().toLowerCase();
-    if (!q) return speakerOptions;
-    return speakerOptions.filter((s) => s.id === form.speaker_id || s.name.toLowerCase().includes(q));
-  }, [speakerOptions, speakerFilter, form.speaker_id]);
-
-  const showSpeakerFilter = speakerOptions.length > 4;
+    if (!q) return speakers;
+    return speakers.filter((s) => s.id === form.speaker_id || s.name.toLowerCase().includes(q));
+  }, [speakers, speakerFilter, form.speaker_id]);
 
   // Új foglalásnál kizárólag a katalógusban szereplő előadót választunk.
   useEffect(() => {
@@ -193,7 +166,7 @@ export default function BookingModal({
     const days = bookingDayCount(form);
     const minutes = bookingDurationMinutes(form);
     if (!days || !minutes) return null;
-    return { days, minutes, label: formatDuration(minutes) };
+    return { days, label: formatDuration(minutes) };
   }, [form]);
 
   // Ütközés-előnézet: terem átfedés, buffer, előadó átfedés
@@ -207,10 +180,8 @@ export default function BookingModal({
     [sessions, form, editingSessionId],
   );
 
-  const hasConflictPreview =
-    conflicts.roomOverlap.length > 0 ||
-    conflicts.roomBuffer.length > 0 ||
-    conflicts.speakerOverlap.length > 0;
+  const conflictGroups = (['roomOverlap', 'roomBuffer', 'speakerOverlap'] as const)
+    .filter((kind) => conflicts[kind].length > 0);
 
   // Sablon gomb: előre definiált cím/idő/szín kitöltése
   function applyTemplate(templateId: SessionTemplateId) {
@@ -352,44 +323,24 @@ export default function BookingModal({
           </div>
         </div>
 
-        {hasConflictPreview && (
+        {conflictGroups.length > 0 && (
           <div className="booking-conflict-preview" role="alert">
-            {conflicts.roomOverlap.length > 0 && (
-              <div className="booking-conflict-block">
-                <strong>{t('booking.roomOverlap')}</strong>
+            {conflictGroups.map((kind) => (
+              <div key={kind} className="booking-conflict-block">
+                <strong>{t(`booking.${kind}`)}</strong>
                 <ul>
-                  {conflicts.roomOverlap.map((s) => (
+                  {conflicts[kind].map((s) => (
                     <li key={s.id}>{s.title}</li>
                   ))}
                 </ul>
               </div>
-            )}
-            {conflicts.roomBuffer.length > 0 && (
-              <div className="booking-conflict-block">
-                <strong>{t('booking.roomBuffer')}</strong>
-                <ul>
-                  {conflicts.roomBuffer.map((s) => (
-                    <li key={s.id}>{s.title}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {conflicts.speakerOverlap.length > 0 && (
-              <div className="booking-conflict-block">
-                <strong>{t('booking.speakerOverlap')}</strong>
-                <ul>
-                  {conflicts.speakerOverlap.map((s) => (
-                    <li key={s.id}>{s.title}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            ))}
           </div>
         )}
 
         <div className="form-group">
           <label className="form-label">{t('booking.speaker')}</label>
-          {showSpeakerFilter && (
+          {speakers.length > 4 && (
             <input className="form-input" style={{ marginBottom: 8 }} placeholder={t('booking.speakerSearch')}
               value={speakerFilter} onChange={(event) => setSpeakerFilter(event.target.value)} />
           )}

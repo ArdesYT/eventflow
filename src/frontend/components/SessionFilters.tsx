@@ -35,32 +35,16 @@ export default function SessionFilters({
     <div
       className={`session-filters${compact ? ' session-filters--compact' : ''}${className ? ` ${className}` : ''}`}
     >
-      <select
-        className="form-select session-filter-select"
-        value={speakerFilter}
-        onChange={(e) => onSpeakerChange(e.target.value)}
-        aria-label={t('filters.speaker')}
-      >
-        <option value="">{t('filters.allSpeakers')}</option>
-        {speakers.map((name) => (
-          <option key={name} value={name}>
-            {name}
-          </option>
-        ))}
-      </select>
-      <select
-        className="form-select session-filter-select"
-        value={roomFilter}
-        onChange={(e) => onRoomChange(e.target.value)}
-        aria-label={t('filters.room')}
-      >
-        <option value="">{t('filters.allRooms')}</option>
-        {rooms.map((name) => (
-          <option key={name} value={name}>
-            {name}
-          </option>
-        ))}
-      </select>
+      {[
+        { label: 'filters.speaker', all: 'filters.allSpeakers', value: speakerFilter, options: speakers, onChange: onSpeakerChange },
+        { label: 'filters.room', all: 'filters.allRooms', value: roomFilter, options: rooms, onChange: onRoomChange },
+      ].map(({ label, all, value, options, onChange }) => (
+        <select key={label} className="form-select session-filter-select" value={value}
+          onChange={(event) => onChange(event.target.value)} aria-label={t(label)}>
+          <option value="">{t(all)}</option>
+          {options.map((name) => <option key={name} value={name}>{name}</option>)}
+        </select>
+      ))}
       {(speakerFilter || roomFilter) && (
         <button
           type="button"

@@ -1,33 +1,33 @@
-/**
- * =============================================================================
- * demoSeed.ts — Demo adatok betöltése az adatbázisba
- * =============================================================================
- *
- * Közös mag modul: a CLI script (seed-demo-data.ts) és a POST /api/admin/seed-demo
- * végpont is ezt hívja.
- *
- * Betöltött entitások:
- *  - 3 demo felhasználó (admin, booker, attendee) bcrypt hash-elt jelszóval
- *  - 5 terem (upsert: létező ID frissítése, új beszúrása)
- *  - 5 előadó (upsert)
- *  - 7 minta előadás (csak ha üres az adatbázis, vagy forceSessions=true)
- *
- * Előadás-beszúrás logika:
- *  - Először törli az érvénytelen (0000-00-00) időpontú sorokat
- *  - Ha van érvényes előadás és nincs force, kihagyja a beszúrást
- *  - force=true esetén meglévő érvényes előadásokat is törli, majd újra feltölti
- * =============================================================================
- */
-
+/** Shared demo seeding for the CLI and admin API. Existing sessions survive unless forced. */
 import type { Pool, PoolConnection } from 'mariadb';
 import bcrypt from 'bcrypt';
+import type { User } from './types';
+
+type DemoUser = Pick<User, 'name' | 'email' | 'role'> & { password: string };
 
 /** Demo bejelentkezési fiókok — jelszavak csak fejlesztéshez, hash-elés után kerülnek DB-be. */
-const USERS = [
+export const DEMO_USERS: DemoUser[] = [
   { name: 'Admin', email: 'admin@example.com', password: 'admin123', role: 'admin' },
   { name: 'Booker', email: 'booker@example.com', password: 'booker123', role: 'booker' },
   { name: 'Attendee', email: 'attendee@example.com', password: 'attendee123', role: 'attendee' },
 ];
+
+export async function upsertDemoUser(conn: PoolConnection, user: DemoUser, saltRounds: number) {
+  const hash = await bcrypt.hash(user.password, saltRounds);
+  const existing = await conn.query('SELECT id FROM users WHERE email = ?', [user.email]);
+  if (existing.length) {
+    await conn.query(
+      'UPDATE users SET name = ?, password_hash = ?, role = ? WHERE email = ?',
+      [user.name, hash, user.role, user.email],
+    );
+    return 'Updated';
+  }
+  await conn.query(
+    'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
+    [user.name, user.email, hash, user.role],
+  );
+  return 'Inserted';
+}
 
 /** Fix ID-jű termek — upsertRoom() frissíti a nevet, ha már léteznek. */
 const ROOMS = [
@@ -102,21 +102,7 @@ export async function runDemoSeed(pool: Pool, forceSessions = false): Promise<De
   try {
     // --- Felhasználók: email alapján upsert, jelszó bcrypt hash ---
     const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 10;
-    for (const u of USERS) {
-      const hash = await bcrypt.hash(u.password, saltRounds);
-      const existing = await conn.query('SELECT id FROM users WHERE email = ?', [u.email]);
-      if (existing.length) {
-        await conn.query(
-          'UPDATE users SET name = ?, password_hash = ?, role = ? WHERE email = ?',
-          [u.name, hash, u.role, u.email],
-        );
-      } else {
-        await conn.query(
-          'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
-          [u.name, u.email, hash, u.role],
-        );
-      }
-    }
+    for (const user of DEMO_USERS) await upsertDemoUser(conn, user, saltRounds);
 
     // --- Termek és előadók upsert ---
     for (const room of ROOMS) await upsertRoom(conn, room);

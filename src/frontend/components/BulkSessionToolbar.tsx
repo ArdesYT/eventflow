@@ -29,6 +29,7 @@ export default function BulkSessionToolbar({
   const [dateOffset, setDateOffset] = useState(0);
   const [roomId, setRoomId] = useState<number | ''>('');
   const [error, setError] = useState<string | null>(null);
+  const hasChanges = dateOffset !== 0 || roomId !== '';
 
   // Booker számára csak a hozzárendelt termek választhatók
   const roomOptions = allowedRoomIds?.length
@@ -36,7 +37,7 @@ export default function BulkSessionToolbar({
     : rooms;
 
   async function handleApply() {
-    if (dateOffset === 0 && roomId === '') return;
+    if (!hasChanges) return;
     setError(null);
     try {
       await onApply({
@@ -85,7 +86,7 @@ export default function BulkSessionToolbar({
       <button
         type="button"
         className="btn-save"
-        disabled={busy || (dateOffset === 0 && roomId === '')}
+        disabled={busy || !hasChanges}
         onClick={handleApply}
       >
         {busy ? t('booking.saving') : t('bulk.apply')}

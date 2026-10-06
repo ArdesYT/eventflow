@@ -42,9 +42,8 @@ export default function ActivityLogView({ entries, loading }: ActivityLogViewPro
           </thead>
           <tbody>
             {entries.map((e) => {
-              const created = e.created_at.replace(' ', 'T');
-              const datePart = created.slice(0, 10);
-              const timePart = created.slice(11, 16);
+              const datePart = e.created_at.slice(0, 10);
+              const timePart = e.created_at.slice(11, 16);
               return (
                 <tr key={e.id}>
                   <td className="admin-audit-time">

@@ -5,7 +5,7 @@
  */
 import type { ReactNode } from 'react';
 import type { Session } from '../../backend/types';
-import { isMultiDaySession, sessionSpansDate } from '../lib/sessionFormat';
+import { isMultiDaySession, localDateKey, sessionSpansDate } from '../lib/sessionFormat';
 import { useI18n } from '../i18n/I18nProvider';
 import { formatMonthYear, getWeekdayLabels } from '../i18n/dateFormat';
 
@@ -18,10 +18,6 @@ interface CalendarViewProps {
   onEventClick: (id: number) => void;
   onNavigate: (dir: -1 | 1) => void;
   onToday: () => void;
-}
-
-function toDateStr(y: number, m: number, d: number): string {
-  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
 export default function CalendarView({
@@ -38,10 +34,7 @@ export default function CalendarView({
   const today = new Date();
   const dayLabels = getWeekdayLabels(locale);
   const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
-  let startDow = new Date(curYear, curMonth, 1).getDay() - 1;
-  if (startDow < 0) startDow = 6;
-
-  const getSessionsForDate = (ds: string) => sessions.filter((s) => sessionSpansDate(s, ds));
+  const startDow = (new Date(curYear, curMonth, 1).getDay() + 6) % 7;
   const cells: ReactNode[] = [];
 
   for (let i = 0; i < startDow; i++) {
@@ -54,13 +47,13 @@ export default function CalendarView({
   }
 
   for (let d = 1; d <= daysInMonth; d++) {
-    const ds = toDateStr(curYear, curMonth, d);
+    const ds = localDateKey(new Date(curYear, curMonth, d));
     const isToday =
       d === today.getDate() &&
       curMonth === today.getMonth() &&
       curYear === today.getFullYear();
     const isSel = ds === selectedDate;
-    const dayEvents = getSessionsForDate(ds);
+    const dayEvents = sessions.filter((s) => sessionSpansDate(s, ds));
     cells.push(
       <div
         key={ds}
