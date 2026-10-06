@@ -14,7 +14,6 @@ import {
 } from './lib/sessionBooking';
 import { sessionSpansDate } from './lib/sessionFormat';
 import { downloadIcsFile } from './lib/icsExport';
-import MiniCalendar from './components/MiniCalendar';
 import SessionFilters from './components/SessionFilters';
 import CalendarView from './components/CalendarView';
 import AgendaView from './components/AgendaView';
@@ -379,7 +378,6 @@ export default function App({
             )}
           </div>
           <div className="topbar-right">
-<<<<<<< HEAD
             <LanguageSwitcher />
             <div className="search-box">
               <span className="search-icon">🔍</span>
@@ -398,9 +396,6 @@ export default function App({
             >
               {t('export.ics')}
             </button
-=======
-            <LanguageSwitcher variant="select" />
->>>>>>> parent of f5f4566 (Removed button "+ New Booking" on Booker view in the navbar)
             <div className="topbar-user-pill">
               <div className="topbar-user-avatar">{getInitials(initialUser.name)}</div>
               <span className="topbar-user-name">{initialUser.name}</span>
@@ -429,7 +424,7 @@ export default function App({
           )}
           {!loading && !error && (
             <>
-              {currentView === 'calendar' && calSubView === 'month' && (
+              {calSubView === 'month' && (
                 searchTerm.trim() && filteredSessions.length > 0 && filteredSessionsInCurrentMonth.length === 0 ? (
                   <SessionsView
                     sessions={filteredSessions}
@@ -450,7 +445,7 @@ export default function App({
                   />
                 )
               )}
-              {currentView === 'calendar' && calSubView === 'agenda' && (
+              {calSubView === 'agenda' && (
                 <AgendaView
                   sessions={filteredSessions}
                   sessionSaves={sessionSaves ?? undefined}
@@ -497,15 +492,15 @@ export default function App({
                   />
                 </>
               )}
-              {currentView === 'agenda' && (
+              {calSubView === 'agenda' && (
                 <AgendaView
                   sessions={filteredSessions}
                   sessionSaves={sessionSaves ?? undefined}
                   onEventClick={(id) => setDetailId(id)}
-                  onDelete={deleteSession}
+                  onDele  te={deleteSession}
                 />
               )}
-              {currentView === 'stats' && (
+              {(calSubView as string) === 'stats' && (
                 <StatsView
                   sessions={filteredSessions}
                   sessionSaves={sessionSaves ?? undefined}
