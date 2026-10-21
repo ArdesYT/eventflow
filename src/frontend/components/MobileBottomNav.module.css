@@ -12,7 +12,7 @@
     z-index: 180;
     min-height: var(--mobile-nav-bar);
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
-    background: #fff;
+    background: var(--surface, #fff);
     border-top: 1px solid var(--gray-200);
     box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
     align-items: stretch;

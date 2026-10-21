@@ -30,7 +30,7 @@
 }
 
 .admin-role-card {
-  background: #fff;
+  background: var(--surface, #fff);
   border: 1px solid var(--gray-100);
   border-radius: var(--radius-md);
   padding: 16px;
@@ -61,7 +61,7 @@
   gap: 12px;
   align-items: center;
   padding: 10px 14px;
-  background: #fff;
+  background: var(--surface, #fff);
   border: 1px solid var(--gray-100);
   border-radius: 10px;
   font-size: 13px;
@@ -107,7 +107,7 @@
 .admin-event-summary {
   margin-bottom: 20px;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+  background: linear-gradient(135deg, var(--event-blue-bg, #eff6ff) 0%, var(--calendar-bg, #f8fafc) 100%);
   border: 1px solid #bfdbfe;
   border-radius: var(--radius-md);
 }

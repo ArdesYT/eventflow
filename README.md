@@ -44,6 +44,21 @@ npm run dev      # Frontend → http://localhost:5173
 
 Üres adatbázis esetén az admin felületen: **Demo adatok betöltése**, vagy `npm run seed`.
 
+### Jelszó-visszaállítás helyi kipróbálása
+
+Indítsd a backendet `npm run server:local`, a frontendet `npm run dev` paranccsal. A kód a böngésző fejlesztői konzoljába kerül; e-mailt és tesztlevél-fájlt sem küld vagy készít a rendszer. A MariaDB-kapcsolat a meglévő `.env` beállításaiból jön. Az új tábla és a munkamenet-verzió oszlopa induláskor automatikusan létrejön.
+
+1. A bejelentkezési oldalon válaszd a **Jelszó visszaállítása** lehetőséget, és add meg egy meglévő fiók e-mail-címét.
+2. Nyisd meg a böngésző fejlesztői eszközeinek **Console** paneljét; az `EventFlow password reset code` sorban jelenik meg a kód.
+3. A küldés után megjelenő **Ellenőrző kód** mezőbe másold be a hatjegyű kódot, és kattints a **Kód ellenőrzése** gombra.
+4. Helyes kód után megjelenik az új jelszó és a megerősítés mezője. Mentsd a jelszót, majd jelentkezz be vele.
+
+A kód 15 percig érvényes, és percenként legfeljebb egy új kód kérhető fiókonként. Öt hibás próbálkozás után új kódot kell kérni. A helyes kód ellenőrzése egyszer használható visszaállítási jogosultságot ad; maga a hatjegyű kód nem használható közvetlenül jelszóváltoztatásra. A sikeres jelszóváltoztatás érvényteleníti a korábbi bejelentkezéseket.
+
+Ismeretlen fiókhoz nem készül kód; a várakozási idő alatt a már kapott kód továbbra is használható. A helyi kódkiadás production módban le van tiltva.
+
+Az implementáció a [jelszó-visszaállításra vonatkozó OWASP-útmutató](https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html) egyszer használható, lejáró tokenjeit és egységes válaszüzenetét követi.
+
 ---
 
 ## Adatbázis beállítása
@@ -106,6 +121,7 @@ A backend kiszolgálja a `dist/` frontendet is. A `dist/index.html` fájlt **ne*
 |---------|--------|
 | `npm run dev` | Frontend dev szerver (Vite) |
 | `npm run server` | Backend API (development) |
+| `npm run server:local` | Helyi backend és DevTools Console panelre küldött visszaállító kód |
 | `npm run start` | Production backend (+ statikus frontend) |
 | `npm run build` | TypeScript + Vite production build |
 | `npm run seed` | Demo felhasználók, termek, előadók, előadások |
@@ -170,6 +186,9 @@ Minden védett végpont: `Authorization: Bearer <JWT>` fejléc.
 |---------|---------|--------|
 | POST | `/api/auth/register` | Regisztráció (attendee) |
 | POST | `/api/auth/login` | Bejelentkezés → `{ user, token }` |
+| POST | `/api/auth/password-reset/request` | Helyi visszaállítás kérése: `{ email }`; fejlesztői módban a kód a böngésző konzoljába kerül, e-mailt nem küld |
+| POST | `/api/auth/password-reset/verify` | Hatjegyű kód ellenőrzése: `{ email, code }` → egyszer használható `{ token }` |
+| POST | `/api/auth/password-reset/confirm` | Új jelszó mentése: `{ token, password }` |
 | GET | `/api/auth/me` | Aktuális felhasználó |
 
 ### Mentett program (attendee)

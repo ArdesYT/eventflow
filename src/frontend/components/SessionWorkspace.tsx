@@ -26,6 +26,8 @@ export interface SessionWorkspaceProps {
   backendMode: boolean;
   initialViewMode?: ViewMode;
   initialDetailId?: number | null;
+  activeDetailId?: number | null;
+  onDetailChange?: (id: number | null) => void;
   onRefreshSessionSaves: () => void;
   onCreate: (body: CreateSessionBody) => Promise<void>;
   onUpdate: (id: number, data: BookingFormData) => Promise<void>;
@@ -36,6 +38,7 @@ export interface SessionWorkspaceProps {
 
 export default function SessionWorkspace({
   user, rooms, sessions, sessionSaves, backendMode, initialViewMode = 'list', initialDetailId = null,
+  activeDetailId, onDetailChange,
   onRefreshSessionSaves, onCreate, onUpdate, onDelete, onSetStatus, onBulkUpdate,
 }: SessionWorkspaceProps) {
   const { t } = useI18n();
@@ -45,7 +48,9 @@ export default function SessionWorkspace({
   const [roomFilter, setRoomFilter] = useState('');
   const [month, setMonth] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [detailId, setDetailId] = useState(initialDetailId);
+  const [localDetailId, setLocalDetailId] = useState(initialDetailId);
+  const detailId = activeDetailId === undefined ? localDetailId : activeDetailId;
+  const setDetailId = onDetailChange ?? setLocalDetailId;
   const [booking, setBooking] = useState<Booking | null>(null);
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   const [saving, setSaving] = useState(false);
@@ -154,7 +159,7 @@ export default function SessionWorkspace({
   }
 
   return (
-    <section className={styles['session-workspace']} aria-label={t('nav.program')}>
+    <section className={`${styles['session-workspace']}${user.role === 'booker' ? ` ${styles.team}` : ''}`} aria-label={t('nav.program')}>
       <div className={styles['session-workspace-toolbar']}>
         <div className={styles['view-toggle']} role="group" aria-label={t('nav.program')}>
           {(['list', 'calendar', 'agenda'] as const).map((view) => (
@@ -176,7 +181,7 @@ export default function SessionWorkspace({
             setSearchTerm(event.target.value);
             setSelectedIds(new Set());
           }} />
-        <SessionFilters sessions={sessions} speakerFilter={speakerFilter} roomFilter={roomFilter}
+        <SessionFilters sessions={sessions} speakerFilter={speakerFilter} roomFilter={roomFilter} className={styles['workspace-filter-selects']}
           onSpeakerChange={(value) => { setSpeakerFilter(value); setSelectedIds(new Set()); }}
           onRoomChange={(value) => { setRoomFilter(value); setSelectedIds(new Set()); }} />
       </div>
@@ -204,7 +209,7 @@ export default function SessionWorkspace({
       )}
       {viewMode === 'agenda' && <AgendaView sessions={filteredSessions} sessionSaves={sessionSaves ?? undefined} onEventClick={setDetailId} />}
       {viewMode === 'calendar' && (
-        <CalendarView curMonth={month.getMonth()} curYear={month.getFullYear()} sessions={filteredSessions}
+        <CalendarView curMonth={month.getMonth()} curYear={month.getFullYear()} sessions={filteredSessions} appearance={user.role === 'booker' ? 'team' : 'default'}
           selectedDate={selectedDate} onSelectDay={selectBookingDay} onEventClick={setDetailId}
           onNavigate={(direction) => { setMonth(new Date(month.getFullYear(), month.getMonth() + direction, 1)); setSelectedDate(null); }}
           onToday={() => { setMonth(new Date()); setSelectedDate(null); }} />

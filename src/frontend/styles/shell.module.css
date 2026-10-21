@@ -7,7 +7,7 @@
 .sidebar {
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);
-  background: #fff;
+  background: var(--surface, #fff);
   border-right: 1px solid var(--gray-100);
   display: flex;
   flex-direction: column;
@@ -69,7 +69,7 @@
 }
 .topbar {
   height: var(--topbar-height);
-  background: #fff;
+  background: var(--surface, #fff);
   border-bottom: 1px solid var(--gray-100);
   padding: 0 24px;
   display: flex;

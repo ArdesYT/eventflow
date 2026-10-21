@@ -7,11 +7,11 @@
   flex-shrink: 0;
 }
 
-.hint-badge.admin    { background: #ede9fe; color: #5b21b6; }
+.hint-badge.admin    { background: var(--badge-admin-bg, #ede9fe); color: var(--badge-admin-ink, #5b21b6); }
 
 .hint-badge.booker   { background: var(--primary-light); color: var(--primary-dark); }
 
-.hint-badge.attendee { background: #d1fae5; color: #065f46; }
+.hint-badge.attendee { background: var(--event-green-bg, #d1fae5); color: var(--event-green, #065f46); }
 
 .session-cancelled-badge {
   display: inline-flex;
@@ -20,9 +20,9 @@
   padding: 2px 8px;
   font-size: 11px;
   font-weight: 600;
-  color: #b91c1c;
-  background: #fee2e2;
-  border: 1px solid #fecaca;
+  color: var(--event-red, #b91c1c);
+  background: var(--event-red-bg, #fee2e2);
+  border: 1px solid var(--event-red, #fecaca);
   border-radius: 999px;
   text-decoration: none;
   white-space: nowrap;

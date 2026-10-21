@@ -24,7 +24,7 @@
 
 .attendee-cancelled-note {
   font-size: 13px;
-  color: #b91c1c;
+  color: var(--event-red, #b91c1c);
   font-weight: 500;
 }
 .attendee-detail-modal {}

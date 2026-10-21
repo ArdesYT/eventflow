@@ -21,7 +21,7 @@
 }
 
 .session-card {
-  background: #fff;
+  background: var(--surface, #fff);
   border: 1px solid var(--gray-100);
   border-radius: var(--radius-md);
   padding: 16px;
@@ -37,8 +37,8 @@
 }
 
 .session-card.cancelled {
-  border-color: #fecaca;
-  background: #fffafa;
+  border-color: var(--event-red, #fecaca);
+  background: var(--event-red-bg, #fffafa);
   opacity: 0.85;
 }
 
@@ -103,13 +103,13 @@
   border-radius: 3px;
 }
 
-.session-duration.blue  { background: #dbeafe; color: #1e40af; }
+.session-duration.blue  { background: var(--event-blue-bg, #dbeafe); color: var(--event-blue, #1e40af); }
 
-.session-duration.amber { background: #fef3c7; color: #92400e; }
+.session-duration.amber { background: var(--event-amber-bg, #fef3c7); color: var(--event-amber, #92400e); }
 
-.session-duration.green { background: #d1fae5; color: #065f46; }
+.session-duration.green { background: var(--event-green-bg, #d1fae5); color: var(--event-green, #065f46); }
 
-.session-duration.red   { background: #fee2e2; color: #991b1b; }
+.session-duration.red   { background: var(--event-red-bg, #fee2e2); color: var(--event-red, #991b1b); }
 
 .session-card-header-right {
   display: flex;
@@ -142,7 +142,7 @@
 }
 
 .session-card.selected {
-  border-color: #93c5fd;
+  border-color: var(--event-blue, #93c5fd);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
 }
 

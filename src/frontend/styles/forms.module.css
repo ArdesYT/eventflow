@@ -21,7 +21,7 @@
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-sm);
   font-size: 13.5px;
-  background: #fff;
+  background: var(--surface, #fff);
   color: var(--gray-800);
   font-family: var(--font-ui);
   transition: border-color 0.15s, box-shadow 0.15s;

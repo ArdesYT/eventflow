@@ -34,6 +34,13 @@ import {
 import { createRateLimiter } from './rateLimit';
 import { checkSessionConflicts, sessionFromRow } from './sessionConflicts';
 import { resolveSessionSpeakerId } from './sessionSpeaker';
+import {
+    createPasswordResetRepository,
+    createPasswordResetRouter,
+    ensurePasswordResetSchema,
+    localResetDeliveryFromEnv,
+    PasswordResetService,
+} from './passwordReset';
 import { formatDate, formatDatetime } from './datetime';
 import {
     createAuthMiddleware,
@@ -71,6 +78,13 @@ const requireBookerOrAdmin = requireRoles('booker', 'admin');
 const requireAttendee = requireRoles('attendee');
 /** Login/register: max 20 kérés / 15 perc / IP */
 const authRateLimit = createRateLimiter(20, 15 * 60 * 1000);
+
+app.use('/api/auth/password-reset', createPasswordResetRouter(new PasswordResetService(
+    createPasswordResetRepository(pool),
+    localResetDeliveryFromEnv(),
+    Date.now,
+    Number(process.env.BCRYPT_SALT_ROUNDS) || 10,
+)));
 
 /** Production biztonság: ne induljon gyenge JWT_SECRET-tel. */
 if (
@@ -558,6 +572,12 @@ app.post('/api/auth/register', authRateLimit, async (req: Request, res: Response
 
     let conn: PoolConnection | undefined;
     try {
+        const emailRegex = /^(?=.{1,254}$)(?=[^@]{1,64}@)[a-z0-9_%+-]+(?:\.[a-z0-9_%+-]+)*@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
+        const valid = emailRegex.test(email.trim());
+        if (!valid) {
+            return res.status(400).json({ message: "Érvénytelen email cím!" });
+        }
+
         conn = await pool.getConnection();
 
         const existing = await conn.query("SELECT id FROM users WHERE email = ?", [email]);
@@ -606,7 +626,7 @@ app.post('/api/auth/login', authRateLimit, async (req: Request, res: Response) =
         }
 
         const safeUser = await enrichUser(conn, toSafeUser(user));
-        const token = signToken(safeUser);
+        const token = signToken(safeUser, Number(user.auth_version ?? 0));
         res.json({ user: safeUser, token });
     } catch (err) {
         console.error("Bejelentkezési hiba:", err);
@@ -1158,6 +1178,8 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 export async function initDatabase(): Promise<void> {
+    // Reset and JWT invalidation must never run against a partially migrated schema.
+    await ensurePasswordResetSchema(pool);
     /** Párhuzamosan futtatjuk az összes séma-ensure lépést induláskor. */
     await Promise.all([
         ensureSessionStatusColumn(pool),
@@ -1169,7 +1191,8 @@ export async function initDatabase(): Promise<void> {
 
 export { app, pool };
 
-void initDatabase().then(() => {
+export async function startServer(): Promise<void> {
+    await initDatabase();
     app.listen(PORT, () => {
         const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
         console.log(`
@@ -1179,4 +1202,12 @@ void initDatabase().then(() => {
     `);
         void logSessionCountHint();
     });
-});
+}
+
+if (require.main === module) {
+    void startServer().catch(() => {
+        console.error('EventFlow could not initialize the database schema. Check the database connection and schema permissions.');
+        void pool.end();
+        process.exitCode = 1;
+    });
+}

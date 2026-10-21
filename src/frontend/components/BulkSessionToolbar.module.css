@@ -21,7 +21,7 @@
   gap: 12px;
   margin-bottom: 16px;
   padding: 14px 16px;
-  background: #f8fafc;
+  background: var(--calendar-bg, #f8fafc);
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-md);
 }
@@ -46,5 +46,5 @@
 
 .bulk-error {
   font-size: 12px;
-  color: #b91c1c;
+  color: var(--event-red, #b91c1c);
 }

@@ -5,16 +5,25 @@ import type { Pool } from 'mariadb';
 import type { User, UserRole } from './types';
 
 /** JWT aláírási kulcs — production-ban kötelező egyedi érték (.env JWT_SECRET). */
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-change-me';
+function jwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (process.env.NODE_ENV === 'production' && (!secret || secret === 'dev-only-change-me')) {
+    throw new Error('Production JWT secret is not configured');
+  }
+  return secret || 'dev-only-change-me';
+}
 
 /** Token élettartam — pl. "7d", "1d". Alapértelmezés: 1 nap. */
-const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '1d') as SignOptions['expiresIn'];
+function jwtExpiresIn(): SignOptions['expiresIn'] {
+  return (process.env.JWT_EXPIRES_IN || '1d') as SignOptions['expiresIn'];
+}
 
 /** A JWT payload-ban tárolt mezők (decode után). */
 export interface JwtPayload {
   sub: number;       // users.id
   role: UserRole;    // admin | booker | attendee
   email: string;
+  ver: number;       // Invalidates all older sessions after a password reset.
 }
 
 /** A kéréshez csatolt, DB-ből frissített felhasználó (jelszó nélkül). */
@@ -29,28 +38,35 @@ export interface AuthenticatedRequest extends Request {
  * JWT token generálása sikeres login/register után.
  * @param user — legalább id, role, email kell
  */
-export function signToken(user: Pick<User, 'id' | 'role' | 'email'>): string {
+export function signToken(user: Pick<User, 'id' | 'role' | 'email'>, authVersion = 0): string {
   const payload: JwtPayload = {
     sub: user.id,
     role: user.role,
     email: user.email,
+    ver: authVersion,
   };
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign(payload, jwtSecret(), { expiresIn: jwtExpiresIn() });
 }
 
 /**
  * Token dekódolása és validálása. Hibás/lejárt token esetén kivétel.
  */
 export function verifyToken(token: string): JwtPayload {
-  const decoded = jwt.verify(token, JWT_SECRET);
+  const decoded = jwt.verify(token, jwtSecret());
   if (typeof decoded === 'string' || !decoded || typeof decoded !== 'object') {
     throw new Error('Invalid token payload');
   }
   const p = decoded as Record<string, unknown>;
+  const sub = Number(p.sub);
+  const version = p.ver ?? 0; // Existing sessions remain valid until the account's first reset.
+  if (!Number.isSafeInteger(sub) || sub <= 0 || !Number.isSafeInteger(version) || Number(version) < 0) {
+    throw new Error('Invalid token payload');
+  }
   return {
-    sub: Number(p.sub),
+    sub,
     role: String(p.role).trim().toLowerCase() as UserRole,
     email: String(p.email),
+    ver: Number(version),
   };
 }
 
@@ -68,20 +84,23 @@ function extractBearerToken(req: Request): string | null {
 async function loadUserById(
   pool: Pool,
   userId: number,
-): Promise<AuthenticatedUser | null> {
+): Promise<{ user: AuthenticatedUser; authVersion: number } | null> {
   const conn = await pool.getConnection();
   try {
     const rows = await conn.query(
-      'SELECT id, name, email, role FROM users WHERE id = ?',
+      'SELECT id, name, email, role, auth_version FROM users WHERE id = ?',
       [userId],
     );
     if (!rows.length) return null;
     const row = rows[0];
     return {
-      id: row.id,
-      name: row.name,
-      email: row.email,
-      role: String(row.role).trim().toLowerCase() as UserRole,
+      user: {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        role: String(row.role).trim().toLowerCase() as UserRole,
+      },
+      authVersion: Number(row.auth_version ?? 0),
     };
   } finally {
     conn.release();
@@ -110,11 +129,11 @@ export function createAuthMiddleware(pool: Pool) {
     try {
       const payload = verifyToken(token);
       const user = await loadUserById(pool, payload.sub);
-      if (!user) {
+      if (!user || payload.ver !== user.authVersion) {
         res.status(401).json({ message: 'Érvénytelen vagy lejárt munkamenet.' });
         return;
       }
-      req.authUser = user;
+      req.authUser = user.user;
       next();
     } catch {
       res.status(401).json({ message: 'Érvénytelen vagy lejárt munkamenet.' });

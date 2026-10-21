@@ -2,7 +2,7 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(17, 24, 39, 0.45);
+  background: var(--theme-overlay, rgba(17, 24, 39, 0.45));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11,7 +11,7 @@
 }
 
 .modal {
-  background: #fff;
+  background: var(--surface, #fff);
   border-radius: var(--radius-lg);
   padding: 26px;
   width: 460px;

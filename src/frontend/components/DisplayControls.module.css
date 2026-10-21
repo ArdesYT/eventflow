@@ -1,0 +1,11 @@
+.display-controls {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.display-controls > :first-child {
+  flex: 0 1 auto;
+  width: auto;
+}

@@ -39,7 +39,7 @@
 
 .agenda-date-circle.today {
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary, #fff);
 }
 
 .agenda-date-text {
@@ -52,7 +52,7 @@
   display: flex;
   gap: 12px;
   padding: 12px 14px;
-  background: #fff;
+  background: var(--surface, #fff);
   border: 1px solid var(--gray-100);
   border-radius: var(--radius-md);
   margin-bottom: 8px;
@@ -62,8 +62,8 @@
 }
 
 .agenda-event.cancelled {
-  border-color: #fecaca;
-  background: #fffafa;
+  border-color: var(--event-red, #fecaca);
+  background: var(--event-red-bg, #fffafa);
   opacity: 0.85;
 }
 
@@ -134,7 +134,7 @@
 }
 
 .agenda-multiday-header {
-  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  background: linear-gradient(135deg, var(--event-blue-bg, #eff6ff) 0%, var(--event-green-bg, #f0fdf4) 100%);
   border-radius: 10px;
   padding: 8px 12px;
   margin-bottom: 10px;
@@ -142,7 +142,7 @@
 
 .agenda-multiday-header .agenda-date-circle {
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary, #fff);
   font-size: 16px;
   font-family: var(--font-ui);
 }

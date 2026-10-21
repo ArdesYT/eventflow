@@ -35,7 +35,7 @@
 }
 
 .admin-users-panel {
-  background: #fff;
+  background: var(--surface, #fff);
   border: 1px solid var(--gray-100);
   border-radius: var(--radius-md);
   padding: 18px 20px;
@@ -84,7 +84,7 @@
   padding: 4px 8px;
   border: 1px solid var(--gray-200);
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface, #fff);
   cursor: pointer;
 }
 

@@ -81,3 +81,65 @@
 .error-banner {
   composes: error-banner from './styles/feedback.module.css';
 }
+
+.app-wrapper.app-wrapper {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 24px;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--calendar-bg, #f8fafc);
+}
+
+.app-wrapper .sidebar { width: auto; min-width: 0; background: transparent; border: 0; overflow-y: auto; }
+.app-wrapper .sidebar-logo { display: flex; align-items: center; gap: 12px; padding: 0; margin-bottom: 20px; border: 0; }
+.app-wrapper .sidebar-brand-icon { flex: none; display: block; border-radius: 10px; }
+.app-wrapper .sidebar-logo-title { font-family: var(--font-ui); font-size: 15px; font-weight: 600; letter-spacing: 0; }
+.app-wrapper .sidebar-logo-sub { font-size: 11px; font-weight: 400; color: var(--calendar-mute, #64748b); }
+.app-wrapper .sidebar-nav { flex: none; padding: 0; margin-bottom: 20px; }
+.app-wrapper .nav-item { border-radius: 8px; font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+.app-wrapper .main-area { min-height: 0; }
+.app-wrapper .topbar { min-height: 48px; height: auto; align-items: flex-start; gap: 12px; padding: 0; border: 0; margin-bottom: 24px; background: transparent; }
+.app-wrapper .topbar-left { display: block; min-width: 0; }
+.app-wrapper .page-title { font-family: var(--font-ui); font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+.app-wrapper .topbar-right { flex-wrap: wrap; justify-content: flex-end; }
+.app-wrapper .content-area { padding: 0 2px 12px; }
+
+.app-wrapper .upcoming-panel { background: var(--surface, #fff); border: 1px solid var(--calendar-line, #e5e9f0); border-radius: 14px; padding: 16px; }
+.app-wrapper .upcoming-panel h2 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+.app-wrapper .upcoming-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; margin-bottom: 8px; border: 0; border-radius: 8px; background: var(--calendar-bg, #f8fafc); font: inherit; text-align: left; cursor: pointer; }
+.app-wrapper .upcoming-row:last-child { margin-bottom: 0; }
+.app-wrapper .upcoming-row:hover { background: var(--primary-light); }
+.app-wrapper .upcoming-icon { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: 7px; background: var(--event-blue-bg, #dbeafe); color: var(--event-blue, #2563eb); }
+.app-wrapper .upcoming-icon.blue { background: var(--event-blue-bg, #dbeafe); color: var(--event-blue, #2563eb); }
+.app-wrapper .upcoming-icon.amber { background: var(--event-amber-bg, #fef3c7); color: var(--event-amber, #d97706); }
+.app-wrapper .upcoming-icon.green { background: var(--event-green-bg, #d1fae5); color: var(--event-green, #059669); }
+.app-wrapper .upcoming-icon.red { background: var(--event-red-bg, #fee2e2); color: var(--event-red, #dc2626); }
+.app-wrapper .upcoming-copy { display: block; min-width: 0; }
+.app-wrapper .upcoming-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; color: var(--calendar-ink, #0f172a); }
+.app-wrapper .upcoming-copy small { display: block; font-size: 11px; color: var(--calendar-mute, #64748b); }
+.app-wrapper .upcoming-empty { font-size: 12px; color: var(--calendar-mute, #64748b); }
+.app-wrapper .sidebar button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  .app-wrapper.app-wrapper { grid-template-columns: 210px minmax(0, 1fr); gap: 20px; padding: 20px; }
+  .app-wrapper .topbar { flex-wrap: wrap; }
+  .app-wrapper .topbar-right { margin-left: auto; }
+}
+
+@media (max-width: 768px) {
+  .app-wrapper.app-wrapper { display: flex; padding: 0; }
+  .app-wrapper .sidebar { display: none; }
+  .app-wrapper .main-area { padding: 14px 12px 0; }
+  .app-wrapper .topbar { margin-bottom: 20px; padding: 0; gap: 10px; }
+  .app-wrapper .topbar-right { flex: 1 1 100%; }
+  .app-wrapper .page-title { font-size: 22px; }
+  .app-wrapper .content-area { padding: 0 2px calc(20px + var(--mobile-nav-total)); }
+}
+
+@media (max-width: 400px) {
+  .app-wrapper .topbar-user-pill { display: none; }
+}

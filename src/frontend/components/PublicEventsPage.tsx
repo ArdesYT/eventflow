@@ -24,7 +24,7 @@ import {
 import { formatTimeKey } from '../i18n/dateFormat';
 import { downloadIcsFile } from '../lib/icsExport';
 import { useI18n } from '../i18n/I18nProvider';
-import LanguageSwitcher from './LanguageSwitcher';
+import DisplayControls from './DisplayControls';
 import SessionFilters from './SessionFilters';
 import AgendaView from './AgendaView';
 import CalendarView from './CalendarView';
@@ -272,7 +272,7 @@ export default function PublicEventsPage({
           </div>
         </div>
         <div className={styles['public-nav-right']}>
-          <LanguageSwitcher variant="select" className={styles['public-nav-lang']} />
+          <DisplayControls languageVariant="select" className={styles['public-nav-lang']} />
           <div className={styles['public-nav-toolbar']}>
             {guestMode ? (
               <button type="button" className={`${styles['btn-save']} ${styles['public-login-btn']}`} onClick={onLoginRequest}>

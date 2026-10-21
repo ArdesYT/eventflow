@@ -100,6 +100,6 @@
 }
 
 .session-cancel-btn {
-  border-color: #fecaca;
-  color: #b91c1c;
+  border-color: var(--event-red, #fecaca);
+  color: var(--event-red, #b91c1c);
 }

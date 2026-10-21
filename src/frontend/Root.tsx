@@ -18,6 +18,7 @@ import { fetchActiveEvent, updateEventProfile } from './lib/eventApi';
 import { FALLBACK_ROOMS } from './lib/rooms';
 import { fetchRooms } from './lib/roomsApi';
 import LoginPage from './components/LoginPage';
+import PasswordResetPage from './components/PasswordResetPage';
 import PublicEventsPage from './components/PublicEventsPage';
 import App from './App';
 import AdminApp from './components/admin/AdminApp';
@@ -113,6 +114,8 @@ export default function Root() {
 
   // —— Állapot: auth és felhasználó ——
   const [user, setUser] = useState<User | null>(() => loadStoredAuth()?.user ?? null);
+  const [authView, setAuthView] = useState<'login' | 'reset'>('login');
+  const [authEmail, setAuthEmail] = useState('');
 
   // —— Állapot: előadások és admin felhasználók ——
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -559,11 +562,29 @@ export default function Root() {
   }
 
   // —— Render: szerepkör és auth alapú routing ——
+  if (!user && !guestBrowse && authView === 'reset') {
+    return (
+      <PasswordResetPage
+        initialEmail={authEmail}
+        onPasswordChanged={handleLogout}
+        onBack={(email) => {
+          setAuthEmail(email);
+          setAuthView('login');
+        }}
+      />
+    );
+  }
+
   if (!user && !guestBrowse) {
     return (
       <LoginPage
         offlineMode={backendMode === false}
+        initialEmail={authEmail}
         onBrowseGuest={() => setGuestBrowse(true)}
+        onPasswordReset={(email) => {
+          setAuthEmail(email);
+          setAuthView('reset');
+        }}
         onLogin={async (credentials) => {
           const loggedInUser = await handleLogin(credentials);
           if (!backendMode) saveAuth(loggedInUser, null);

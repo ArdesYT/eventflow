@@ -32,7 +32,7 @@ import SpeakersView from './SpeakersView';
 import SessionWorkspace from '../SessionWorkspace';
 import RoomsUsage from './RoomsUsage';
 import ActivityLogView from './ActivityLogView';
-import LanguageSwitcher from '../LanguageSwitcher';
+import DisplayControls from '../DisplayControls';
 import MobileBottomNav from '../MobileBottomNav';
 import { fetchActivityLog } from '../../lib/adminApi';
 import { useI18n } from '../../i18n/I18nProvider';
@@ -226,7 +226,7 @@ export default function AdminApp({
             </span>
           </div>
           <div className={styles['topbar-right']}>
-            <LanguageSwitcher variant="select" />
+            <DisplayControls languageVariant="select" />
             {currentView === 'speakers' && (
               <div className={styles['search-box']}>
                 <span className={styles['search-icon']}>🔍</span>
