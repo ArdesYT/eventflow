@@ -1,6 +1,6 @@
 /**
  * Alkalmazás gyökér — auth, backend/demo mód, szerepkör-alapú routing.
- * Root dönti el: LoginPage, PublicEventsPage (attendee/guest), App (booker), AdminApp (admin).
+ * Root dönti el: LandingPage, LoginPage, PublicEventsPage (attendee/guest), App (booker), AdminApp (admin).
  * Kezeli a sessions/users/rooms/event state-et, pollingot és a schedule mentéseket.
  */
 import { useState, useEffect, useCallback } from 'react';
@@ -17,6 +17,7 @@ import type {
 import { fetchActiveEvent, updateEventProfile } from './lib/eventApi';
 import { FALLBACK_ROOMS } from './lib/rooms';
 import { fetchRooms } from './lib/roomsApi';
+import LandingPage from './components/LandingPage';
 import LoginPage from './components/LoginPage';
 import PasswordResetPage from './components/PasswordResetPage';
 import PublicEventsPage from './components/PublicEventsPage';
@@ -114,7 +115,7 @@ export default function Root() {
 
   // —— Állapot: auth és felhasználó ——
   const [user, setUser] = useState<User | null>(() => loadStoredAuth()?.user ?? null);
-  const [authView, setAuthView] = useState<'login' | 'reset'>('login');
+  const [anonymousView, setAnonymousView] = useState<'landing' | 'login' | 'reset' | 'program'>('landing');
   const [authEmail, setAuthEmail] = useState('');
 
   // —— Állapot: előadások és admin felhasználók ——
@@ -130,9 +131,8 @@ export default function Root() {
   const [scheduleBusyId, setScheduleBusyId] = useState<number | null>(null);
   const [sessionSaves, setSessionSaves] = useState<SessionSavesMap | null>(null);
 
-  // —— Állapot: backend elérhetőség, vendég böngészés, demo ——
+  // —— Állapot: backend elérhetőség és demo ——
   const [backendMode, setBackendMode] = useState<boolean | null>(null);
-  const [guestBrowse, setGuestBrowse] = useState(false);
   const [loadingDemo, setLoadingDemo] = useState(false);
 
   // —— Állapot: termek és eseményprofil ——
@@ -142,6 +142,10 @@ export default function Root() {
   // Hibaüzenetek lokalizálása
   const displayError = error ? translateError(error, t) : null;
   const displayScheduleError = scheduleError ? translateError(scheduleError, t) : null;
+
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [anonymousView, user?.id]);
 
   // —— Adatbetöltők (useCallback) ——
   const fetchSessions = useCallback(async () => {
@@ -555,46 +559,59 @@ export default function Root() {
     }
   }
 
+  function showLanding() {
+    setAuthEmail('');
+    setAnonymousView('landing');
+  }
+
   function handleLogout() {
     clearAuth();
     setUser(null);
-    setGuestBrowse(false);
+    showLanding();
   }
 
   // —— Render: szerepkör és auth alapú routing ——
-  if (!user && !guestBrowse && authView === 'reset') {
+  if (!user && anonymousView === 'landing') {
+    return (
+      <LandingPage
+        onBrowseProgram={() => setAnonymousView('program')}
+        onSignIn={() => setAnonymousView('login')}
+      />
+    );
+  }
+
+  if (!user && anonymousView === 'reset') {
     return (
       <PasswordResetPage
         initialEmail={authEmail}
-        onPasswordChanged={handleLogout}
+        onPasswordChanged={clearAuth}
         onBack={(email) => {
           setAuthEmail(email);
-          setAuthView('login');
+          setAnonymousView('login');
         }}
       />
     );
   }
 
-  if (!user && !guestBrowse) {
+  if (!user && anonymousView === 'login') {
     return (
       <LoginPage
         offlineMode={backendMode === false}
         initialEmail={authEmail}
-        onBrowseGuest={() => setGuestBrowse(true)}
+        onBackHome={showLanding}
+        onBrowseGuest={() => setAnonymousView('program')}
         onPasswordReset={(email) => {
           setAuthEmail(email);
-          setAuthView('reset');
+          setAnonymousView('reset');
         }}
         onLogin={async (credentials) => {
           const loggedInUser = await handleLogin(credentials);
           if (!backendMode) saveAuth(loggedInUser, null);
           setUser(loggedInUser);
-          setGuestBrowse(false);
         }}
         onRegister={async (credentials) => {
           const registeredUser = await handleRegister(credentials);
           setUser(registeredUser);
-          setGuestBrowse(false);
         }}
       />
     );
@@ -664,7 +681,8 @@ export default function Root() {
       onToggleNotifications={user ? handleToggleNotifications : undefined}
       notificationsOn={!!user && notificationsEnabled()}
       onLogout={user ? handleLogout : undefined}
-      onLoginRequest={user ? undefined : () => setGuestBrowse(false)}
+      onBackHome={user ? undefined : showLanding}
+      onLoginRequest={user ? undefined : () => setAnonymousView('login')}
     />
   );
 }

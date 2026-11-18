@@ -7,9 +7,9 @@ type DemoUser = Pick<User, 'name' | 'email' | 'role'> & { password: string };
 
 /** Demo bejelentkezési fiókok — jelszavak csak fejlesztéshez, hash-elés után kerülnek DB-be. */
 export const DEMO_USERS: DemoUser[] = [
-  { name: 'Admin', email: 'admin@example.com', password: 'admin123', role: 'admin' },
-  { name: 'Booker', email: 'booker@example.com', password: 'booker123', role: 'booker' },
-  { name: 'Attendee', email: 'attendee@example.com', password: 'attendee123', role: 'attendee' },
+  { name: 'Admin', email: 'admin@example.com', password: 'admin', role: 'admin' },
+  { name: 'Booker', email: 'booker@example.com', password: 'admin', role: 'booker' },
+  { name: 'Attendee', email: 'attendee@example.com', password: 'admin', role: 'attendee' },
 ];
 
 export async function upsertDemoUser(conn: PoolConnection, user: DemoUser, saltRounds: number) {

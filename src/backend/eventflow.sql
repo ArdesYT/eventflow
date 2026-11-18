@@ -152,9 +152,9 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `password_hash`, `role`, `created_at`) VALUES
-(6, 'Admin', 'admin@example.com', '$2b$10$/tW497xbkxGN0zXt9r2CcuMNTQYa6AT9WWsCd1sC2uwnS/yoX2PKy', 'admin', '2026-03-26 08:39:14'),
-(8, 'Attendee', 'attendee@example.com', '$2b$10$Pw44lc0cuHhfPLcy/hSA4OFuZ8Uptv8C0jbSUFsPkkm5jYjZWIkui', 'attendee', '2026-03-26 11:05:42'),
-(9, 'Booker', 'booker@example.com', '$2b$10$sCFplBpRDnDJs45K5BrfeOuXPUOsX5Dvw8rxX74UzrDTQ1IiS3MZ2', 'booker', '2026-05-26 06:49:20'),
+(6, 'Admin', 'admin@example.com', '$2b$10$w5lFTdH6rUkExUXoKPAgNuxiZeWR6VRB07dgXxhe5DFbwjYkED0uu', 'admin', '2026-03-26 08:39:14'),
+(8, 'Attendee', 'attendee@example.com', '$2b$10$uz8WpVDvwJh2/H85dYx5ZuydemfOEsQJr3dyklvYs9RdkiwPQ5.3a', 'attendee', '2026-03-26 11:05:42'),
+(9, 'Booker', 'booker@example.com', '$2b$10$QVOPQaMOpJQppuJ8Yuth0e6yxJSivdaPbzANDWQKqlukPmQncygLi', 'booker', '2026-05-26 06:49:20'),
 (10, 'Kovács Ádám', 'adam@eventflow.com', '$2b$10$xlUGdR5a1XxfUqKwiyqpC.4IiMn0kBLsGDWQDN7kXNuvlSRXOew3G', 'booker', '2026-05-26 07:31:04');
 
 -- --------------------------------------------------------

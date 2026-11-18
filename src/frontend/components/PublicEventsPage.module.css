@@ -741,6 +741,26 @@
   font-size: 13px;
 }
 
+.public-home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--gray-700);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.public-home-btn:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 .public-agenda-wrap,
 .public-calendar-wrap {
   background: var(--surface, #fff);

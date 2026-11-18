@@ -11,13 +11,14 @@ import styles from './LoginPage.module.css';
 interface LoginPageProps {
   offlineMode: boolean;
   initialEmail?: string;
+  onBackHome?: () => void;
   onBrowseGuest?: () => void;
   onPasswordReset?: (email: string) => void;
   onLogin: (credentials: { email: string; password: string }) => Promise<void>;
   onRegister: (credentials: { name: string; email: string; password: string }) => Promise<void>;
 }
 
-export default function LoginPage({ offlineMode, initialEmail = '', onBrowseGuest, onPasswordReset, onLogin, onRegister }: LoginPageProps) {
+export default function LoginPage({ offlineMode, initialEmail = '', onBackHome, onBrowseGuest, onPasswordReset, onLogin, onRegister }: LoginPageProps) {
   const { t } = useI18n();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
@@ -86,6 +87,14 @@ export default function LoginPage({ offlineMode, initialEmail = '', onBrowseGues
           <DisplayControls />
         </div>
 
+        {onBackHome && (
+          <div className={styles['login-home']}>
+            <button type="button" className={styles['login-home-btn']} onClick={onBackHome} disabled={loading}>
+              <span aria-hidden="true">←</span>
+              {t('landing.backHome')}
+            </button>
+          </div>
+        )}
         <form className={styles['login-form']} onSubmit={handleSubmit} noValidate aria-labelledby="login-title">
           <div className={styles['login-form-header']}>
             <h1 id="login-title" className={styles['login-title']}>

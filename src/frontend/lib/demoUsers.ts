@@ -16,9 +16,9 @@ export type DemoUser = User & { password: string };
  * @remarks A jelszavak csak helyi/demo célra szolgálnak
  */
 export const DEMO_USERS: DemoUser[] = [
-  { id: 1, name: 'Admin', email: 'admin@example.com', password: 'admin123', role: 'admin' },
-  { id: 2, name: 'Booker', email: 'booker@example.com', password: 'booker123', role: 'booker', assigned_room_ids: [1, 2] },
-  { id: 3, name: 'Attendee', email: 'attendee@example.com', password: 'attendee123', role: 'attendee' },
+  { id: 1, name: 'Admin', email: 'admin@example.com', password: 'admin', role: 'admin' },
+  { id: 2, name: 'Booker', email: 'booker@example.com', password: 'admin', role: 'booker', assigned_room_ids: [1, 2] },
+  { id: 3, name: 'Attendee', email: 'attendee@example.com', password: 'admin', role: 'attendee' },
 ];
 
 /**

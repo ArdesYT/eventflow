@@ -1,6 +1,6 @@
 /**
  * Nyilvános/résztvevői programoldal — attendee és vendég (guest) nézet.
- * Root rendereli attendee szerepkörnél; guestBrowse módban bejelentkezés nélkül.
+ * Root rendereli attendee szerepkörnél és a nyilvános program vendégnézetében.
  * Fülek: összes program, saját program, előadók; nézetek: lista, napirend, naptár.
  * Props: event, sessions, savedSessions, schedule callback-ek, user/guestMode, onLogout.
  */
@@ -63,6 +63,7 @@ interface PublicEventsPageProps {
   onSaveSession: (sessionId: number) => Promise<void>;
   onRemoveSession: (sessionId: number) => Promise<void>;
   onLogout?: () => void;
+  onBackHome?: () => void;
   onLoginRequest?: () => void;
   onToggleNotifications?: (enable: boolean) => Promise<boolean>;
   notificationsOn?: boolean;
@@ -101,6 +102,7 @@ export default function PublicEventsPage({
   onSaveSession,
   onRemoveSession,
   onLogout,
+  onBackHome,
   onLoginRequest,
   onToggleNotifications,
   notificationsOn = false,
@@ -275,9 +277,17 @@ export default function PublicEventsPage({
           <DisplayControls languageVariant="select" className={styles['public-nav-lang']} />
           <div className={styles['public-nav-toolbar']}>
             {guestMode ? (
-              <button type="button" className={`${styles['btn-save']} ${styles['public-login-btn']}`} onClick={onLoginRequest}>
-                {t('public.login')}
-              </button>
+              <>
+                {onBackHome && (
+                  <button type="button" className={styles['public-home-btn']} onClick={onBackHome}>
+                    <span aria-hidden="true">←</span>
+                    {t('landing.backHome')}
+                  </button>
+                )}
+                <button type="button" className={`${styles['btn-save']} ${styles['public-login-btn']}`} onClick={onLoginRequest}>
+                  {t('public.login')}
+                </button>
+              </>
             ) : (
               <>
                 <div className={styles['public-user-pill']}>

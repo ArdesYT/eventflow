@@ -8,6 +8,8 @@ Konferencia- és eseményprogram-kezelő webalkalmazás: előadások ütemezése
 
 Teljes dokumentáció: [documentation/EventFlow_Dokumentacio.docx](documentation/EventFlow_Dokumentacio.docx)
 
+A projekt részletes magyar magyarázata, adatfolyamokkal, fájltérképpel és indítási példákkal: [Projektmagyarazat.md](documentation/Projektmagyarazat.md)
+
 ---
 
 ## Szerepkörök
@@ -19,7 +21,7 @@ Teljes dokumentáció: [documentation/EventFlow_Dokumentacio.docx](documentation
 | **Látogató (attendee)** | Nyilvános program | Böngészés, mentett program, ICS export, értesítések |
 | **Vendég** | Bejelentkezés nélkül | Program böngészése (mentés nélkül) |
 
-Demó fiókok: `admin@example.com` / `admin123` · `booker@example.com` / `booker123` · `attendee@example.com` / `attendee123`
+Demófiókok: `admin@example.com`, `booker@example.com` és `attendee@example.com`. Mindhárom jelszava `admin`.
 
 ### A feladatok helye
 
@@ -28,6 +30,30 @@ Demó fiókok: `admin@example.com` / `admin123` · `booker@example.com` / `booke
 - **Admin – Előadók:** előadó létrehozása, szerkesztése, törlése és egyesítése. A foglalási űrlap és az előadás API is csak meglévő `speaker_id` értéket fogad el; a `speaker_name` nem hoz létre előadót. Új előadót először a `POST /api/speakers` végponton kell felvenni.
 - **Admin – Áttekintés:** üres adatbázis esetén itt tölthetők be a demo adatok. A felhasználók, teremhozzárendelések és eseményprofil saját menüpontjukban kezelhetők.
 - **Látogató:** mentés és eltávolítás az előadás részleteinél, minden megjelenítési nézetből ugyanazon a felületen. Lemondott előadás is eltávolítható. Export a program eszköztárán, értesítések a Mentett programom fülön.
+
+---
+
+## Helyi vizsgabemutató Macen
+
+Telepítsd és nyisd meg a [Docker Desktopot](https://docs.docker.com/desktop/setup/install/mac-install/). Oktatási célra ingyenes. A projektmappában futtasd az első indítást internetkapcsolattal.
+
+```bash
+docker compose up --build --wait
+```
+
+Amikor elindult, nyisd meg a böngészőben a [http://localhost:3000](http://localhost:3000) címet. Az adatbázis az első indításkor automatikusan betölti a mintaelőadásokat és a fenti demófiókokat. A csomag a saját Macen futó bemutatóra készült, és a helyi böngészőből érhető el. A naptárban a mintaelőadások 2026 márciusában vannak.
+
+A próba után a `docker compose stop` paranccsal állítsd le. A vizsgán nyisd meg a Docker Desktopot, majd ugyanebből a mappából indítsd el újra az előkészített konténereket.
+
+```bash
+docker compose start --wait
+```
+
+Az újraindítás megőrzi a demóban elmentett módosításokat. A vizsga előtti próbán kapcsold ki a Wi-Fi-t, indítsd újra a konténereket, és ellenőrizd a bejelentkezést és a programot.
+
+### Adatbázis kezelése phpMyAdminnal
+
+A [phpMyAdmin](http://localhost:8080) felületén az `eventflow` felhasználóval és az `admin` jelszóval lépj be. A bal oldali menüben nyisd meg az `eventflow` adatbázist. Az előadások a `sessions` táblában vannak.
 
 ---
 

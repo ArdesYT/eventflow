@@ -281,12 +281,8 @@ for (const offlineMode of [false, true]) {
     const demoSection = html.match(/<section\b[^>]*aria-labelledby="login-demo-title"[^>]*>[\s\S]*?<\/section>/)[0];
     const demoButtons = buttons(demoSection);
     assert.equal(demoButtons.length, 3);
-    for (const [email, password] of [
-      ['admin@example.com', 'admin123'],
-      ['booker@example.com', 'booker123'],
-      ['attendee@example.com', 'attendee123'],
-    ]) {
-      const matching = demoButtons.filter((button) => button.includes(`${email} / ${password}`));
+    for (const email of ['admin@example.com', 'booker@example.com', 'attendee@example.com']) {
+      const matching = demoButtons.filter((button) => button.includes(`${email} / admin`));
       assert.equal(matching.length, 1);
       assert.match(matching[0], /type="button"/);
       assert.doesNotMatch(matching[0], /\sdisabled(?:[\s=>])/);

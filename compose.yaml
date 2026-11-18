@@ -1,0 +1,52 @@
+services:
+  app:
+    build: .
+    init: true
+    environment:
+      PORT: "3000"
+      DB_HOST: db
+      DB_USER: eventflow
+      DB_PASS: admin
+      DB_NAME: eventflow
+      JWT_SECRET: eventflow-local-demo-jwt-secret
+      CLIENT_URL: http://localhost:3000
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: eventflow
+      MARIADB_USER: eventflow
+      MARIADB_PASSWORD: admin
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+    volumes:
+      - demo-db:/var/lib/mysql
+      - ./src/backend/eventflow.sql:/docker-entrypoint-initdb.d/eventflow.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    environment:
+      PMA_HOST: db
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  demo-db:
