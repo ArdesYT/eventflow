@@ -83,7 +83,7 @@
 }
 
 .headerSignIn {
-  composes: btn-save from '../styles/buttons.module.css';
+  composes: btn-save from "../styles/buttons.module.css";
   min-height: 38px;
   padding-inline: 14px;
   font-size: 0.875rem;
@@ -91,8 +91,11 @@
 
 .hero {
   overflow: hidden;
-  background:
-    linear-gradient(125deg, var(--surface) 40%, var(--primary-light) 160%);
+  background: linear-gradient(
+    125deg,
+    var(--surface) 40%,
+    var(--primary-light) 160%
+  );
 }
 
 .heroContent {
@@ -144,11 +147,11 @@
 }
 
 .primaryButton {
-  composes: btn-save from '../styles/buttons.module.css';
+  composes: btn-save from "../styles/buttons.module.css";
 }
 
 .secondaryButton {
-  composes: btn-cancel from '../styles/buttons.module.css';
+  composes: btn-cancel from "../styles/buttons.module.css";
 }
 
 .primaryButton,
@@ -176,7 +179,7 @@
   outline-offset: 4px;
 }
 
-.header [role='group'] button:focus-visible {
+.header [role="group"] button:focus-visible {
   outline-offset: -2px;
 }
 
@@ -207,7 +210,7 @@
 }
 
 .preview::after {
-  content: '';
+  content: "";
   background: linear-gradient(180deg, transparent 20%, rgba(12, 18, 34, 0.75));
 }
 
@@ -274,12 +277,12 @@
   background: var(--session-bg);
 }
 
-.scheduleRow[data-color='green'] {
+.scheduleRow[data-color="green"] {
   --session-ink: var(--success);
   --session-bg: var(--success-light);
 }
 
-.scheduleRow[data-color='amber'] {
+.scheduleRow[data-color="amber"] {
   --session-ink: var(--accent);
   --session-bg: var(--accent-light);
 }
@@ -378,14 +381,14 @@
   color: var(--primary);
 }
 
-.featureIcon[data-icon='bookmark'],
-.featureIcon[data-icon='download'] {
+.featureIcon[data-icon="bookmark"],
+.featureIcon[data-icon="download"] {
   background: var(--success-light);
   color: var(--success);
 }
 
-.featureIcon[data-icon='conflict'],
-.featureIcon[data-icon='people'] {
+.featureIcon[data-icon="conflict"],
+.featureIcon[data-icon="people"] {
   background: var(--accent-light);
   color: var(--theme-warning-ink, #92400e);
 }
@@ -514,7 +517,7 @@
 }
 
 .faqItem summary::after {
-  content: '+';
+  content: "+";
   flex: 0 0 20px;
   color: var(--primary);
   font-size: 1.5rem;
@@ -524,7 +527,7 @@
 }
 
 .faqItem[open] summary::after {
-  content: '−';
+  content: "−";
 }
 
 .faqItem p {
@@ -809,7 +812,7 @@
 }
 
 @media (max-width: 420px) {
-  .headerActions [role='group'] button {
+  .headerActions [role="group"] button {
     padding-inline: 5px;
     font-size: 0.75rem;
   }
@@ -844,4 +847,3 @@
     width: 100%;
   }
 }
-
